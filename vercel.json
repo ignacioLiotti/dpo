@@ -1,0 +1,11 @@
+{
+	"version": 2,
+	"buildCommand": "npm run build",
+	"devCommand": "npm run dev",
+	"installCommand": "npm install",
+	"framework": "nextjs",
+	"env": {
+		"NEXT_PUBLIC_API_URL": "REPLACE_WITH_YOUR_API_URL",
+		"DATABASE_URL": "REPLACE_WITH_YOUR_DATABASE_URL"
+	}
+}
