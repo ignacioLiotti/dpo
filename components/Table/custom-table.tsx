@@ -19,7 +19,6 @@ import {
   SortingState,
   getSortedRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   Column,
 } from "@tanstack/react-table"
 import { motion } from "framer-motion"
@@ -35,7 +34,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { DataTablePagination } from "./DataTablePagination"
 import { DataTableFloatingToolbar } from "./DataTableFloatingToolbar"
 import { EditableCell } from "../editable-cell"
-import { Item } from "@/types/table-types"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
 
 // ─────────────────────────────────────────────────────

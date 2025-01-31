@@ -5,40 +5,42 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // uncomment next line if you use Prisma <5.10
+  // directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model certificaciones {
   IdCertificado  Int       @id @default(autoincrement())
   NumCertificado String?   @db.VarChar(50)
   Monto          Float?
-  MesCertificado DateTime? @db.DateTime(0)
+  MesCertificado DateTime?
   IdObras        Int?
   IdTipos        Int?
   IdEmpresa      Int?
-  FechaLiq       DateTime? @db.DateTime(0)
-  FechaIng       DateTime? @db.DateTime(0)
-  pagado         Int?      @db.TinyInt
+  FechaLiq       DateTime?
+  FechaIng       DateTime?
+  pagado         Int?      @db.SmallInt
   netoapagar     Float?
   numexpte       String?   @db.VarChar(255)
-  provisorio     Int?      @db.TinyInt
-  verificado     Int?      @db.TinyInt
+  provisorio     Int?      @db.SmallInt
+  verificado     Int?      @db.SmallInt
   numexpte2      Int?
   ubicacion      Int?
-  recibidofyh_1  DateTime? @db.DateTime(0)
-  recibidofyh_2  DateTime? @db.DateTime(0)
-  recibidofyh_3  DateTime? @db.DateTime(0)
-  recibidofyh_4  DateTime? @db.DateTime(0)
-  recibidofyh_5  DateTime? @db.DateTime(0)
-  recibido_1     Int?      @db.TinyInt
-  recibido_2     Int?      @db.TinyInt
-  recibido_3     Int?      @db.TinyInt
-  recibido_4     Int?      @db.TinyInt
-  recibido_5     Int?      @db.TinyInt
+  recibidofyh_1  DateTime?
+  recibidofyh_2  DateTime?
+  recibidofyh_3  DateTime?
+  recibidofyh_4  DateTime?
+  recibidofyh_5  DateTime?
+  recibido_1     Int?      @db.SmallInt
+  recibido_2     Int?      @db.SmallInt
+  recibido_3     Int?      @db.SmallInt
+  recibido_4     Int?      @db.SmallInt
+  recibido_5     Int?      @db.SmallInt
   IdTipos2       String?   @db.VarChar(255)
   redetnum       String?   @db.VarChar(255)
   adicnum        String?   @db.VarChar(255)
 
-  @@index([IdEmpresa], map: "IdEmpresa")
+  @@index([IdEmpresa], map: "cert_IdEmpresa")
   @@index([IdObras], map: "IdObra")
   @@index([IdTipos], map: "IdTipos")
   @@index([NumCertificado], map: "NumCertificado")
@@ -55,9 +57,9 @@ model empresas {
   Cuit          String?   @db.VarChar(255)
   Observaciones String?   @db.VarChar(255)
   mail          String?   @db.VarChar(255)
-  cfce          DateTime? @db.DateTime(0)
-  cfcv          DateTime? @db.DateTime(0)
-  cfcp          DateTime? @db.DateTime(0)
+  cfce          DateTime?
+  cfcv          DateTime?
+  cfcp          DateTime?
   pass          String?   @db.VarChar(255)
   user          String?   @db.VarChar(255)
 }
@@ -69,7 +71,7 @@ model inspectores {
   Nombres       String? @db.VarChar(50)
   proye         Int?
   Tel_fono      String? @map("Teléfono") @db.VarChar(50)
-  Inspector     Int?    @db.TinyInt
+  Inspector     Int?    @db.SmallInt
 }
 
 model obras {
@@ -86,27 +88,27 @@ model obras {
   IdModalidad           Int?
   IdLocalidad           Int?
   IdAreas               Int?
-  Fecha_de_Contrato     DateTime? @map("Fecha de Contrato") @db.DateTime(0)
-  Fecha_de_Inicio       DateTime? @map("Fecha de Inicio") @db.DateTime(0)
-  Fecha_de_Finalizaci_n DateTime? @map("Fecha de Finalización") @db.DateTime(0)
-  Memoria_Desc          String?   @map("Memoria Desc") @db.LongText
+  Fecha_de_Contrato     DateTime? @map("Fecha de Contrato")
+  Fecha_de_Inicio       DateTime? @map("Fecha de Inicio")
+  Fecha_de_Finalizaci_n DateTime? @map("Fecha de Finalización")
+  Memoria_Desc          String?   @map("Memoria Desc") @db.Text
   Codigo_Meta           String?   @map("Codigo Meta") @db.VarChar(50)
   Departamento          Int?
   Monto_Adicional_1     Float?
   Plazo_Adicional1      Int?
-  Final_adicional1      DateTime? @db.DateTime(0)
+  Final_adicional1      DateTime?
   Monto_Adicional_2     Float?
   Plazo_Adicional2      Int?
-  Final_adicional2      DateTime? @db.DateTime(0)
+  Final_adicional2      DateTime?
   Plazo_Adicional3      Int?
-  Final_adicional3      DateTime? @db.DateTime(0)
+  Final_adicional3      DateTime?
   IdProyectista         Int?
   Norma1                String?   @db.VarChar(50)
   Norma2                String?   @db.VarChar(50)
   Norma3                String?   @db.VarChar(50)
   Amp_Cont1             String?   @db.VarChar(50)
   Amp_Cont2             String?   @db.VarChar(50)
-  Observaciones         String?   @db.LongText
+  Observaciones         String?   @db.Text
   Monto_Adicional_3     Float?
   Amp_Cont3             String?   @db.VarChar(50)
   Redet_monto_1         Float?
@@ -136,41 +138,41 @@ model obras {
   basicoredet4          String?   @db.VarChar(255)
   basicoredet5          String?   @db.VarChar(255)
   basicoredet6          String?   @db.VarChar(255)
-  Proyecto              Int?      @db.TinyInt
+  Proyecto              Int?      @db.SmallInt
   A_oTerminada          Int?      @map("AñoTerminada")
   Expte                 String?   @db.VarChar(255)
   Expte2                Int?
-  pliego                Int?      @db.TinyInt
+  pliego                Int?      @db.SmallInt
   basico                String?   @db.VarChar(255)
-  prioridad             Int?      @db.TinyInt
+  prioridad             Int?      @db.SmallInt
   fuenteO               Int?
   Edificio              Int?
   pptoof                Float?
-  p                     Int?      @map("3p") @db.TinyInt
-  Fechalicit            DateTime? @db.DateTime(0)
+  p                     Int?      @map("3p") @db.SmallInt
+  Fechalicit            DateTime?
   ResponsableProy       String?   @db.VarChar(255)
-  Fechapliego           DateTime? @db.DateTime(0)
-  Fechaelevado          DateTime? @db.DateTime(0)
+  Fechapliego           DateTime?
+  Fechaelevado          DateTime?
   NormaARP              String?   @db.VarChar(255)
   NormaARD              String?   @db.VarChar(255)
-  fechaARP              DateTime? @db.DateTime(0)
-  fechaARD              DateTime? @db.DateTime(0)
+  fechaARP              DateTime?
+  fechaARD              DateTime?
   NormaARPA1            String?   @db.VarChar(255)
   NormaARDA1            String?   @db.VarChar(255)
-  fechaARPA1            DateTime? @db.DateTime(0)
-  fechaARDA1            DateTime? @db.DateTime(0)
+  fechaARPA1            DateTime?
+  fechaARDA1            DateTime?
   NormaARPA2            String?   @db.VarChar(255)
   NormaARDA2            String?   @db.VarChar(255)
-  fechaARPA2            DateTime? @db.DateTime(0)
-  fechaARDA2            DateTime? @db.DateTime(0)
+  fechaARPA2            DateTime?
+  fechaARDA2            DateTime?
   NormaARPA3            String?   @db.VarChar(255)
   NormaARDA3            String?   @db.VarChar(255)
-  fechaARPA3            DateTime? @db.DateTime(0)
-  fechaARDA3            DateTime? @db.DateTime(0)
-  inaugurada            Int?      @db.TinyInt
-  ainaugurar            Int?      @db.TinyInt
-  fechainaugur          DateTime? @db.DateTime(0)
-  noinaugur             Int?      @db.TinyInt
+  fechaARPA3            DateTime?
+  fechaARDA3            DateTime?
+  inaugurada            Int?      @db.SmallInt
+  ainaugurar            Int?      @db.SmallInt
+  fechainaugur          DateTime?
+  noinaugur             Int?      @db.SmallInt
   observ3_              String?   @map("observ3%") @db.VarChar(255)
   numlic                String?   @db.VarChar(255)
   asociado1             Int?
@@ -181,9 +183,9 @@ model obras {
   dibujante2            Int?
   IdEstad               Int?
   pptador               Int?
-  fechainicio           DateTime? @db.DateTime(0)
-  fechafin              DateTime? @db.DateTime(0)
-  fechaelevdir          DateTime? @db.DateTime(0)
+  fechainicio           DateTime?
+  fechafin              DateTime?
+  fechaelevdir          DateTime?
   IdEsc                 Int?
   tareas                String?   @db.VarChar(255)
   IdObj                 Int?
@@ -195,30 +197,30 @@ model obras {
   ampm2                 Int?
   normaadju             String?   @db.VarChar(255)
   normalicit            String?   @db.VarChar(255)
-  fecha1                DateTime? @db.DateTime(0)
-  fecha2                DateTime? @db.DateTime(0)
-  fecha3                DateTime? @db.DateTime(0)
-  fecha4                DateTime? @db.DateTime(0)
-  fecha5                DateTime? @db.DateTime(0)
-  fecha6                DateTime? @db.DateTime(0)
-  datospoliza           String?   @db.LongText
+  fecha1                DateTime?
+  fecha2                DateTime?
+  fecha3                DateTime?
+  fecha4                DateTime?
+  fecha5                DateTime?
+  fecha6                DateTime?
+  datospoliza           String?   @db.Text
   onm2                  Int?
   codigoSIG             Int?
   avanceproy            Int?      @map("%avanceproy")
-  MemAdic1              String?   @db.LongText
-  MemAdic2              String?   @db.LongText
-  MemAdic3              String?   @db.LongText
+  MemAdic1              String?   @db.Text
+  MemAdic2              String?   @db.Text
+  MemAdic3              String?   @db.Text
   polizanum             String?   @db.VarChar(255)
   polizaemp             String?   @db.VarChar(255)
   polizamonto           Float?
   clasificacion         Int?
-  fecha7                DateTime? @db.DateTime(0)
-  fecha8                DateTime? @db.DateTime(0)
-  fecha9                DateTime? @db.DateTime(0)
-  caratula              Int?      @db.TinyInt
-  presupuesto           Int?      @db.TinyInt
-  drive                 Int?      @db.TinyInt
-  obserpliego           String?   @db.LongText
+  fecha7                DateTime?
+  fecha8                DateTime?
+  fecha9                DateTime?
+  caratula              Int?      @db.SmallInt
+  presupuesto           Int?      @db.SmallInt
+  drive                 Int?      @db.SmallInt
+  obserpliego           String?   @db.Text
   IdProg                Int?
   autor1                String?   @db.VarChar(255)
   autor2                String?   @db.VarChar(255)
@@ -273,15 +275,15 @@ model obras {
   AP_norma_4            Int?
   Monto_Adicional_4     Float?
   Plazo_Adicional4      Int?
-  Final_adicional4      DateTime? @db.DateTime(0)
+  Final_adicional4      DateTime?
   Amp_Cont4             String?   @db.VarChar(50)
-  MemAdic4              String?   @db.LongText
+  MemAdic4              String?   @db.Text
   ARPA_expte_4          Int?
   ARDA_expte_4          Int?
   NormaARPA4            String?   @db.VarChar(255)
   NormaARDA4            String?   @db.VarChar(255)
-  fechaARPA4            DateTime? @db.DateTime(0)
-  fechaARDA4            DateTime? @db.DateTime(0)
+  fechaARPA4            DateTime?
+  fechaARDA4            DateTime?
   Norma4                String?   @db.VarChar(50)
   ARPA_expte_3          Int?
   ARDA_expte_3          Int?
@@ -289,36 +291,35 @@ model obras {
   ARDA_expte_2          Int?
   ARPA_expte_1          Int?
   ARDA_expte_1          Int?
-  pr1                   Int?      @map("3pr1") @db.TinyInt
-  pr2                   Int?      @map("3pr2") @db.TinyInt
-  pr3                   Int?      @map("3pr3") @db.TinyInt
-  pr4                   Int?      @map("3pr4") @db.TinyInt
-  pr5                   Int?      @map("3pr5") @db.TinyInt
-  pr6                   Int?      @map("3pr6") @db.TinyInt
-  pr7                   Int?      @map("3pr7") @db.TinyInt
-  pr8                   Int?      @map("3pr8") @db.TinyInt
-  pr9                   Int?      @map("3pr9") @db.TinyInt
-  pr10                  Int?      @map("3pr10") @db.TinyInt
-  pr11                  Int?      @map("3pr11") @db.TinyInt
-  pr12                  Int?      @map("3pr12") @db.TinyInt
+  pr1                   Int?      @map("3pr1") @db.SmallInt
+  pr2                   Int?      @map("3pr2") @db.SmallInt
+  pr3                   Int?      @map("3pr3") @db.SmallInt
+  pr4                   Int?      @map("3pr4") @db.SmallInt
+  pr5                   Int?      @map("3pr5") @db.SmallInt
+  pr6                   Int?      @map("3pr6") @db.SmallInt
+  pr7                   Int?      @map("3pr7") @db.SmallInt
+  pr8                   Int?      @map("3pr8") @db.SmallInt
+  pr9                   Int?      @map("3pr9") @db.SmallInt
+  pr10                  Int?      @map("3pr10") @db.SmallInt
+  pr11                  Int?      @map("3pr11") @db.SmallInt
+  pr12                  Int?      @map("3pr12") @db.SmallInt
   IdRepresentante       Int?
   ARPA_expte_0          Int?
   ARDA_expte_0          Int?
-  pptotope              Int?      @db.TinyInt
+  pptotope              Int?      @db.SmallInt
 
-  @@index([IdEmpresa], map: "EmpresasObras")
-  @@index([IdAreas], map: "IdAreas")
-  @@index([IdAvance], map: "IdAvance")
-  @@index([IdEmpresa], map: "IdEmpresa")
-  @@index([IdInspectores], map: "IdInspector")
-  @@index([IdLocalidad], map: "IdLocalidad")
-  @@index([IdModalidad], map: "IdModalidad")
-  @@index([IdReparticion], map: "IdReparticion")
-  @@index([IdProyectista], map: "Proyectista")
-  @@index([IdEsc], map: "IdEsc")
-  @@index([IdEstad], map: "IdEstad")
-  @@index([IdRepresentante], map: "IdInspectores")
-  @@index([Idproceso], map: "Idproceso")
+  @@index([IdEmpresa], map: "obras_IdEmpresa")
+  @@index([IdAreas], map: "obras_IdAreas")
+  @@index([IdAvance], map: "obras_IdAvance")
+  @@index([IdInspectores], map: "obras_IdInspector")
+  @@index([IdLocalidad], map: "obras_IdLocalidad")
+  @@index([IdModalidad], map: "obras_IdModalidad")
+  @@index([IdReparticion], map: "obras_IdReparticion")
+  @@index([IdProyectista], map: "obras_Proyectista")
+  @@index([IdEsc], map: "obras_IdEsc")
+  @@index([IdEstad], map: "obras_IdEstad")
+  @@index([IdRepresentante], map: "obras_IdInspectores")
+  @@index([Idproceso], map: "obras_Idproceso")
 }
 
 model proyectistas {
@@ -329,9 +330,9 @@ model proyectistas {
   Profesion     String? @db.VarChar(50)
   Direcci_n     String? @map("Dirección") @db.VarChar(50)
   Tel_fono      String? @map("Teléfono") @db.VarChar(50)
-  Inspector     Int?    @db.TinyInt
+  Inspector     Int?    @db.SmallInt
   DNI           Int?
-  observaciones String? @db.LongText
+  observaciones String?
   mail          String? @db.VarChar(255)
   dependencia   Int?
 }
@@ -352,7 +353,7 @@ model areas {
   IdAreas Int     @id @default(autoincrement())
   Areas   String? @db.VarChar(50)
 
-  @@index([Areas], map: "IdArea")
+  @@index([Areas], map: "areas_IdArea")
 }
 
 model avance {
@@ -402,8 +403,8 @@ model edificios {
   estadoconserv String? @db.VarChar(255)
   Superficie    Float?
   dirlote       String? @db.VarChar(255)
-  Extras        String? @db.LongText
-  Observaciones String? @db.LongText
+  Extras        String? @db.Text
+  Observaciones String? @db.Text
   Direcci_n     String? @map("Dirección") @db.VarChar(255)
   Convenio      String? @db.VarChar(255)
   Categor_a     String? @map("Categoría") @db.VarChar(255)
@@ -430,8 +431,8 @@ model edificios {
   frente        Float?
   fondo         Float?
 
-  @@index([Nombre], map: "Nombre")
-  @@index([IdDptos], map: "iddptos")
+  @@index([Nombre], map: "edificios_Nombre")
+  @@index([IdDptos], map: "edificios_iddptos")
 }
 
 model estados {
@@ -451,7 +452,7 @@ model funcion {
 
 model informes {
   IdInforme Int       @id @default(autoincrement())
-  fecha     DateTime? @db.DateTime(0)
+  fecha     DateTime?
   IdObras   Int?
   informe   String?   @db.VarChar(200)
 }
@@ -475,7 +476,7 @@ model localidades {
   Datos       String? @db.VarChar(255)
   abrevloc    String? @db.VarChar(255)
 
-  @@index([IdDptos], map: "iddptos")
+  @@index([IdDptos], map: "localidades_iddptos")
 }
 
 model modalidad {
@@ -486,7 +487,7 @@ model modalidad {
 model plan_trabajo {
   IdPlan          Int       @id @default(autoincrement())
   IdObras         Int?
-  Mes_1           DateTime? @map("Mes 1") @db.DateTime(0)
+  Mes_1           DateTime? @map("Mes 1")
   Montos_1        Float?    @map("Montos 1")
   P__de_Trabajo_1 Float?    @map("P_ de Trabajo_1")
 
@@ -517,7 +518,7 @@ model rubros {
   Rubro      String? @db.VarChar(50)
   comentario String? @db.VarChar(255)
 
-  @@index([Rubro], map: "IdArea")
+  @@index([Rubro], map: "rubros_IdArea")
 }
 
 model tipocertificados {
@@ -530,7 +531,7 @@ model tipocomprobante {
   compro     String? @db.VarChar(50)
   comentario String? @db.VarChar(255)
 
-  @@index([compro], map: "IdArea")
+  @@index([compro], map: "compro_IdArea")
 }
 
 model usuarios {
@@ -555,7 +556,7 @@ model repartici_n {
 model prices {
   id         Int      @id @default(autoincrement())
   item_id    Int
-  price_date DateTime @db.Date
+  price_date DateTime
   price      Float?
   items      items    @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "prices_ibfk_1")
 
