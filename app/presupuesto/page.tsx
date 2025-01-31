@@ -152,16 +152,56 @@ function PresupuestoContent() {
         if (!response.ok) throw new Error('Error al cargar los elementos.')
         const elements = await response.json()
 
-        const combined = Object.values(elements).flat()
-          .filter(element => element && typeof element === 'object')
-        setAllElements(combined)
+        const elementsAsArray = Object.values(elements).flat()
+
+        console.log('elementsAsArray', elementsAsArray)
+        console.log('ids', ids)
+        // Filter elements based on selectedIds
+        const filteredElements = elementsAsArray.filter((element: any) => {
+          console.log('element.id', element.id);
+          console.log(ids.includes(String(element.id)))
+          return ids.includes(String(element.id));
+        });
+
+        // Transform only the filtered elements
+        const transformedElements = filteredElements.map((element: any) => ({
+          id: element.id,
+          name: element.nombre || element.name || 'Sin descripción',
+          unit: element.unidad || element.unit || '',
+          quantity: element.cantidad || 0,
+          unitPrice: element.precio || element.price || 0,
+          totalPrice: (element.cantidad || 0) * (element.precio || 0),
+          price: element.precio || element.price || 0,
+          category: element.category || 'Sin categoría',
+          parcial: 0,
+          rubro: 0,
+          accumulated: 0,
+          element_tags: element.element_tags || []
+        }))
+
+        // Group filtered elements by their tags
+        const groupedElements = transformedElements.reduce((acc: GroupedData, element: TableItem) => {
+          if (element.element_tags && element.element_tags.length > 0) {
+            element.element_tags.forEach((tagObj: TagObject) => {
+              const tagName = tagObj.tags.name
+              if (!acc[tagName]) {
+                acc[tagName] = []
+              }
+              acc[tagName].push(element)
+            })
+          }
+          return acc
+        }, {})
+
+        setAllElements(transformedElements)
+        setData(groupedElements)
       } catch (err) {
         console.error('Error fetching elements:', err)
         setError('Error al cargar los elementos disponibles.')
       }
     }
     fetchElements()
-  }, [])
+  }, [ids])
 
   // Load data from localStorage on initial render
   useEffect(() => {
@@ -258,7 +298,7 @@ function PresupuestoContent() {
     // Inject obraId: 100 into the data
     const dataWithObraId = {
       data: { ...data },
-      obraId: 15, // Adding default obraId
+      obraId: 781, // Adding default obraId
     };
 
     console.log('Data with obraId:', dataWithObraId);
@@ -268,7 +308,7 @@ function PresupuestoContent() {
     console.log('Serialized JSON:', jsonData);
 
     try {
-      const response = await fetch('/api/presupuestos/tableData', {
+      const response = await fetch('/api/presupuestos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

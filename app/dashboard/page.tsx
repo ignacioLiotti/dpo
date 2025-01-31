@@ -11,6 +11,7 @@ const fetchMoreData = async (start: number, limit: number = 100): Promise<Elemen
     const res = await fetch(`/api/tagsWithElements?start=${start}&limit=${limit}`);
     if (!res.ok) throw new Error(`Failed to fetch data: ${res.statusText}`);
     const data = await res.json();
+    console.log('data', data);
     return data;
   } catch (error) {
     console.error('Error in fetchMoreData:', error);

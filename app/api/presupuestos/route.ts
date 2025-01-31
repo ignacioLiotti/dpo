@@ -21,6 +21,18 @@ export async function POST(req: Request) {
 			);
 		}
 
+		// Check if the obra exists
+		const existingObra = await prisma.obras.findUnique({
+			where: { IdObras: Number(obraId) },
+		});
+
+		if (!existingObra) {
+			return NextResponse.json(
+				{ error: `Obra with id ${obraId} not found` },
+				{ status: 404 }
+			);
+		}
+
 		// Create a new presupuesto
 		const newPresupuesto = await prisma.presupuestos.create({
 			data: {

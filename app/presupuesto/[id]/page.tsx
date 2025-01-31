@@ -695,6 +695,8 @@ export default function PresupuestoPage() {
         {loading && <p className="text-center text-gray-600">Cargando...</p>}
         {error && <p className="text-center text-red-600">{error}</p>}
 
+        {console.log('datadatadata', data)}
+
         {/* The main table */}
         {!loading && !error && (
           <div className="rounded-lg border border-gray-200">
@@ -730,7 +732,7 @@ export default function PresupuestoPage() {
                   </TableRow>
                 ) : (
                   /* For each tag, create a section header + items */
-                  Object.entries(data).map(([tag, items], tagIndex) => (
+                  Object.entries(data.data).map(([tag, items], tagIndex) => (
                     <React.Fragment key={tag}>
                       {/* Section Header */}
                       <TableRow className="bg-stone-100 border-r border-l">

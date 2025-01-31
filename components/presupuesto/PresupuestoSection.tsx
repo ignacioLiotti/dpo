@@ -188,10 +188,10 @@ export function PresupuestoSection({
     handleElementSelect(customElement);
   }
 
-  console.log('tag', tag)
-  console.log('isNewSection', isNewSection)
-  console.log('isInView', isInView)
-  console.log('filteredElements', filteredElements)
+  // console.log('tag', tag)
+  // console.log('isNewSection', isNewSection)
+  // console.log('isInView', isInView)
+  // console.log('filteredElements', filteredElements)
 
   return (
     <motion.div

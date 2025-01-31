@@ -7,6 +7,7 @@ import { Separator } from "@radix-ui/react-dropdown-menu";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Bot, BrainCogIcon, Coins, DatabaseZapIcon, FilePlus, FlaskConicalIcon, FolderSearch2, HardHatIcon, House, LayoutTemplateIcon } from "lucide-react";
 import ReactScanWrapper from "./reactScanWrapper";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -532,6 +533,7 @@ export default async function RootLayout({
             </SidebarInset>
           </SidebarProvider>
         </ReactScanWrapper>
+        <Toaster />
       </body>
     </html>
   );

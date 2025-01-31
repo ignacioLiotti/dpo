@@ -3,10 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql://"
   url      = env("DATABASE_URL")
-  // uncomment next line if you use Prisma <5.10
-  // directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model certificaciones {
@@ -91,7 +89,7 @@ model obras {
   Fecha_de_Contrato     DateTime? @map("Fecha de Contrato")
   Fecha_de_Inicio       DateTime? @map("Fecha de Inicio")
   Fecha_de_Finalizaci_n DateTime? @map("Fecha de Finalización")
-  Memoria_Desc          String?   @map("Memoria Desc") @db.Text
+  Memoria_Desc          String?   @map("Memoria Desc")
   Codigo_Meta           String?   @map("Codigo Meta") @db.VarChar(50)
   Departamento          Int?
   Monto_Adicional_1     Float?
@@ -108,7 +106,7 @@ model obras {
   Norma3                String?   @db.VarChar(50)
   Amp_Cont1             String?   @db.VarChar(50)
   Amp_Cont2             String?   @db.VarChar(50)
-  Observaciones         String?   @db.Text
+  Observaciones         String?
   Monto_Adicional_3     Float?
   Amp_Cont3             String?   @db.VarChar(50)
   Redet_monto_1         Float?
@@ -203,13 +201,13 @@ model obras {
   fecha4                DateTime?
   fecha5                DateTime?
   fecha6                DateTime?
-  datospoliza           String?   @db.Text
+  datospoliza           String?
   onm2                  Int?
   codigoSIG             Int?
   avanceproy            Int?      @map("%avanceproy")
-  MemAdic1              String?   @db.Text
-  MemAdic2              String?   @db.Text
-  MemAdic3              String?   @db.Text
+  MemAdic1              String?
+  MemAdic2              String?
+  MemAdic3              String?
   polizanum             String?   @db.VarChar(255)
   polizaemp             String?   @db.VarChar(255)
   polizamonto           Float?
@@ -220,7 +218,7 @@ model obras {
   caratula              Int?      @db.SmallInt
   presupuesto           Int?      @db.SmallInt
   drive                 Int?      @db.SmallInt
-  obserpliego           String?   @db.Text
+  obserpliego           String?
   IdProg                Int?
   autor1                String?   @db.VarChar(255)
   autor2                String?   @db.VarChar(255)
@@ -277,7 +275,7 @@ model obras {
   Plazo_Adicional4      Int?
   Final_adicional4      DateTime?
   Amp_Cont4             String?   @db.VarChar(50)
-  MemAdic4              String?   @db.Text
+  MemAdic4              String?
   ARPA_expte_4          Int?
   ARDA_expte_4          Int?
   NormaARPA4            String?   @db.VarChar(255)
@@ -307,7 +305,7 @@ model obras {
   ARPA_expte_0          Int?
   ARDA_expte_0          Int?
   pptotope              Int?      @db.SmallInt
-  presupuestos          presupuestos[]
+  presupuestos         presupuestos[]
 
   @@index([IdEmpresa], map: "obras_IdEmpresa")
   @@index([IdAreas], map: "obras_IdAreas")
@@ -404,8 +402,8 @@ model edificios {
   estadoconserv String? @db.VarChar(255)
   Superficie    Float?
   dirlote       String? @db.VarChar(255)
-  Extras        String? @db.Text
-  Observaciones String? @db.Text
+  Extras        String?
+  Observaciones String?
   Direcci_n     String? @map("Dirección") @db.VarChar(255)
   Convenio      String? @db.VarChar(255)
   Categor_a     String? @map("Categoría") @db.VarChar(255)
@@ -565,10 +563,12 @@ model prices {
 }
 
 model presupuestos {
-  id     Int      @id @default(autoincrement())
-  data   Json?
-  obraId Int?
-  obra   obras?   @relation(fields: [obraId], references: [IdObras])
+  id          Int      @id @default(autoincrement())
+  obraId      Int
+  data        Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  obra        obras    @relation(fields: [obraId], references: [IdObras])
 
   @@index([obraId])
 }
