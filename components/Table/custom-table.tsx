@@ -293,6 +293,8 @@ export default function CustomTable() {
   // 4) Row Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  console.log('selectedIds', selectedIds)
+
   // 5) Table instance
   const columns = useMemo<ColumnDef<ElementRow>[]>(
     () => [
@@ -318,11 +320,10 @@ export default function CustomTable() {
           )
         },
         cell: ({ row }) => {
-          const item = row.original
           return (
             <Checkbox
-              checked={selectedIds.has(item.id)}
-              onCheckedChange={() => handleToggleSelect(item.id)}
+              checked={row.getIsSelected()}
+              onCheckedChange={(checked) => row.toggleSelected(!!checked)}
               aria-label="Select row"
             />
           )
@@ -508,6 +509,7 @@ export default function CustomTable() {
     getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
     enableRowSelection: true,
+    getRowId: (row) => row.id,
     onRowSelectionChange: (updater) => {
       const newSelection =
         typeof updater === "function"
