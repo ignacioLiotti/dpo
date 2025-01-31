@@ -1,73 +1,88 @@
-"use client";
-import BudgetForm from "@/components/BudgetForm";
-import BudgetTable from "@/components/BudgetTable";
-import CertificateForm from "@/components/CertificateForm";
-import CertificateTable from "@/components/CertificateTable";
-import React, { useState } from "react";
+'use client'
+import CustomTable, { ElementRow } from "@/components/Table/custom-table"
+import { Card } from "@/components/ui/card"
+import { useEffect, useState } from "react"
 
-export default function Home() {
-  const [budgets, setBudgets] = useState([
-    {
-      id: 1,
-      projectName: "Project A",
-      client: "Client X",
-      status: "draft" as const,
-    },
-  ]);
+const CACHE_KEY = 'dashboard_data_cache';
+const CACHE_EXPIRY = 1000 * 60 * 60; // 1 hour
 
-  const [certificates, setCertificates] = useState([
-    {
-      id: 101,
-      project: "Project A",
-      period: "Dec 2024",
-      status: "pending" as const,
-      totalAmount: 5000,
-    },
-  ]);
+const fetchMoreData = async (start: number, limit: number = 100): Promise<ElementRow[] | null> => {
+  try {
+    const res = await fetch(`/api/tagsWithElements?start=${start}&limit=${limit}`);
+    if (!res.ok) throw new Error(`Failed to fetch data: ${res.statusText}`);
+    const data = await res.json();
+    console.log('data', data);
+    return data;
+  } catch (error) {
+    console.error('Error in fetchMoreData:', error);
+    return null;
+  }
+}
 
-  const handleSaveBudget = (data: any) => {
-    console.log("Budget Data:", data);
-    // Append to budgets list or update as needed
-  };
+export default function Page() {
+  const [data, setData] = useState<ElementRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSaveCertificate = (data: any) => {
-    console.log("Certificate Data:", data);
-    // Append to certificates list or update as needed
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Try to get data from cache first
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data: cachedData, timestamp } = JSON.parse(cached);
 
-  const handleEditBudget = (id: number) => {
-    console.log("Edit budget with ID:", id);
-  };
+          // Check if cache is still valid (not expired)
+          if (Date.now() - timestamp < CACHE_EXPIRY) {
+            setData(cachedData);
+            setIsLoading(false);
+            return;
+          }
+        }
 
-  const handleDeleteBudget = (id: number) => {
-    console.log("Delete budget with ID:", id);
-  };
+        // If no cache or expired, fetch fresh data
+        setIsLoading(true);
+        const freshData = await fetchMoreData(0, 100);
 
-  const handleViewCertificate = (id: number) => {
-    console.log("View certificate with ID:", id);
-  };
+        if (freshData) {
+          // Update state
+          setData(freshData);
 
-  const handleGenerateCertificate = (id: number) => {
-    console.log("Generate certificate with ID:", id);
-  };
+          // Save to cache with timestamp
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            data: freshData,
+            timestamp: Date.now()
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   return (
-    <main className="p-8">
-      <BudgetForm onSave={handleSaveBudget} />
-      <hr className="my-8" />
-      <BudgetTable
-        budgets={budgets}
-        onEdit={handleEditBudget}
-        onDelete={handleDeleteBudget}
-      />
-      <hr className="my-8" />
-      <CertificateForm onSave={handleSaveCertificate} />
-      <hr className="my-8" />
-      <CertificateTable
-        certificates={certificates}
-        onView={handleViewCertificate}
-        onGenerate={handleGenerateCertificate}
-      />
-    </main>
+    <div className="flex flex-1 flex-col gap-4 p-4 bg-muted/70">
+      <Card className="min-h-[100vh] flex-1 rounded-xl md:min-h-min p-0">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          </div>
+        ) : (
+          <CustomTable
+          />
+        )}
+      </Card>
+      {/* <Card className="min-h-[100vh] flex-1 rounded-xl md:min-h-min p-0" >
+            <ExpandableTable />
+          </Card> */}
+      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+        <div className="aspect-video rounded-xl bg-muted/50" />
+        <div className="aspect-video rounded-xl bg-muted/50" />
+        <div className="aspect-video rounded-xl bg-muted/50" />
+      </div>
+    </div>
   );
 }
