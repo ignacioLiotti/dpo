@@ -177,10 +177,10 @@ export async function POST(request: Request) {
 
 		// 1) Split the entire file content into statements,
 		//    ignoring semicolons inside quotes.
-		let rawStatements = splitSQLStatements(fileContent);
+		const rawStatements = splitSQLStatements(fileContent);
 
 		// 2) Transform each statement from MySQL to Postgres syntax
-		let statements = rawStatements.map(transformMySQLtoPostgres);
+		const statements = rawStatements.map(transformMySQLtoPostgres);
 
 		// 3) Execute only CREATE TABLE or INSERT statements
 		const results: { success: boolean; statement: string; error?: string }[] =

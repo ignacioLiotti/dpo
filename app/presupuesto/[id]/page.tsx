@@ -47,6 +47,7 @@ interface TableItem {
   accumulated?: string | number
   parcial?: string | number
   rubro?: string | number
+  element_tags?: Array<{ tags: { name: string } }>
 }
 
 interface GroupedData {
@@ -693,9 +694,7 @@ export default function PresupuestoPage() {
         </div>
 
         {loading && <p className="text-center text-gray-600">Cargando...</p>}
-        {error && <p className="text-center text-red-600">{error}</p>}
-
-        {console.log('datadatadata', data)}
+        {error !== null && <p className="text-center text-red-600">{error}</p>}
 
         {/* The main table */}
         {!loading && !error && (
@@ -746,7 +745,7 @@ export default function PresupuestoPage() {
                       </TableRow>
 
                       {/* Rows for this tag */}
-                      {items.map((item, rowIndex) => {
+                      {(Array.isArray(items) ? items : []).map((item: TableItem, rowIndex: number) => {
                         const rowNumber = `${tagIndex + 1}.${rowIndex + 1}`
                         return (
                           <TableRow key={item.id}>
@@ -860,10 +859,10 @@ export default function PresupuestoPage() {
                                               element =>
                                                 Array.isArray(element.element_tags) &&
                                                 element.element_tags.some(
-                                                  (tagObj: any) => tagObj.tags?.name === tag
+                                                  (tagObj: { tags?: { name: string } }) => tagObj.tags?.name === tag
                                                 ) &&
-                                                !items.some(
-                                                  existing => existing.id === element.id
+                                                !(Array.isArray(items) ? items : []).some(
+                                                  (existing: TableItem) => existing.id === element.id
                                                 )
                                             )
                                             .map((element, idx) => (
