@@ -62,9 +62,9 @@ export async function DELETE(
 ) {
 	try {
 		const id = (await params).id;
-		await prisma.certificadosObraMensuales.delete({
+		await prisma.certificaciones.delete({
 			where: {
-				id: parseInt(id),
+				IdCertificado: parseInt(id),
 			},
 		});
 

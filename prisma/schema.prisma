@@ -307,6 +307,7 @@ model obras {
   ARPA_expte_0          Int?
   ARDA_expte_0          Int?
   pptotope              Int?      @db.SmallInt
+  presupuestos          presupuestos[]
 
   @@index([IdEmpresa], map: "obras_IdEmpresa")
   @@index([IdAreas], map: "obras_IdAreas")
@@ -568,4 +569,6 @@ model presupuestos {
   data   Json?
   obraId Int?
   obra   obras?   @relation(fields: [obraId], references: [IdObras])
+
+  @@index([obraId])
 }

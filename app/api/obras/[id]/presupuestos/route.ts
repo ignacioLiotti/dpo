@@ -13,7 +13,6 @@ export async function GET(req: Request) {
 		// Fetch the presupuestos related to the obra from your data source using Prisma
 		const presupuestos = await prisma.presupuestos.findMany({
 			where: { obraId: id }, // Replace 'obraId' with the correct field name if different
-			include: { certificados: true }, // Include certificados
 		});
 
 		if (!presupuestos || presupuestos.length === 0) {
