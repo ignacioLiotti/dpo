@@ -32,6 +32,18 @@ function getSortClause(sortParam: string | null): string {
 
 export async function GET(request: Request) {
 	try {
+		// Debug check for DATABASE_URL
+		if (
+			!process.env.DATABASE_URL?.startsWith("postgresql://") &&
+			!process.env.DATABASE_URL?.startsWith("postgres://")
+		) {
+			console.error(
+				"Invalid DATABASE_URL format:",
+				process.env.DATABASE_URL?.substring(0, 20)
+			);
+			throw new Error("Invalid database configuration");
+		}
+
 		const url = new URL(request.url);
 
 		// 1) Grab parameters
