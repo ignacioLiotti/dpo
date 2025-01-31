@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Key, ReactNode, useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,70 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface Obra {
+  IdObras: Key | null | undefined;
+  NombreObra: ReactNode;
+  Norma_Legal: ReactNode;
+  Monto_Contrato: ReactNode;
+  IdEmpresa: ReactNode;
+  IdInspectores: ReactNode;
+  IdReparticion: ReactNode;
+  IdAvance: ReactNode;
+  Plazo: ReactNode;
+  IdModalidad: ReactNode;
+  IdLocalidad: ReactNode;
+  IdAreas: ReactNode;
+  Fecha_de_Contrato: ReactNode;
+  Fecha_de_Inicio: ReactNode;
+  Fecha_de_Finalizaci__n: ReactNode;
+  Memoria_Desc: ReactNode;
+  Codigo_Meta: ReactNode;
+  Departamento: ReactNode;
+  Monto_Adicional_1: ReactNode;
+  Plazo_Adicional1: ReactNode;
+  Final_adicional1: ReactNode;
+  Monto_Adicional_2: ReactNode;
+  Plazo_Adicional2: ReactNode;
+  Final_adicional2: ReactNode;
+  Plazo_Adicional3: ReactNode;
+  Final_adicional3: ReactNode;
+  IdProyectista: ReactNode;
+  Norma1: ReactNode;
+  Norma2: ReactNode;
+  Norma3: ReactNode;
+  Amp_Cont1: ReactNode;
+  Amp_Cont2: ReactNode;
+  Observaciones: ReactNode;
+  Monto_Adicional_3: ReactNode;
+  Amp_Cont3: ReactNode;
+  Redet_monto_1: ReactNode;
+  Redet_monto_2: ReactNode;
+  Redet_monto_3: ReactNode;
+  Redet_norma_1: ReactNode;
+  Redet_norma_2: ReactNode;
+  Redet_norma_3: ReactNode;
+  Proyecto: ReactNode;
+  A__oTerminada: ReactNode;
+  Expte: ReactNode;
+  pliego: ReactNode;
+  basico: ReactNode;
+  prioridad: ReactNode;
+  fuenteO: ReactNode;
+  Edificio: ReactNode;
+  pptoof: ReactNode;
+  p: ReactNode;
+  Fechalicit: ReactNode;
+  ResponsableProy: ReactNode;
+  Fechapliego: ReactNode;
+  Fechaelevado: ReactNode;
+  NormaARP: ReactNode;
+  NormaARD: ReactNode;
+  fechaARP: ReactNode;
+  fechaARD: ReactNode;
+  inaugurada: ReactNode;
+  ainaugurar: ReactNode;
+  fechainaugur: ReactNode;
+  noinaugur: ReactNode;
+  observinaugur: ReactNode;
   id: number;
   nombre: string;
   ubicacion: string;

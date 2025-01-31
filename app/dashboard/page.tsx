@@ -18,11 +18,6 @@ const fetchMoreData = async (start: number, limit: number = 100): Promise<Elemen
   }
 }
 
-interface CustomTableProps {
-  fetchedData: ElementRow[];
-  onFetchMore: (startIndex: number) => Promise<ElementRow[]>;
-}
-
 export default function Page() {
   const [data, setData] = useState<ElementRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,20 +61,6 @@ export default function Page() {
 
     loadData();
   }, []);
-
-  const handleFetchMore = async (startIndex: number) => {
-    const newData = await fetchMoreData(startIndex, 100);
-    if (newData) {
-      // Update cache with new combined data
-      const updatedData = [...data, ...newData];
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: updatedData,
-        timestamp: Date.now()
-      }));
-      return newData;
-    }
-    return [];
-  };
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 bg-muted/70">

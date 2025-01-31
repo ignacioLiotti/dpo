@@ -1,4 +1,3 @@
-import { NextApiRequest, NextApiResponse } from "next";
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client"; // Import Prisma Client
 

@@ -45,16 +45,16 @@ export function DataTableToolbar<TData>({
     resetCallbacks.forEach(callback => callback());
   };
 
-  const isValidDate = (value) => {
+  const isValidDate = (value: any) => {
     return (
-      (value instanceof Date && !isNaN(value)) ||
+      (value instanceof Date && !isNaN(value as any)) ||
       (typeof value === 'string' &&
         /\d{2,4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}\/\d{2,4}/.test(value) &&
         !isNaN(new Date(value).getTime()))
     );
   };
 
-  const handleAction = (action) => {
+  const handleAction = (action: any) => {
     if (action.value === 'export') {
       // handleExport();
     } else if (action.value === 'delete') {
@@ -68,7 +68,7 @@ export function DataTableToolbar<TData>({
     // { value: 'delete', label: 'Delete' }
   ];
 
-  const handleFilterChange = (event) => {
+  const handleFilterChange = (event: any) => {
     if (filterColumn === "global") return setGlobalFilter(event.target.value);
     else return table.getColumn(filterColumn)?.setFilterValue(event.target.value);
   };
@@ -80,25 +80,25 @@ export function DataTableToolbar<TData>({
         <div className="tw-flex tw-flex-1 tw-items-center  tw-space-x-2 tw-text-sm">
           {/* Texto para traducir */}
           <Input
-            placeholder={filterColumn !== "global" ? `Filtrar ${table.getColumn(filterColumn)?.columnDef?.headerName} ...` : 'Buscar ...'}
+            placeholder={filterColumn !== "global" ? `Filtrar ${table.getColumn(filterColumn)?.columnDef.header} ...` : 'Buscar ...'}
             value={globalFilter ? globalFilter : (table.getColumn(filterColumn)?.getFilterValue() as string)}
             onChange={handleFilterChange}
             className="tw-h-8 tw-w-[150px] lg:tw-w-[250px]"
           />
-          {columnsConfig.columns?.map((col) => (
+          {columnsConfig.columns?.map((col: any) => (
             col.filterType && table.getColumn(col.accessorKey) && col.filterOptions && (
               <DataTableFacetedFilter
                 key={col.accessorKey}
                 column={table.getColumn(col.accessorKey)}
                 title={col.header}
                 options={col.filterOptions}
-                onResetFilters={registerResetCallback}
+                onResetFilters={() => registerResetCallback(() => { })}
               />
             )
           ))}
           {isFiltered && (
             <Button
-              variant="brand-ghost"
+              variant="ghost"
               onClick={handleResetFilters} // Use the new handleResetFilters function
               className="tw-h-8 tw-px-2 lg:tw-px-3"
             >
@@ -120,7 +120,7 @@ export function DataTableToolbar<TData>({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {/* Texto para traducir */}
-            <Button variant="brand-outline">Acciones</Button>
+            <Button variant="outline">Acciones</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="tw-w-56">
             {/* Texto para traducir */}

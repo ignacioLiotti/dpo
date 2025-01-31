@@ -94,16 +94,10 @@ export async function GET(request: Request) {
           ${whereClause}
         `;
 
-				const [items, totalResult] = await Promise.all([
+				const [items] = await Promise.all([
 					prisma.$queryRawUnsafe(itemsQuery),
 					prisma.$queryRawUnsafe(totalQuery),
 				]);
-
-				// totalResult should be an array of objects; each object has { count: number }
-				const totalCount =
-					Array.isArray(totalResult) && totalResult[0]?.count
-						? Number(totalResult[0].count)
-						: 0;
 
 				// 6) Process items to match the expected format
 				const itemsWithDetails = (items as any[]).map((item) => ({

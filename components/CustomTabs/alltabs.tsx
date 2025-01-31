@@ -9,6 +9,7 @@ interface AllTabsProps {
   type: "text" | "icon" | "both"; // Type of content (text, icon, or both)
   direction: "vertical" | "horizontal"; // Layout direction of the tabs
   variant: "default" | "card"; // Determines how the tab content is displayed
+  children: React.ReactNode;
 }
 
 export default function AllTabs({ type, direction, variant, children }: AllTabsProps) {

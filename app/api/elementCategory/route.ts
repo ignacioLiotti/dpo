@@ -8,12 +8,18 @@ export async function GET(req: Request) {
 		const category = url.searchParams.get("category");
 
 		// Validate the category
-		if (!["materiales", "indices", "items", "jornales"].includes(category || "")) {
-			return NextResponse.json({ error: "Invalid or missing category." }, { status: 400 });
+		if (
+			!["materiales", "indices", "items", "jornales"].includes(category || "")
+		) {
+			return NextResponse.json(
+				{ error: "Invalid or missing category." },
+				{ status: 400 }
+			);
 		}
-
 		// Fetch elements and tags for the requested category
-		const elements = await prisma[category].findMany({
+		const elements = await (
+			prisma[category as keyof typeof prisma] as any
+		).findMany({
 			include: {
 				[`${category}_prices`]: {
 					orderBy: { valid_from: "desc" },
@@ -31,17 +37,18 @@ export async function GET(req: Request) {
 				},
 			},
 		});
-
 		// Map elements to include only necessary fields for the combobox
-		const result = elements.map((element) => ({
+		const result = elements.map((element: any) => ({
 			id: element.id,
 			name: element.name || "Sin descripción",
 			unit: element.unit || "",
 			price: element[`${category}_prices`]?.[0]?.price || 0,
-			tags: element.element_tags?.map((tag) => ({
-				id: tag.tags.id,
-				name: tag.tags.name,
-			})),
+			tags: element.element_tags?.map(
+				(tag: { tags: { id: number; name: string } }) => ({
+					id: tag.tags.id,
+					name: tag.tags.name,
+				})
+			),
 		}));
 
 		// Return the result

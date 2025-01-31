@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   AudioWaveform,
-  BookOpen,
   Bot,
   BrainCogIcon,
   Coins,
@@ -19,8 +18,6 @@ import {
   LayoutTemplateIcon,
   Map,
   PieChart,
-  Settings2,
-  SquareTerminal,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -42,7 +39,7 @@ const transformDirectoryToNav = (
 ): any[] => {
   const result: any[] = [];
 
-  const findIconKey = (key) => {
+  const findIconKey = (key: string) => {
     switch (key.toLowerCase()) {
       case "create":
         return "FilePlus";
@@ -120,9 +117,8 @@ const iconMap = {
   FlaskConicalIcon,
   Bot
 };
-
 // Function to map icon keys back to components
-const mapIconsToComponents = (navItems) => {
+const mapIconsToComponents = (navItems: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[]) => {
   return navItems.map(item => ({
     ...item,
     icon: iconMap[item.iconKey],
@@ -137,7 +133,7 @@ const capitalizeFirstLetter = (string: string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-export function AppSidebar({ mappedData }) {
+export function AppSidebar({ mappedData }: { mappedData: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[] }) {
 
   const teams = [
     {

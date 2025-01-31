@@ -24,101 +24,101 @@ export const metadata: Metadata = {
 };
 
 // Modify the transform function to store icon keys
-const transformDirectoryToNav = (
-  structure: Record<string, any>,
-  basePath: string = ""
-): any[] => {
-  const result: any[] = [];
+// const transformDirectoryToNav = (
+//   structure: Record<string, any>,
+//   basePath: string = ""
+// ): any[] => {
+//   const result: any[] = [];
 
-  const findIconKey = (key: string) => {
-    switch (key.toLowerCase()) {
-      case "create":
-        return "FilePlus";
-      case "main":
-        return "House";
-      case "explore":
-        return "FolderSearch2";
-      case "api":
-        return "BrainCogIcon";
-      case "dashboard":
-        return "LayoutTemplateIcon";
-      case "db":
-        return "DatabaseZapIcon";
-      case "obras":
-        return "HardHatIcon";
-      case "presupuesto":
-        return "Coins";
-      case "uitest":
-        return "FlaskConicalIcon";
-      default:
-        return "Bot"; // Default icon key
-    }
-  };
+//   const findIconKey = (key: string) => {
+//     switch (key.toLowerCase()) {
+//       case "create":
+//         return "FilePlus";
+//       case "main":
+//         return "House";
+//       case "explore":
+//         return "FolderSearch2";
+//       case "api":
+//         return "BrainCogIcon";
+//       case "dashboard":
+//         return "LayoutTemplateIcon";
+//       case "db":
+//         return "DatabaseZapIcon";
+//       case "obras":
+//         return "HardHatIcon";
+//       case "presupuesto":
+//         return "Coins";
+//       case "uitest":
+//         return "FlaskConicalIcon";
+//       default:
+//         return "Bot"; // Default icon key
+//     }
+//   };
 
-  for (const key in structure) {
-    if (key === "files") continue;
+//   for (const key in structure) {
+//     if (key === "files") continue;
 
-    const folder = structure[key];
-    const files = folder.files || [];
-    const hasPageFile = files.includes("page.tsx");
-    const subfolders = Object.keys(folder).filter(k => k !== "files");
+//     const folder = structure[key];
+//     const files = folder.files || [];
+//     const hasPageFile = files.includes("page.tsx");
+//     const subfolders = Object.keys(folder).filter(k => k !== "files");
 
-    if (hasPageFile) {
-      const iconKey = findIconKey(key);
+//     if (hasPageFile) {
+//       const iconKey = findIconKey(key);
 
-      const items = transformDirectoryToNav(folder, `${basePath}/${key}`);
-      result.push({
-        title: capitalizeFirstLetter(key),
-        url: `${basePath}/${key}`.replace(/\/+/g, "/"),
-        iconKey: iconKey, // Store icon key
-        items: [
-          {
-            title: "Main",
-            url: `${basePath}/${key}`.replace(/\/+/g, "/"),
-            iconKey: "House", // Use the Main icon key for the "Main" page
-          },
-          ...items
-        ]
-      });
-    } else if (typeof folder === "object") {
-      const iconKey = findIconKey(key);
+//       const items = transformDirectoryToNav(folder, `${basePath}/${key}`);
+//       result.push({
+//         title: capitalizeFirstLetter(key),
+//         url: `${basePath}/${key}`.replace(/\/+/g, "/"),
+//         iconKey: iconKey, // Store icon key
+//         items: [
+//           {
+//             title: "Main",
+//             url: `${basePath}/${key}`.replace(/\/+/g, "/"),
+//             iconKey: "House", // Use the Main icon key for the "Main" page
+//           },
+//           ...items
+//         ]
+//       });
+//     } else if (typeof folder === "object") {
+//       const iconKey = findIconKey(key);
 
-      result.push({
-        title: capitalizeFirstLetter(key),
-        url: `${basePath}/${key}`.replace(/\/+/g, "/"),
-        iconKey: iconKey, // Store icon key
-        items: transformDirectoryToNav(folder, `${basePath}/${key}`)
-      });
-    }
-  }
+//       result.push({
+//         title: capitalizeFirstLetter(key),
+//         url: `${basePath}/${key}`.replace(/\/+/g, "/"),
+//         iconKey: iconKey, // Store icon key
+//         items: transformDirectoryToNav(folder, `${basePath}/${key}`)
+//       });
+//     }
+//   }
 
-  return result;
-}
+//   return result;
+// }
 
-// Map icon keys back to components
-const iconMap = {
-  FilePlus,
-  House,
-  FolderSearch2,
-  BrainCogIcon,
-  LayoutTemplateIcon,
-  DatabaseZapIcon,
-  HardHatIcon,
-  Coins,
-  FlaskConicalIcon,
-  Bot
-};
-// Function to map icon keys back to components
-const mapIconsToComponents = (navItems: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[]) => {
-  return navItems.map(item => ({
-    ...item,
-    icon: iconMap[item.iconKey],
-    items: item.items.map(subItem => ({
-      ...subItem,
-      icon: iconMap[subItem.iconKey]
-    }))
-  }));
-};
+// // Map icon keys back to components
+// const iconMap = {
+//   FilePlus,
+//   House,
+//   FolderSearch2,
+//   BrainCogIcon,
+//   LayoutTemplateIcon,
+//   DatabaseZapIcon,
+//   HardHatIcon,
+//   Coins,
+//   FlaskConicalIcon,
+//   Bot
+// };
+// // Function to map icon keys back to components
+// const mapIconsToComponents = (navItems: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[]) => {
+//   return navItems.map(item => ({
+//     ...item,
+//     icon: iconMap[item.iconKey],
+//     items: item.items.map(subItem => ({
+//       ...subItem,
+//       icon: iconMap[subItem.iconKey]
+//     }))
+//   }));
+// };
 
 const capitalizeFirstLetter = (string: string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -506,7 +506,7 @@ export default async function RootLayout({
       >
         <ReactScanWrapper>
           <SidebarProvider>
-            <AppSidebar mappedData={mapped} />
+            <AppSidebar mappedData={mapped as any} />
             <SidebarInset>
               <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
                 <div className="flex items-center gap-2 px-4">

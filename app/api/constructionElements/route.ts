@@ -5,7 +5,7 @@ import { getCachedData } from "@/lib/cache";
 export async function GET() {
 	// Query 'elements' table from your local DBasdasd
 	const elements = await getCachedData("elements", async () => {
-		return prisma.elements.findMany();
+		return prisma.items.findMany();
 	});
 	return NextResponse.json(elements);
 }

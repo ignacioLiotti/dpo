@@ -15,7 +15,6 @@ export async function POST(req: Request) {
 		console.log("aca", await request);
 
 		if (!obraId) {
-			console.log("obraId is required. Error: ", error.stack);
 			return NextResponse.json(
 				{ error: "obraId is required" },
 				{ status: 400 }
@@ -39,7 +38,7 @@ export async function POST(req: Request) {
 }
 
 // GET Handler
-export async function GET(req: Request) {
+export async function GET() {
 	try {
 		// Fetch all presupuestos sorted by id
 		const presupuestos = await prisma.presupuestos.findMany({

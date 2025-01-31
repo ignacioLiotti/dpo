@@ -1,16 +1,8 @@
 'use client';
-import ExampleDocument from '@/components/testDocument/page';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
-import { Box, House, PanelsTopLeft } from 'lucide-react';
+
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { motion } from "motion/react";
-import useMeasure from 'react-use-measure'
 import TabsComponent from './TabsComponent';
-import PresupuestosContent from './PresupuestosContent';
 
 function ObraPage() {
   const pathname = usePathname();

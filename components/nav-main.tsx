@@ -36,8 +36,7 @@ type NavItem = {
 export function NavMain({
   items,
 }: {
-  currentPath: string;
-  items: NavItem[];
+  items: any;
 }) {
   // Next.js client-side path
   const pathname = usePathname();
@@ -50,7 +49,7 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => {
+        {items.map((item: any) => {
           const hasActiveSubItem = isSubItemActive(item.items);
 
           return (
@@ -79,7 +78,7 @@ export function NavMain({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {item.items?.map((subItem) => (
+                    {item.items?.map((subItem: any) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           asChild

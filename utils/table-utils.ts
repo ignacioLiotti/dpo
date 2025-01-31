@@ -18,13 +18,24 @@ export const highlightText = (text: string, highlight: string) => {
 	const regex = new RegExp(`(${highlight})`, "gi");
 	return text
 		.split(regex)
-		.map((part, i) => (regex.test(part) ? createElement("mark", { key: i, className: "bg-yellow-200" }, part) : part));
+		.map((part, i) =>
+			regex.test(part)
+				? createElement("mark", { key: i, className: "bg-yellow-200" }, part)
+				: part
+		);
 };
 
-export const sortData = (data: Item[], sortColumn: keyof Item, sortDirection: "asc" | "desc"): Item[] => {
+export const sortData = (
+	data: Item[],
+	sortColumn: keyof Item,
+	sortDirection: "asc" | "desc"
+): Item[] => {
 	const sortedData = [...data].sort((a, b) => {
-		if (a[sortColumn] < b[sortColumn]) return sortDirection === "asc" ? -1 : 1;
-		if (a[sortColumn] > b[sortColumn]) return sortDirection === "asc" ? 1 : -1;
+		const aVal = a[sortColumn];
+		const bVal = b[sortColumn];
+		if (aVal === undefined || bVal === undefined) return 0;
+		if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+		if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
 		return 0;
 	});
 

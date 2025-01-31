@@ -1,40 +1,13 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Check, ChevronsUpDown, Package, Plus, Trash2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { debounce } from 'lodash'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
+
 import { Card } from '@/components/ui/card'
 
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -42,7 +15,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Box, House, PanelsTopLeft } from "lucide-react";
-import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { PresupuestoSection } from '@/components/presupuesto/PresupuestoSection'
@@ -159,18 +131,18 @@ function AddSectionDialog({ onAdd }: AddSectionDialogProps) {
   )
 }
 
-export default function PresupuestoPage() {
+// Separate component for search params
+function PresupuestoContent() {
   const searchParams = useSearchParams()
   const idsParam = searchParams.get('selectedIds') ?? ''
   const ids = React.useMemo(() => idsParam.split(',').filter(Boolean), [idsParam])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Data grouped by tag => { [tag: string]: TableItem[] }
   const [data, setData] = useState<GroupedData>({})
   const [newSections, setNewSections] = useState<Set<string>>(new Set())
   const [allElements, setAllElements] = useState<any[]>([])
+  const [previewVersion, setPreviewVersion] = useState<string | boolean>('false')
 
   // Fetch all elements on mount
   useEffect(() => {
@@ -343,10 +315,6 @@ export default function PresupuestoPage() {
     }, 100)
   }
 
-  const [previewVersion, setPreviewVersion] = useState<string | boolean>('false')
-
-  console.log(previewVersion)
-
   // Calculate grand total (sum of all sections total price)
   const grandTotal = React.useMemo(() => {
     return Object.values(data).reduce((total, items) => {
@@ -507,7 +475,15 @@ export default function PresupuestoPage() {
         </div>
       </form>
     </div>
+  )
+}
 
+// Main component
+export default function PresupuestoPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PresupuestoContent />
+    </Suspense>
   )
 }
 

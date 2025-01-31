@@ -201,7 +201,7 @@ export default function ExpandableTable() {
   const handleToggleSelect = (item: Item) => {
     const allIds = collectAllIdsRecursive(item)
     const newSelectedIds = new Set(selectedIds)
-    const newExpanded: ExpandedState = { ...expanded }
+    const newExpanded = { ...expanded as any }
 
     // If any child is not selected, select them all. Otherwise, unselect them all.
     const shouldSelect = allIds.some((id) => !newSelectedIds.has(id))
@@ -261,7 +261,7 @@ export default function ExpandableTable() {
       setExpanded({})
       return
     }
-    const newExpanded: ExpandedState = { ...expanded }
+    const newExpanded: ExpandedState = { ...expanded as any }
     const searchLower = searchTerm.toLowerCase()
 
     data.forEach((item) => {
@@ -274,7 +274,7 @@ export default function ExpandableTable() {
         )
       )
       if (itemMatches || subItemMatches) {
-        newExpanded[item.id] = true
+        (newExpanded as Record<string, boolean>)[item.id] = true;
       }
     })
 

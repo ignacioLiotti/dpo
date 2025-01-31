@@ -13,9 +13,8 @@ export async function POST(req: Request) {
 
 		console.log("aca", data, obraId);
 		console.log("aca", await request);
-
 		if (!obraId) {
-			console.log("obraId is required. Error: ", error.stack);
+			console.log("obraId is required");
 			return NextResponse.json(
 				{ error: "obraId is required" },
 				{ status: 400 }
