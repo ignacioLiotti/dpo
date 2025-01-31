@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { items } from "@prisma/client";
 
 export async function GET(req: Request) {
 	try {
@@ -7,48 +8,38 @@ export async function GET(req: Request) {
 		const url = new URL(req.url);
 		const category = url.searchParams.get("category");
 
-		// Validate the category
-		if (
-			!["materiales", "indices", "items", "jornales"].includes(category || "")
-		) {
+		// Validate the category parameter exists
+		if (!category) {
 			return NextResponse.json(
-				{ error: "Invalid or missing category." },
+				{ error: "Category parameter is required." },
 				{ status: 400 }
 			);
 		}
-		// Fetch elements and tags for the requested category
-		const elements = await (
-			prisma[category as keyof typeof prisma] as any
-		).findMany({
+
+		// Fetch items for the requested category
+		const elements = await prisma.items.findMany({
+			where: {
+				origin_table: category,
+			},
 			include: {
-				[`${category}_prices`]: {
-					orderBy: { valid_from: "desc" },
-					take: 1,
-				},
-				element_tags: {
-					include: {
-						tags: {
-							select: {
-								id: true,
-								name: true,
-							},
-						},
+				prices: {
+					orderBy: {
+						price_date: "desc",
 					},
+					take: 1,
 				},
 			},
 		});
-		// Map elements to include only necessary fields for the combobox
-		const result = elements.map((element: any) => ({
+
+		// Map elements to include only necessary fields
+		const result = elements.map((element) => ({
 			id: element.id,
-			name: element.name || "Sin descripción",
-			unit: element.unit || "",
-			price: element[`${category}_prices`]?.[0]?.price || 0,
-			tags: element.element_tags?.map(
-				(tag: { tags: { id: number; name: string } }) => ({
-					id: tag.tags.id,
-					name: tag.tags.name,
-				})
-			),
+			code: element.cod,
+			name: element.item_name,
+			unit: element.unid,
+			price: element.prices[0]?.price || 0,
+			category: element.category,
+			origin: element.origin_table,
 		}));
 
 		// Return the result

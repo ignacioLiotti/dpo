@@ -3,13 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
 	try {
-		const certificados = await prisma.certificadosObraMensuales.findMany({
-			include: {
-				presupuesto: true,
-				certificadoAnterior: true,
-				certificadoSiguiente: true,
-			},
-		});
+		const certificados = await prisma.certificaciones.findMany();
 		return NextResponse.json(certificados);
 	} catch (error) {
 		console.error("Error fetching certificados:", error);
@@ -23,18 +17,8 @@ export async function GET() {
 export async function POST(request: Request) {
 	try {
 		const body = await request.json();
-		const { presupuestoId, documentoJson, certificadoAnteriorId } = body;
-
-		const certificado = await prisma.certificadosObraMensuales.create({
-			data: {
-				presupuestoId,
-				documentoJson,
-				certificadoAnteriorId,
-			},
-			include: {
-				presupuesto: true,
-				certificadoAnterior: true,
-			},
+		const certificado = await prisma.certificaciones.create({
+			data: body,
 		});
 
 		return NextResponse.json(certificado);

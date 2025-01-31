@@ -7,14 +7,9 @@ export async function GET(
 ) {
 	try {
 		const id = (await params).id;
-		const certificado = await prisma.certificadosObraMensuales.findUnique({
+		const certificado = await prisma.certificaciones.findUnique({
 			where: {
-				id: parseInt(id),
-			},
-			include: {
-				presupuesto: true,
-				certificadoAnterior: true,
-				certificadoSiguiente: true,
+				IdCertificado: parseInt(id),
 			},
 		});
 
@@ -41,21 +36,14 @@ export async function PUT(
 ) {
 	try {
 		const body = await request.json();
-		const { documentoJson } = body;
+		const { documentoJson, ...otherData } = body;
 		const id = (await params).id;
 
-		const certificado = await prisma.certificadosObraMensuales.update({
+		const certificado = await prisma.certificaciones.update({
 			where: {
-				id: parseInt(id),
+				IdCertificado: parseInt(id),
 			},
-			data: {
-				documentoJson,
-			},
-			include: {
-				presupuesto: true,
-				certificadoAnterior: true,
-				certificadoSiguiente: true,
-			},
+			data: otherData,
 		});
 
 		return NextResponse.json(certificado);

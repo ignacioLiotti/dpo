@@ -562,3 +562,10 @@ model prices {
 
   @@index([item_id], map: "item_id")
 }
+
+model presupuestos {
+  id     Int      @id @default(autoincrement())
+  data   Json?
+  obraId Int?
+  obra   obras?   @relation(fields: [obraId], references: [IdObras])
+}
