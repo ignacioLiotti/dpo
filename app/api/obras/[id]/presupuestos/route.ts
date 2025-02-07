@@ -1,35 +1,31 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client"; // Import Prisma Client
+import { NextRequest, NextResponse } from "next/server";
+import { handleAPIError } from "@/lib/utils/errorHandler";
+import {
+	getPresupuestosByObraId,
+	createPresupuesto,
+} from "@/app/controllers/presupuestos.controller";
 
-const prisma = new PrismaClient(); // Initialize Prisma Client
-
-// Function to handle GET request for presupuestos of a singular obra
-export async function GET(req: Request) {
+export async function GET(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
 	try {
-		const urlParts = req.url.split("/");
-		console.log("urlParts", urlParts);
-		const id = parseInt(urlParts[urlParts.length - 2], 10); // Ensure id is parsed as an integer
-
-		// Fetch the presupuestos related to the obra from your data source using Prisma
-		const presupuestos = await prisma.presupuestos.findMany({
-			where: { obraId: id }, // Replace 'obraId' with the correct field name if different
-		});
-
-		if (!presupuestos || presupuestos.length === 0) {
-			return NextResponse.json(
-				{ error: "No presupuestos found for this obra" },
-				{ status: 404 }
-			);
-		}
-
-		return NextResponse.json(presupuestos, { status: 200 }); // Return the presupuestos data
+		const presupuestos = await getPresupuestosByObraId(Number(params.id));
+		return NextResponse.json(presupuestos);
 	} catch (error) {
-		if (error instanceof Error) {
-			console.log("Error: ", error.stack);
-		}
-		return NextResponse.json(
-			{ error: "Internal Server Error" },
-			{ status: 500 }
-		);
+		return handleAPIError(error);
+	}
+}
+
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	try {
+		const data = await request.json();
+		const presupuesto = await createPresupuesto(Number(params.id), data);
+		return NextResponse.json(presupuesto, { status: 201 });
+	} catch (error) {
+		return handleAPIError(error);
 	}
 }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Check, Plus, Trash2 } from "lucide-react"
+import { Check, Plus, Trash2, FilePenLine, BookIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/table"
 import { debounce } from 'lodash'
 import { Card } from '@/components/ui/card'
-
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -37,6 +36,24 @@ import {
 } from "@/components/ui/tooltip";
 import { Box, House, PanelsTopLeft } from "lucide-react";
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
+import { Save } from "lucide-react"
+import { PresupuestoSection } from '@/components/presupuesto/PresupuestoSection'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import dynamic from 'next/dynamic'
+import { GroupedPresupuestoData, GroupedMedicionData, PresupuestoItem } from '../types'
+
+// Dynamically import MedicionSection to prevent mixing of types
+const MedicionSection = dynamic(() => import('./MedicionSection'), {
+  loading: () => <div>Cargando medición...</div>
+})
 
 interface TableItem {
   id: string | number
@@ -48,10 +65,35 @@ interface TableItem {
   parcial?: string | number
   rubro?: string | number
   element_tags?: Array<{ tags: { name: string } }>
+  quantity?: number
+  unitPrice?: number
+  totalPrice?: number
+  anterior?: number
+  presente?: number
+  acumulado?: number
+  originalUnit?: string
 }
 
 interface GroupedData {
   [tag: string]: TableItem[]
+}
+
+interface MedicionData {
+  fecha: string
+  items: {
+    itemId: string | number
+    anterior: number
+    presente: number
+    acumulado: number
+  }[]
+}
+
+interface Medicion {
+  id: number
+  presupuestoId: number
+  data: MedicionData
+  createdAt: string
+  updatedAt: string
 }
 
 const testData = {
@@ -450,538 +492,229 @@ const testData = {
 }
 
 export default function PresupuestoPage() {
-  const [loading, setLoading] = useState(false)
+  const params = useParams()
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Extract the id from the URL
-  const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
-
-  // Initialize state for data
-  const [data, setData] = useState<GroupedData>({});
+  const [data, setData] = useState<GroupedPresupuestoData>({})
+  const [previewVersion, setPreviewVersion] = useState<'false' | 'medicion'>('false')
+  const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
-    if (id) {
-      // Fetch or manipulate data based on the id
-      // For example, you might fetch data from an API
-      fetchDataById(id);
-    }
-  }, [id]);
-
-  const fetchDataById = async (id: string) => {
-    setLoading(true);
-    try {
-      // Replace this with your actual data fetching logic
-      const response = await fetch(`/api/presupuestos/${id}`);
-      const result: GroupedData = await response.json();
-      setData(result);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      setError("Error al cargar los datos.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // For searching & adding new items
-  const [searchOpen, setSearchOpen] = useState<{ [key: string]: boolean }>({})
-  const [generalSearchOpen, setGeneralSearchOpen] = useState(false)
-  const [allElements, setAllElements] = useState<any[]>([])
-  const [filteredElements, setFilteredElements] = useState<any[]>([])
-  const [searchValue, setSearchValue] = useState("")
-
-  const serializeDataToJson = () => {
-    return JSON.stringify(data);
-  };
-
-  // Function to initialize state from JSON
-  const initializeDataFromJson = (jsonString: string) => {
-    try {
-      const parsedData: GroupedData = JSON.parse(jsonString);
-      setData(parsedData);
-    } catch (error) {
-      console.error("Failed to parse JSON:", error);
-      setError("Error al cargar los datos desde JSON.");
-    }
-  };
-
-  // -----------------------------
-  //   Debounced Search Setup
-  // -----------------------------
-  const debouncedSearch = useCallback(
-    debounce((searchTerm: string) => {
-      if (searchTerm.length >= 4) {
-        const filtered = allElements.filter(element =>
-          element.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        setFilteredElements(filtered)
-      } else {
-        setFilteredElements([])
+    const fetchData = async () => {
+      try {
+        const presupuestoResponse = await fetch(`/api/presupuestos/${params.id}`)
+        if (!presupuestoResponse.ok) throw new Error('Error al cargar el presupuesto.')
+        const presupuestoData = await presupuestoResponse.json()
+        setData(presupuestoData.data)
+        console.log('data', presupuestoData.data)
+        setLoading(false)
+      } catch (err) {
+        console.error('Error fetching data:', err)
+        setError('Error al cargar los datos.')
+        setLoading(false)
       }
-    }, 300),
-    [allElements]
-  )
+    }
+    fetchData()
+  }, [params.id])
 
-  const handleSearch = (value: string) => {
-    setSearchValue(value)
-    debouncedSearch(value)
-  }
+  // Update scroll detection
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0)
+    }
 
-  // -----------------------------
-  //   Update Data in state
-  // -----------------------------
-  const updateData = (
-    tag: string,
-    itemId: string | number,
-    key: keyof TableItem,
-    newValue: string
-  ) => {
+    window.addEventListener('scroll', handleScroll)
+    handleScroll()
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Transform presupuesto data to medicion data
+  const transformToMedicionData = (): GroupedMedicionData => {
+    const medicionData: GroupedMedicionData = {};
+
+    Object.entries(data).forEach(([tag, items]) => {
+      medicionData[tag] = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category || '',
+        anterior: 0,
+        presente: 0,
+        acumulado: 0
+      }));
+    });
+
+    return medicionData;
+  };
+
+  // Calculate grand total and section rubros
+  const { grandTotal, sectionRubros } = React.useMemo(() => {
+    const total = Object.values(data).reduce((total, items) => {
+      if (!Array.isArray(items)) return total;
+      return total + items.reduce((sectionTotal, item) => {
+        const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
+        return sectionTotal + itemTotal;
+      }, 0);
+    }, 0);
+
+    const rubros = Object.entries(data).map(([tag, items]) => {
+      if (!Array.isArray(items)) return 0;
+
+      const sectionTotal = items.reduce((sum, item) => {
+        const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
+        return sum + itemTotal;
+      }, 0);
+
+      return total > 0 ? (sectionTotal * 100 / total) : 0;
+    });
+
+    return { grandTotal: total, sectionRubros: rubros };
+  }, [data]);
+
+  // Calculate running total (IACUM) for each section
+  const sectionIacums = React.useMemo(() => {
+    let runningTotal = 0;
+    return Object.entries(data).map(([tag, items]) => {
+      if (!Array.isArray(items)) return 0;
+
+      const sectionTotal = items.reduce((sum, item) => {
+        const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
+        return sum + itemTotal;
+      }, 0);
+
+      runningTotal += sectionTotal;
+      return grandTotal > 0 ? (runningTotal * 100 / grandTotal) : 0;
+    });
+  }, [data, grandTotal]);
+
+  // Update data when a value changes
+  const updateData = (tag: string, itemId: string | number, key: keyof PresupuestoItem, value: string) => {
     setData(prev => {
       const newData = { ...prev }
-      const arr = newData[tag] || []
-      const itemIndex = arr.findIndex(it => String(it.id) === String(itemId))
+      const items = newData[tag] || []
+      const itemIndex = items.findIndex(it => String(it.id) === String(itemId))
+
       if (itemIndex > -1) {
-        const oldItem = arr[itemIndex]
+        const item = items[itemIndex]
+        const numValue = Number(value) || 0
+
+        // Create updated item with new value
+        const updatedItem = { ...item, [key]: numValue }
+
+        // Recalculate totalPrice if quantity or unitPrice changes
+        if (key === 'quantity' || key === 'unitPrice') {
+          updatedItem.totalPrice = (updatedItem.quantity || 0) * (updatedItem.unitPrice || 0)
+        }
+
+        // Update the item in the array
         newData[tag] = [
-          ...arr.slice(0, itemIndex),
-          { ...oldItem, [key]: newValue },
-          ...arr.slice(itemIndex + 1),
+          ...items.slice(0, itemIndex),
+          updatedItem,
+          ...items.slice(itemIndex + 1),
         ]
+
+        // Calculate new grand total
+        const grandTotal = Object.values(newData).reduce((total, sectionItems) => {
+          return total + sectionItems.reduce((sectionTotal, item) => {
+            return sectionTotal + ((item.quantity || 0) * (item.unitPrice || 0))
+          }, 0)
+        }, 0)
+
+        // Update parcial values for all sections
+        Object.keys(newData).forEach(sectionTag => {
+          const sectionTotal = newData[sectionTag].reduce((sum, item) => {
+            return sum + ((item.quantity || 0) * (item.unitPrice || 0))
+          }, 0)
+
+          newData[sectionTag] = newData[sectionTag].map(item => {
+            const itemTotal = (item.quantity || 0) * (item.unitPrice || 0)
+            return {
+              ...item,
+              totalPrice: itemTotal,
+              parcial: grandTotal > 0 ? (itemTotal * 100 / grandTotal) : 0,
+              rubro: grandTotal > 0 ? (sectionTotal * 100 / grandTotal) : 0
+            }
+          })
+        })
       }
       return newData
     })
   }
 
-  // -----------------------------
-  //   Add item to a section
-  // -----------------------------
-  const addElementToSection = (tag: string, element: any) => {
-    setData(prev => {
-      const newData = { ...prev }
-      if (!newData[tag]) {
-        newData[tag] = []
-      }
-      newData[tag] = [
-        ...newData[tag],
-        {
-          id: element.id,
-          name: element.name || 'Sin descripción',
-          unit: element.unit || '',
-          price: element.prices?.[0]?.price || 0,
-          category: element.categories?.name || 'Sin categoría',
-          parcial: element.prices?.[0]?.price || 0,
-          rubro: '',
-          accumulated: '',
-        },
-      ]
-      return newData
-    })
-  }
+  if (loading) return <div>Cargando...</div>
+  if (error) return <div>{error}</div>
 
-  // For the "Agregar nuevo elemento" combobox
-  const addGeneralElement = (element: any) => {
-    const tag = element.element_tags?.[0]?.tags?.name || 'Sin Etiqueta'
-    addElementToSection(tag, element)
-    setGeneralSearchOpen(false)
-    setSearchValue("")
-    setFilteredElements([])
-  }
-
-  // -----------------------------
-  //   Delete row from a tag
-  // -----------------------------
-  const handleDeleteRow = (tag: string, itemId: string | number) => {
-    setData(prev => {
-      const newData = { ...prev }
-      newData[tag] = newData[tag]?.filter(item => String(item.id) !== String(itemId)) || []
-      return newData
-    })
-  }
-
-  // -----------------------------
-  //   Handle Form Submit
-  // -----------------------------
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Final data:', data);
-    const jsonData = serializeDataToJson();
-    console.log('Serialized JSON:', jsonData);
-    // Additional logic ...
-  };
-
-  const [previewVersion, setPreviewVersion] = useState<string | boolean>(false)
-
-  console.log(previewVersion)
-
-  // -----------------------------
-  //   Render
-  // -----------------------------
   return (
-    <div className='flex items-start justify-center gap-4'>
-      <Tabs defaultValue="tab-1" orientation="vertical" className="flex gap-2 mt-4">
-        <TabsList className="flex-col">
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild >
-                <span>
-                  <TabsTrigger value="tab-1" className="py-3" onClick={() => setPreviewVersion('false')}>
-                    <House size={16} strokeWidth={2} aria-hidden="true" />
-                  </TabsTrigger>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="px-2 py-1 text-xs">
-                Modo Editable
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild >
-                <span>
-                  <TabsTrigger value="tab-2" className="group py-3" onClick={() => setPreviewVersion('true')}>
-                    <span className="relative flex justify-center items-center gap-2">
-                      <PanelsTopLeft size={16} strokeWidth={2} aria-hidden="true" />
-                      {/* <Badge className="absolute -top-2.5 left-full min-w-5 justify-center -translate-x-1.5 border-background px-0.5 text-[10px]/[.875rem] transition-opacity group-data-[state=inactive]:opacity-50">
-                        3
-                      </Badge> */}
-                      {/* Projects */}
-                    </span>
-                  </TabsTrigger>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="px-2 py-1 text-xs" >
-                Vista Previa (Total)
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <TabsTrigger value="tab-3" className="py-3" onClick={() => setPreviewVersion('parcial')}>
-                    <Box size={16} strokeWidth={2} aria-hidden="true" />
-                  </TabsTrigger>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="px-2 py-1 text-xs">
-                Vista Previa (Parcial)
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </TabsList>
-      </Tabs>
-      <form onSubmit={handleSubmit} className="max-w-[1000px] min-w-[860px] p-6 bg-white rounded-xl shadow-lg relative">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">
-            Ministerio de Obras y Servicios Públicos
-          </h1>
-          <Card className="text-gray-600 flex flex-col justify-center items-start p-2 px-4">
-            <p className="mb-2">{`Obra: `}
-              <b>
-                COMISARIA LAGUNA BRAVA - Obra Nueva 1226
-              </b>
-            </p>
-            <p>{`Ubicacion: `}
-              <b>
-                CORRIENTES CAPITAL
-              </b>
-            </p>
-          </Card>
-          <h2 className="mt-4 text-lg font-bold uppercase underline">
-            Planilla de Presupuesto e Incidencias
-          </h2>
+    <div className='flex items-start justify-center gap-8 relative'>
+      <div className='flex flex-col gap-2 mb-16'>
+        <Tabs defaultValue="tab-1" className={cn("sticky top-0 z-10 p-3 pt-5 -mt-5", isScrolled ? "-ml-20" : "w-1/2")}>
+          <TabsList>
+            <motion.div className="bg-muted rounded-lg flex">
+              <span className='w-full'>
+                <TabsTrigger value="tab-1" className="py-2 w-full justify-start" asChild onClick={() => setPreviewVersion('false')}>
+                  <motion.button className="inline-flex items-center justify-center gap-1.5">
+                    <FilePenLine size={16} strokeWidth={2} />
+                    <span>Vista Presupuesto</span>
+                  </motion.button>
+                </TabsTrigger>
+              </span>
+              <span className='w-full'>
+                <TabsTrigger value="tab-2" className="py-2 w-full justify-start" asChild onClick={() => setPreviewVersion('medicion')}>
+                  <motion.button className="inline-flex items-center justify-center gap-1.5">
+                    <BookIcon size={16} strokeWidth={2} />
+                    <span>Nueva Medición</span>
+                  </motion.button>
+                </TabsTrigger>
+              </span>
+            </motion.div>
+          </TabsList>
+        </Tabs>
+
+        <div className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">
+              Ministerio de Obras y Servicios Públicos
+            </h1>
+            <Card className="text-gray-600 flex flex-col justify-center items-start p-2 px-4">
+              <p className="mb-2">Obra: <b>COMISARIA LAGUNA BRAVA - Obra Nueva 1226</b></p>
+              <p>Ubicacion: <b>CORRIENTES CAPITAL</b></p>
+            </Card>
+
+            <h2 className="mt-4 text-lg font-bold uppercase underline">
+              {previewVersion === 'medicion' ? 'Medición de Avance de Obra' : 'Planilla de Presupuesto'}
+            </h2>
+          </div>
+
+          {/* Content */}
+          {previewVersion === 'medicion' ? (
+            <MedicionSection
+              presupuestoId={params.id as string}
+              initialData={transformToMedicionData()}
+            />
+          ) : (
+            <div className="rounded-lg border-none border-gray-200 space-y-8">
+              {Object.entries(data).map(([tag, items], tagIndex) => (
+                <PresupuestoSection
+                  key={tag}
+                  tag={tag}
+                  tagIndex={tagIndex}
+                  items={items}
+                  previewVersion={previewVersion}
+                  grandTotal={grandTotal}
+                  sectionRubros={sectionRubros}
+                  sectionIacums={sectionIacums}
+                  updateData={(itemId, key, value) => updateData(tag, itemId, key, value)}
+                  handleDeleteRow={() => { }}
+                  allElements={[]}
+                  highlightChanges={false}
+                />
+              ))}
+            </div>
+          )}
         </div>
-
-        {loading && <p className="text-center text-gray-600">Cargando...</p>}
-        {error !== null && <p className="text-center text-red-600">{error}</p>}
-
-        {/* The main table */}
-        {!loading && !error && (
-          <div className="rounded-lg border border-gray-200">
-            <Table>
-              {/* <TableCaption className='hidden'>Elementos agrupados por sección (tag).</TableCaption> */}
-
-              <TableHeader >
-                <TableRow>
-                  <TableHead className="w-[50px]">N°</TableHead>
-                  <TableHead className="text-left">Nombre</TableHead>
-                  <TableHead className="text-left">Unidad </TableHead>
-                  <TableHead className="text-center">Parcial</TableHead>
-                  {(previewVersion == 'parcial' || previewVersion == 'false') && (
-                    <>
-                      <TableHead className="text-center">Rubro</TableHead>
-                      <TableHead className="text-center">IACUMUL</TableHead>
-                    </>
-                  )}
-
-                  {previewVersion === 'false' && (
-                    <TableHead className="text-center">Acciones</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {/* If no data */}
-                {Object.keys(data).length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center">
-                      No hay datos disponibles.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  /* For each tag, create a section header + items */
-                  Object.entries(data.data).map(([tag, items], tagIndex) => (
-                    <React.Fragment key={tag}>
-                      {/* Section Header */}
-                      <TableRow className="bg-stone-100 border-r border-l">
-                        {/* 
-                        We can style it however you like. 
-                        colSpan = total number of columns in the table
-                      */}
-                        <TableCell colSpan={7} className="font-bold ">
-                          {tagIndex + 1}. {tag.toUpperCase()}
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Rows for this tag */}
-                      {(Array.isArray(items) ? items : []).map((item: TableItem, rowIndex: number) => {
-                        const rowNumber = `${tagIndex + 1}.${rowIndex + 1}`
-                        return (
-                          <TableRow key={item.id}>
-                            {/* N° */}
-                            <TableCell className="text-gray-600 border-r border-l">
-                              {rowNumber}
-                            </TableCell>
-                            {/* Nombre */}
-                            <TableCell className='border-r'>
-                              {item.name}
-                            </TableCell>
-                            {/* Unidad */}
-                            <TableCell className='border-r'>
-                              {item.unit}
-                            </TableCell>
-                            {/* Parcial */}
-                            <TableCell className="text-center border-r  group  cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]  focus:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)] focus-within:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
-                              <EditableInput
-                                value={String(item.parcial ?? '')}
-                                onChange={(val) => updateData(tag, item.id, 'parcial', val)}
-                                suffix="%"
-                              />
-                            </TableCell>
-                            {(previewVersion === 'parcial' || previewVersion === 'false') && (
-                              <>
-                                <TableCell className="text-center border-r  group  cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]  focus:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)] focus-within:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
-                                  <EditableInput
-                                    value={String(item.rubro ?? '')}
-                                    onChange={(val) => updateData(tag, item.id, 'rubro', val)}
-                                    suffix="%"
-                                  />
-                                </TableCell>
-                                {/* IACUMUL */}
-                                <TableCell className="text-center border-r group cursor-text box-border hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]  focus:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)] focus-within:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
-                                  <EditableInput
-                                    value={String(item.accumulated ?? '')}
-                                    onChange={(val) => updateData(tag, item.id, 'accumulated', val)}
-                                    suffix="%"
-                                  />
-                                </TableCell>
-                              </>
-                            )}
-                            {/* Rubro */}
-                            {/* Delete Action */}
-                            {previewVersion === 'false' && (
-
-                              <TableCell className="text-center border-r">
-                                <Button
-                                  variant="destructive"
-                                  className="flex items-center gap-1 h-6 w-7 p-0 mx-auto"
-                                  onClick={() => handleDeleteRow(tag, item.id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        )
-                      })}
-
-                      {/* Add new element to this tag */}
-                      {previewVersion === 'false' && (
-                        <TableRow className='group'>
-                          <TableCell colSpan={7} className='group-hover:bg-white'>
-                            <div className="relative">
-                              <button
-                                onClick={() =>
-                                  setSearchOpen(prev => ({ ...prev, [tag]: !prev[tag] }))
-                                }
-                                className="w-full px-4 py-2 text-left text-gray-600 border-2 border-dashed 
-                                       border-gray-300 rounded-lg hover:bg-slate-50 transition-colors 
-                                       duration-200 flex items-center gap-2"
-                              >
-                                <Plus className="w-4 h-4 text-blue-500" />
-                                <span>Agregar elemento a {tag}</span>
-                              </button>
-
-                              {searchOpen[tag] && (
-                                <Popover
-                                  open={searchOpen[tag]}
-                                  onOpenChange={(open) => {
-                                    setSearchOpen(prev => ({ ...prev, [tag]: open }))
-                                  }}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <></>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-full p-0 mt-1">
-                                    {/* @ts-ignore */}
-                                    <Command>
-                                      {/* @ts-ignore */}
-                                      <CommandInput
-                                        // @ts-ignore
-                                        placeholder="Buscar elementos (mínimo 4 caracteres)..."
-                                        value={searchValue}
-                                        onValueChange={handleSearch}
-                                      />
-                                      {/* @ts-ignore */}
-                                      <CommandEmpty>
-                                        {/* @ts-ignore */}
-                                        {searchValue.length < 4
-                                          ? "Ingrese al menos 4 caracteres para buscar"
-                                          : "No se encontraron elementos"}
-                                      </CommandEmpty>
-                                      {/* @ts-ignore */}
-                                      <CommandGroup>
-                                        {/* @ts-ignore */}
-                                        <CommandList>
-                                          {filteredElements
-                                            .filter(
-                                              element =>
-                                                Array.isArray(element.element_tags) &&
-                                                element.element_tags.some(
-                                                  (tagObj: { tags?: { name: string } }) => tagObj.tags?.name === tag
-                                                ) &&
-                                                !(Array.isArray(items) ? items : []).some(
-                                                  (existing: TableItem) => existing.id === element.id
-                                                )
-                                            )
-                                            .map((element, idx) => (
-
-                                              // @ts-ignore
-                                              <CommandItem
-                                                key={`${element.id}-${idx}`}
-                                                value={element.name}
-                                                onSelect={() => {
-                                                  addElementToSection(tag, element)
-                                                  setSearchOpen(prev => ({ ...prev, [tag]: false }))
-                                                  setSearchValue("")
-                                                  setFilteredElements([])
-                                                }}
-                                              >
-                                                <Check className={cn("mr-2 h-4 w-4", "opacity-0")} />
-                                                {element.name}
-                                              </CommandItem>
-                                            ))}
-                                        </CommandList>
-                                      </CommandGroup>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  ))
-                )}
-              </TableBody>
-
-              {/* <TableFooter>
-              <TableRow>
-                <TableCell colSpan={7} className="text-right">
-                  If you want a summary or total, put it here
-                </TableCell>
-              </TableRow>
-            </TableFooter> */}
-            </Table>
-          </div>
-        )}
-
-        {/* General Add Element Button */}
-        {!loading && !error && previewVersion === false && (
-          <div className="mt-6">
-            <Popover open={generalSearchOpen} onOpenChange={setGeneralSearchOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="secondary"
-                  role="combobox"
-                  aria-expanded={generalSearchOpen}
-                  className="w-full justify-between"
-                >
-                  <span>Agregar nuevo elemento</span>
-                  <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                {/* @ts-ignore */}
-                <Command>
-                  {/* @ts-ignore */}
-                  <CommandInput
-                    // @ts-ignore
-                    placeholder="Buscar elementos (mínimo 4 caracteres)..."
-                    value={searchValue}
-                    onValueChange={handleSearch}
-                  />
-                  {/* @ts-ignore */}
-                  <CommandEmpty>
-                    {searchValue.length < 4
-                      ? "Ingrese al menos 4 caracteres para buscar"
-                      : "No se encontraron elementos"}
-                  </CommandEmpty>
-                  {/* @ts-ignore */}
-                  <CommandGroup>
-                    {/* @ts-ignore */}
-                    <CommandList>
-                      {filteredElements.map((element, index) => (
-                        // @ts-ignore
-                        <CommandItem
-                          key={`${element.id}-${index}`}
-                          value={element.name}
-                          onSelect={() => addGeneralElement(element)}
-                        >
-                          <Check className={cn("mr-2 h-4 w-4", "opacity-0")} />
-                          {element.name}
-                        </CommandItem>
-                      ))}
-                    </CommandList>
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
-
-        {/* Submit Button */}
-        {!loading && !error && (
-          <div className="mt-6">
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg
-                       transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Guardar Cambios
-            </Button>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="text-sm text-center mt-2">
-          <p>Página 1 de 1</p>
-        </div>
-      </form>
+      </div>
     </div>
-
   )
 }
 

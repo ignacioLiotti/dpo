@@ -8,7 +8,7 @@ function getSortClause(sortParam: string | null): string {
 		return "ORDER BY i.id ASC"; // default
 	}
 
-	// Example: sort=cod:asc or sort=item_name:desc
+	// Example: sort=cod:asc or sort=name:desc
 	const [field, dir] = sortParam.split(":");
 	const sortField = (field || "").trim();
 	const sortDir = (dir || "").trim().toUpperCase() === "DESC" ? "DESC" : "ASC";
@@ -17,8 +17,8 @@ function getSortClause(sortParam: string | null): string {
 	const validColumns = [
 		"id",
 		"cod",
-		"item_name",
-		"unid",
+		"name",
+		"unit",
 		"category",
 		"type",
 		"origin_table",
@@ -47,12 +47,12 @@ export async function GET(request: Request) {
 		const orderByClause = getSortClause(sortParam);
 
 		// 4) Build a small WHERE clause for search
-		//    Below we match `item_name` to the searchTerm (case-insensitive).
+		//    Below we match `name` to the searchTerm (case-insensitive).
 		//    Adjust for your DB or additional columns as needed.
 		//    If you are on Postgres, you can do ILIKE. MySQL only has LOWER().
 		const safeSearch = searchTerm.replace(/'/g, "''"); // naive escaping example
 		const whereClause = safeSearch
-			? `WHERE LOWER(i.item_name) LIKE LOWER('%${safeSearch}%')`
+			? `WHERE LOWER(i.name) LIKE LOWER('%${safeSearch}%')`
 			: "";
 
 		// 5) Use the cache or fetch anew
@@ -64,24 +64,23 @@ export async function GET(request: Request) {
           SELECT
             i.id,
             i.cod,
-            i.item_name,
-            i.unid,
+            i.name,
+            i.unit,
             i.category,
             i.type,
             i.origin_table,
-            i.publicar,
             p.price,
-            p.price_date
+            p.priceDate
           FROM items i
           LEFT JOIN (
-            SELECT item_id, price, price_date
+            SELECT itemId, price, priceDate
             FROM prices p1
-            WHERE (item_id, price_date) IN (
-              SELECT item_id, MAX(price_date) as max_date
+            WHERE (itemId, priceDate) IN (
+              SELECT itemId, MAX(priceDate) as max_date
               FROM prices
-              GROUP BY item_id
+              GROUP BY itemId
             )
-          ) p ON i.id = p.item_id
+          ) p ON i.id = p.itemId
           ${whereClause}
           ${orderByClause}
           LIMIT ${limit} OFFSET ${start}
@@ -109,10 +108,10 @@ export async function GET(request: Request) {
 				const itemsWithDetails = (items as any[]).map((item) => ({
 					id: item.id,
 					codigo: item.cod,
-					nombre: item.item_name,
-					unidad: item.unid,
+					nombre: item.name,
+					unidad: item.unit,
 					precio: item.price,
-					fecha_precio: item.price_date,
+					fecha_precio: item.priceDate,
 					category: item.category,
 					type: item.type,
 					origin_table: item.origin_table,

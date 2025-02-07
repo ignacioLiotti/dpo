@@ -39,6 +39,14 @@ interface TableItem {
   parcial?: string | number
   rubro?: string | number
   element_tags?: { tags: { name: string } }[]
+  originalUnit?: string
+  originalQuantity?: number
+  originalUnitPrice?: number
+  targetSection?: string
+  nombre?: string
+  anterior?: number
+  presente?: number
+  acumulado?: number
 }
 
 interface PresupuestoSectionProps {
@@ -54,6 +62,7 @@ interface PresupuestoSectionProps {
   handleDeleteRow: (tag: string, itemId: string | number) => void
   isNewSection?: boolean
   allElements: any[]
+  highlightChanges?: boolean
 }
 
 function EditableInput({
@@ -61,13 +70,22 @@ function EditableInput({
   onChange,
   suffix = "",
   prefix = "",
+  originalValue,
+  highlightChanges = false,
 }: {
   value: string | number
   onChange: (val: string) => void
   suffix?: string
   prefix?: string
+  originalValue?: string | number
+  highlightChanges?: boolean
 }) {
   const [value, setValue] = React.useState(String(initialValue))
+  const originalValueRef = React.useRef(originalValue)
+  const hasChanged = originalValueRef.current !== undefined && String(originalValueRef.current) !== String(initialValue)
+  const shouldHighlight = highlightChanges && hasChanged
+  const hiddenSpanRef = React.useRef<HTMLSpanElement>(null)
+  const inputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     setValue(String(initialValue))
@@ -78,21 +96,45 @@ function EditableInput({
   }
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className={cn("flex items-center justify-center gap-1 h-full flex-grow relative group", shouldHighlight && "bg-yellow-100")}>
       {prefix && <span className="text-sm text-gray-700">{prefix}</span>}
-      <input
-        className="border-b border-transparent group-hover:border-gray-300 group-focus:border-gray-300 focus:outline-none bg-transparent w-[50px] text-right focus-within:border-gray-300"
-        value={value}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={handleBlur}
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          className={cn(
+            "border-b border-transparent group-hover:border-gray-300 group-focus:border-gray-300 focus:outline-none bg-transparent text-right focus-within:border-gray-300 w-[20px] min-w-0",
+          )}
+          value={value}
+          style={{ width: hiddenSpanRef.current ? `${hiddenSpanRef.current.offsetWidth + 4}px` : 'auto' }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={handleBlur}
+        />
+        <span
+          ref={hiddenSpanRef}
+          className="invisible absolute top-0 left-0 whitespace-pre"
+          style={{
+            font: 'inherit',
+            position: 'absolute',
+            padding: '0',
+            border: '0',
+            whiteSpace: 'pre'
+          }}
+        >
+          {value}
+        </span>
+      </div>
       {suffix && <span className="text-sm text-gray-700">{suffix}</span>}
+      {shouldHighlight && (
+        <div className="absolute invisible group-hover:visible bg-black text-white text-xs rounded py-1 px-2 -top-8 left-1/2 transform -translate-x-1/2">
+          Original: {originalValueRef.current}
+        </div>
+      )}
     </div>
   )
 }
@@ -109,14 +151,10 @@ export function PresupuestoSection({
   updateData,
   handleDeleteRow,
   isNewSection = false,
-  allElements
+  allElements,
+  highlightChanges = true,
 }: PresupuestoSectionProps) {
-  // Local states
-  const [isSearchOpen, setIsSearchOpen] = React.useState(false)
-  const [searchValue, setSearchValue] = React.useState('')
-  const [filteredElements, setFilteredElements] = React.useState<any[]>([])
-
-  // Remove allElements state and fetch
+  // Remove local states for search
   const ref = React.useRef(null)
   const isInView = useInView(ref, { once: true })
 
@@ -131,67 +169,8 @@ export function PresupuestoSection({
     visible: { borderColor: 'rgba(59, 130, 246, 0)' }
   }
 
-  // Debounced search function
-  const debouncedSearch = React.useCallback(
-    debounce((searchTerm: string) => {
-      if (searchTerm.length >= 4) {
-        const filtered = allElements.filter(element => {
-          // Name matching - case insensitive
-          const searchLower = searchTerm.toLowerCase();
-          const nameLower = (element.nombre || element.name || '').toLowerCase();
-          const nameMatch = nameLower.includes(searchLower);
-
-          // For custom sections, don't filter by tag
-          const isCustomSection = !element.element_tags?.some((tagObj: any) =>
-            (tagObj.tags?.name || tagObj.name || '').toLowerCase() === tag.toLowerCase()
-          );
-
-          return nameMatch && (isCustomSection || element.category?.toLowerCase() === tag.toLowerCase());
-        });
-
-        setFilteredElements(filtered);
-      } else {
-        setFilteredElements([]);
-      }
-    }, 300),
-    [allElements, tag]
-  )
-
-  // Handle search input change
-  const handleSearch = (value: string) => {
-    setSearchValue(value);
-    debouncedSearch(value);
-  }
-
-  // Handle element selection
-  const handleElementSelect = (element: any) => {
-    addElementToSection(tag, element);
-    setIsSearchOpen(false);
-    setSearchValue('');
-    setFilteredElements([]);
-  }
-
-  // Handle custom element creation
-  const handleCreateCustomElement = () => {
-    const customElement = {
-      id: `custom-${Date.now()}`,
-      nombre: searchValue,
-      name: searchValue,
-      unidad: '',
-      unit: '',
-      cantidad: 0,
-      quantity: 0,
-      precio: 0,
-      price: 0,
-      category: tag,
-    };
-    handleElementSelect(customElement);
-  }
-
-  // console.log('tag', tag)
-  // console.log('isNewSection', isNewSection)
-  // console.log('isInView', isInView)
-  // console.log('filteredElements', filteredElements)
+  console.log(sectionRubros)
+  console.log(sectionIacums)
 
   return (
     <motion.div
@@ -223,82 +202,6 @@ export function PresupuestoSection({
             <Package size={16} strokeWidth={2} aria-hidden="true" />
             {tagIndex + 1}. {tag.toUpperCase()}
           </span>
-          <div className="relative">
-            {previewVersion === 'false' && (
-              <Popover
-                open={isSearchOpen}
-                onOpenChange={setIsSearchOpen}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className={cn(
-                      "w-7 h-7 p-0 -my-1"
-                    )}
-                    onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  >
-                    <Plus className="w-4 h-4 text-blue-500" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  {/* @ts-ignore */}
-                  <Command>
-                    {/* @ts-ignore */}
-                    <CommandInput
-                      // @ts-ignore
-                      placeholder="Buscar elementos (mínimo 4 caracteres)..."
-                      value={searchValue}
-                      onValueChange={handleSearch}
-                      onKeyDown={(e: React.KeyboardEvent) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                        }
-                      }}
-                    />
-                    {/* @ts-ignore */}
-                    <CommandEmpty>
-                      {/* @ts-ignore */}
-                      {(!searchValue || searchValue.length < 4) ? (
-                        "Ingrese al menos 4 caracteres para buscar"
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-6 gap-2">
-                          <span className="text-sm text-muted-foreground">No se encontraron elementos</span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCreateCustomElement}
-                            className="mt-2"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Crear "{searchValue}"
-                          </Button>
-                        </div>
-                      )}
-                    </CommandEmpty>
-                    {/* @ts-ignore */}
-                    <CommandGroup>
-                      {/* @ts-ignore */}
-                      <CommandList>
-                        {filteredElements.map((element, idx) => (
-                          // @ts-ignore
-                          <CommandItem
-                            key={element.id}
-                            value={element.nombre}
-                            onSelect={() => handleElementSelect(element)}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", "opacity-0")} />
-                            {element.nombre}
-                          </CommandItem>
-                        ))}
-                      </CommandList>
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
         </h3>
 
         <Table className="bg-white border-l-none">
@@ -307,11 +210,21 @@ export function PresupuestoSection({
               <TableRow className="bg-white border-l-none">
                 <TableHead className="w-[50px] bg-white">N°</TableHead>
                 <TableHead className="text-left bg-white">Nombre</TableHead>
-                <TableHead className="text-left bg-white">Unidad</TableHead>
-                <TableHead className="text-center bg-white">Cantidad</TableHead>
-                <TableHead className="text-center bg-white" colSpan={2}>Precio Unit.</TableHead>
-                <TableHead className="text-center bg-white" colSpan={2}>Precio Total</TableHead>
-                <TableHead className="text-center bg-white">Parcial</TableHead>
+                {previewVersion !== 'medicion' ? (
+                  <>
+                    <TableHead className="text-left bg-white">Unidad</TableHead>
+                    <TableHead className="text-center bg-white">Cantidad</TableHead>
+                    <TableHead className="text-center bg-white" colSpan={2}>Precio Unit.</TableHead>
+                    <TableHead className="text-center bg-white" colSpan={2}>Precio Total</TableHead>
+                    <TableHead className="text-center bg-white">Parcial</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead className="text-center bg-white">Anterior</TableHead>
+                    <TableHead className="text-center bg-white">Presente</TableHead>
+                    <TableHead className="text-center bg-white">Acumulado a la Fecha</TableHead>
+                  </>
+                )}
                 {previewVersion === 'false' && (
                   <TableHead className="text-center bg-white">Acciones</TableHead>
                 )}
@@ -335,51 +248,84 @@ export function PresupuestoSection({
             {/* Rows for this tag */}
             {Array.isArray(items) && items.map((item, rowIndex) => {
               const rowNumber = `${tagIndex + 1}.${rowIndex + 1}`
-              const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-              const parcialPercentage = grandTotal ? (itemTotal * 100 / grandTotal) : 0;
+              const itemTotal = ((item.quantity || 0) * (item.unitPrice || 0));
+              const parcialPercentage = grandTotal ? ((itemTotal * 100) / grandTotal) : 0;
 
               return (
                 <TableRow key={item.id}>
                   {/* N° */}
-                  <TableCell className="text-gray-600 border-r ">
+                  <TableCell className="text-gray-600 border-r">
                     {rowNumber}
                   </TableCell>
                   {/* Nombre */}
                   <TableCell className='border-r'>
                     {item.name}
                   </TableCell>
-                  {/* Unidad */}
-                  <TableCell className='border-r'>
-                    <EditableInput
-                      value={String(item.unit ?? '')}
-                      onChange={(val) => updateData(tag, item.id, 'unit', val)}
-                      suffix=""
-                    />
-                  </TableCell>
-                  <TableCell className="text-center border-r group cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
-                    <EditableInput
-                      value={String(item.quantity ?? '')}
-                      onChange={(val) => updateData(tag, item.id, 'quantity', val)}
-                      suffix=""
-                    />
-                  </TableCell>
-                  <TableCell className="text-center border-r group cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]" colSpan={2}>
-                    <EditableInput
-                      value={String(item.unitPrice ?? '')}
-                      onChange={(val) => updateData(tag, item.id, 'unitPrice', val)}
-                      prefix="$"
-                    />
-                  </TableCell>
-                  <TableCell className="text-center border-r" colSpan={2}>
-                    ${itemTotal.toFixed(2)}
-                  </TableCell>
-                  {/* Parcial */}
-                  <TableCell className="text-center">
-                    {parcialPercentage.toFixed(2)}%
-                  </TableCell>
-                  {/* Rubro */}
+                  {previewVersion !== 'medicion' ? (
+                    <>
+                      {/* Regular view columns */}
+                      <TableCell className='border-r'>
+                        <EditableInput
+                          value={String(item.unit ?? '')}
+                          originalValue={item.unit}
+                          onChange={(val) => updateData(tag, item.id, 'unit', val)}
+                          suffix=""
+                          highlightChanges={highlightChanges}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center border-r group cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
+                        <EditableInput
+                          value={String(item.quantity ?? '')}
+                          originalValue={item.quantity}
+                          onChange={(val) => updateData(tag, item.id, 'quantity', val)}
+                          suffix=""
+                          highlightChanges={false}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center border-r group cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]" colSpan={2}>
+                        <EditableInput
+                          value={String(item.unitPrice ?? '')}
+                          originalValue={item.unitPrice}
+                          onChange={(val) => updateData(tag, item.id, 'unitPrice', val)}
+                          prefix="$"
+                          highlightChanges={highlightChanges}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center border-r" colSpan={2}>
+                        ${(itemTotal || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {(parcialPercentage || 0).toFixed(2)}%
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      {/* Medición view columns */}
+                      <TableCell className="text-center border-r group cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
+                        <EditableInput
+                          value={String(item.anterior ?? 0)}
+                          originalValue={item.anterior}
+                          onChange={(val) => updateData(tag, item.id, 'anterior', val)}
+                          suffix=""
+                          highlightChanges={false}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center border-r group cursor-text hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]">
+                        <EditableInput
+                          value={String(item.presente ?? 0)}
+                          originalValue={item.presente}
+                          onChange={(val) => updateData(tag, item.id, 'presente', val)}
+                          suffix=""
+                          highlightChanges={false}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center border-r">
+                        {((item.anterior || 0) + (item.presente || 0)).toFixed(2)}
+                      </TableCell>
+                    </>
+                  )}
                   {previewVersion === 'false' && (
-                    <TableCell className="text-center border-r">
+                    <TableCell className="text-center border-r border-l">
                       <Button
                         variant="destructive"
                         className="flex items-center gap-1 h-6 w-7 p-0 mx-auto"
@@ -399,7 +345,7 @@ export function PresupuestoSection({
                 <TableCell colSpan={10} className="p-0">
                 </TableCell>
                 <TableCell className="p-0 relative h-[100px]">
-                  <div className={cn(" right-0 w-[300px] max-w-[300px] absolute top-0 my-4 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-md")}>
+                  <div className={cn(" right-0 w-[300px] max-w-[300px] absolute top-0 my-4 mr-2 rounded-lg border border-gray-200 shadow-md")}>
                     <Table >
                       <TableRow className="bg-black text-white hover:bg-black/80 border-r-none">
                         <TableCell className="text-center font-bold border-r">

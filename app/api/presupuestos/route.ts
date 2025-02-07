@@ -11,9 +11,6 @@ export async function POST(req: Request) {
 		const request = await req.json();
 		const { data, obraId } = request;
 
-		console.log("aca", data, obraId);
-		console.log("aca", await request);
-
 		if (!obraId) {
 			return NextResponse.json(
 				{ error: "obraId is required" },

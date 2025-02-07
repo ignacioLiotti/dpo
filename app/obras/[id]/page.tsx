@@ -1,36 +1,23 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import TabsComponent from './TabsComponent';
+import { useDataItem } from "@/lib/hooks/useDataItem";
+import { LoadingPage } from "@/components/loading";
+import TabsComponent from "./TabsComponent";
 
-function ObraPage() {
-  const pathname = usePathname();
-  const id = pathname.split('/').pop(); // Extract the ID from the pathname
-  const [obra, setObra] = useState(null);
+export default function ObraPage({ params }: { params: { id: string } }) {
+  const { data: obra, loading, error } = useDataItem("obra", parseInt(params.id));
 
-  useEffect(() => {
-    if (id) {
-      // Fetch the obra data
-      fetch(`/api/obras/${id}`)
-        .then((response) => response.json())
-        .then((data) => setObra(data))
-        .catch((error) => console.error('Error fetching obra:', error));
-    }
-  }, [id]);
-
-  if (!obra) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return <LoadingPage />;
   }
 
-  console.log(obra);
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
-  return (
-    <div className="flex flex-col bg-muted/70 h-full gap-16 px-11 py-14">
-      <TabsComponent
-        obra={obra} />
-    </div>
-  );
+  if (!obra) {
+    return <div>No se encontró la obra</div>;
+  }
+
+  return <TabsComponent obra={obra} />;
 }
-
-export default ObraPage;

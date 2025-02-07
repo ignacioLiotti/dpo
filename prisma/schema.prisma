@@ -3,572 +3,82 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASEURL")
 }
 
-model certificaciones {
-  IdCertificado  Int       @id @default(autoincrement())
-  NumCertificado String?   @db.VarChar(50)
-  Monto          Float?
-  MesCertificado DateTime?
-  IdObras        Int?
-  IdTipos        Int?
-  IdEmpresa      Int?
-  FechaLiq       DateTime?
-  FechaIng       DateTime?
-  pagado         Int?      @db.SmallInt
-  netoapagar     Float?
-  numexpte       String?   @db.VarChar(255)
-  provisorio     Int?      @db.SmallInt
-  verificado     Int?      @db.SmallInt
-  numexpte2      Int?
-  ubicacion      Int?
-  recibidofyh_1  DateTime?
-  recibidofyh_2  DateTime?
-  recibidofyh_3  DateTime?
-  recibidofyh_4  DateTime?
-  recibidofyh_5  DateTime?
-  recibido_1     Int?      @db.SmallInt
-  recibido_2     Int?      @db.SmallInt
-  recibido_3     Int?      @db.SmallInt
-  recibido_4     Int?      @db.SmallInt
-  recibido_5     Int?      @db.SmallInt
-  IdTipos2       String?   @db.VarChar(255)
-  redetnum       String?   @db.VarChar(255)
-  adicnum        String?   @db.VarChar(255)
+model prices {
+  id        Int      @id @default(autoincrement())
+  itemId    Int
+  price     Float?
+  priceDate DateTime
+  item      items    @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([IdEmpresa], map: "cert_IdEmpresa")
-  @@index([IdObras], map: "IdObra")
-  @@index([IdTipos], map: "IdTipos")
-  @@index([NumCertificado], map: "NumCertificado")
-  @@index([IdObras], map: "ObrasCertificaciones")
-  @@index([IdTipos2], map: "IdTipos2")
-}
-
-model empresas {
-  IdEmpresa     Int       @id @default(autoincrement())
-  Nombreempresa String?   @db.VarChar(50)
-  Responsable   String?   @db.VarChar(50)
-  Direcci_n     String?   @map("Dirección") @db.VarChar(50)
-  Telefono      String?   @db.VarChar(255)
-  Cuit          String?   @db.VarChar(255)
-  Observaciones String?   @db.VarChar(255)
-  mail          String?   @db.VarChar(255)
-  cfce          DateTime?
-  cfcv          DateTime?
-  cfcp          DateTime?
-  pass          String?   @db.VarChar(255)
-  user          String?   @db.VarChar(255)
-}
-
-model inspectores {
-  IdInspectores Int     @id @default(autoincrement())
-  Tratamiento   String? @db.VarChar(10)
-  Apellido      String? @db.VarChar(50)
-  Nombres       String? @db.VarChar(50)
-  proye         Int?
-  Tel_fono      String? @map("Teléfono") @db.VarChar(50)
-  Inspector     Int?    @db.SmallInt
-}
-
-model obras {
-  IdObras               Int       @id @default(autoincrement())
-  NombreObra            String?   @unique(map: "NombreObra") @db.VarChar(200)
-  Norma_Legal           String?   @db.VarChar(50)
-  Norma_Legal2          String?   @db.VarChar(50)
-  Monto_Contrato        Float?
-  IdEmpresa             Int?
-  IdInspectores         Int?
-  IdReparticion         Int?
-  IdAvance              Int?
-  Plazo                 Int?
-  IdModalidad           Int?
-  IdLocalidad           Int?
-  IdAreas               Int?
-  Fecha_de_Contrato     DateTime? @map("Fecha de Contrato")
-  Fecha_de_Inicio       DateTime? @map("Fecha de Inicio")
-  Fecha_de_Finalizaci_n DateTime? @map("Fecha de Finalización")
-  Memoria_Desc          String?   @map("Memoria Desc")
-  Codigo_Meta           String?   @map("Codigo Meta") @db.VarChar(50)
-  Departamento          Int?
-  Monto_Adicional_1     Float?
-  Plazo_Adicional1      Int?
-  Final_adicional1      DateTime?
-  Monto_Adicional_2     Float?
-  Plazo_Adicional2      Int?
-  Final_adicional2      DateTime?
-  Plazo_Adicional3      Int?
-  Final_adicional3      DateTime?
-  IdProyectista         Int?
-  Norma1                String?   @db.VarChar(50)
-  Norma2                String?   @db.VarChar(50)
-  Norma3                String?   @db.VarChar(50)
-  Amp_Cont1             String?   @db.VarChar(50)
-  Amp_Cont2             String?   @db.VarChar(50)
-  Observaciones         String?
-  Monto_Adicional_3     Float?
-  Amp_Cont3             String?   @db.VarChar(50)
-  Redet_monto_1         Float?
-  Redet_monto_2         Float?
-  Redet_monto_3         Float?
-  Redet_norma_1         String?   @db.VarChar(50)
-  Redet_norma_2         String?   @db.VarChar(50)
-  Redet_norma_3         String?   @db.VarChar(50)
-  Redet_monto_4         Float?
-  Redet_monto_5         Float?
-  Redet_monto_6         Float?
-  Redet_norma_4         Int?
-  Redet_norma_5         Int?
-  Redet_norma_6         Int?
-  Redet_norma_01        Int?
-  Redet_norma_02        Int?
-  Redet_norma_03        Int?
-  redet1                String?   @db.VarChar(255)
-  redet2                String?   @db.VarChar(255)
-  redet3                String?   @db.VarChar(255)
-  redet4                String?   @db.VarChar(255)
-  redet5                String?   @db.VarChar(255)
-  redet6                String?   @db.VarChar(255)
-  basicoredet1          String?   @db.VarChar(255)
-  basicoredet2          String?   @db.VarChar(255)
-  basicoredet3          String?   @db.VarChar(255)
-  basicoredet4          String?   @db.VarChar(255)
-  basicoredet5          String?   @db.VarChar(255)
-  basicoredet6          String?   @db.VarChar(255)
-  Proyecto              Int?      @db.SmallInt
-  A_oTerminada          Int?      @map("AñoTerminada")
-  Expte                 String?   @db.VarChar(255)
-  Expte2                Int?
-  pliego                Int?      @db.SmallInt
-  basico                String?   @db.VarChar(255)
-  prioridad             Int?      @db.SmallInt
-  fuenteO               Int?
-  Edificio              Int?
-  pptoof                Float?
-  p                     Int?      @map("3p") @db.SmallInt
-  Fechalicit            DateTime?
-  ResponsableProy       String?   @db.VarChar(255)
-  Fechapliego           DateTime?
-  Fechaelevado          DateTime?
-  NormaARP              String?   @db.VarChar(255)
-  NormaARD              String?   @db.VarChar(255)
-  fechaARP              DateTime?
-  fechaARD              DateTime?
-  NormaARPA1            String?   @db.VarChar(255)
-  NormaARDA1            String?   @db.VarChar(255)
-  fechaARPA1            DateTime?
-  fechaARDA1            DateTime?
-  NormaARPA2            String?   @db.VarChar(255)
-  NormaARDA2            String?   @db.VarChar(255)
-  fechaARPA2            DateTime?
-  fechaARDA2            DateTime?
-  NormaARPA3            String?   @db.VarChar(255)
-  NormaARDA3            String?   @db.VarChar(255)
-  fechaARPA3            DateTime?
-  fechaARDA3            DateTime?
-  inaugurada            Int?      @db.SmallInt
-  ainaugurar            Int?      @db.SmallInt
-  fechainaugur          DateTime?
-  noinaugur             Int?      @db.SmallInt
-  observ3_              String?   @map("observ3%") @db.VarChar(255)
-  numlic                String?   @db.VarChar(255)
-  asociado1             Int?
-  asociado2             Int?
-  calculista            Int?
-  computista            Int?
-  dibujante1            Int?
-  dibujante2            Int?
-  IdEstad               Int?
-  pptador               Int?
-  fechainicio           DateTime?
-  fechafin              DateTime?
-  fechaelevdir          DateTime?
-  IdEsc                 Int?
-  tareas                String?   @db.VarChar(255)
-  IdObj                 Int?
-  observproy            String?   @db.VarChar(255)
-  solic1                Int?
-  solic2                Int?
-  Idproceso             Int?
-  refm2                 Int?
-  ampm2                 Int?
-  normaadju             String?   @db.VarChar(255)
-  normalicit            String?   @db.VarChar(255)
-  fecha1                DateTime?
-  fecha2                DateTime?
-  fecha3                DateTime?
-  fecha4                DateTime?
-  fecha5                DateTime?
-  fecha6                DateTime?
-  datospoliza           String?
-  onm2                  Int?
-  codigoSIG             Int?
-  avanceproy            Int?      @map("%avanceproy")
-  MemAdic1              String?
-  MemAdic2              String?
-  MemAdic3              String?
-  polizanum             String?   @db.VarChar(255)
-  polizaemp             String?   @db.VarChar(255)
-  polizamonto           Float?
-  clasificacion         Int?
-  fecha7                DateTime?
-  fecha8                DateTime?
-  fecha9                DateTime?
-  caratula              Int?      @db.SmallInt
-  presupuesto           Int?      @db.SmallInt
-  drive                 Int?      @db.SmallInt
-  obserpliego           String?
-  IdProg                Int?
-  autor1                String?   @db.VarChar(255)
-  autor2                String?   @db.VarChar(255)
-  autor3                String?   @db.VarChar(255)
-  autor4                String?   @db.VarChar(255)
-  autor5                String?   @db.VarChar(255)
-  autor6                String?   @db.VarChar(255)
-  autor7                String?   @db.VarChar(255)
-  autor8                String?   @db.VarChar(255)
-  autor9                String?   @db.VarChar(255)
-  autor10               String?   @db.VarChar(255)
-  autor11               String?   @db.VarChar(255)
-  autor12               String?   @db.VarChar(255)
-  link1                 String?   @db.VarChar(50)
-  link2                 String?   @db.VarChar(50)
-  ordenanza1            String?   @db.VarChar(50)
-  ordenanza2            String?   @db.VarChar(50)
-  progresoplanif        Int?
-  Redet_monto_7         Float?
-  Redet_monto_8         Float?
-  Redet_monto_9         Float?
-  Redet_norma_7         String?   @db.VarChar(50)
-  Redet_norma_8         String?   @db.VarChar(50)
-  Redet_norma_9         String?   @db.VarChar(50)
-  Redet_monto_10        Float?
-  Redet_monto_11        Float?
-  Redet_monto_12        Float?
-  Redet_norma_10        Int?
-  Redet_norma_11        Int?
-  Redet_norma_12        Int?
-  basicoredet7          String?   @db.VarChar(255)
-  basicoredet8          String?   @db.VarChar(255)
-  basicoredet9          String?   @db.VarChar(255)
-  basicoredet10         String?   @db.VarChar(255)
-  basicoredet11         String?   @db.VarChar(255)
-  basicoredet12         String?   @db.VarChar(255)
-  redet7                String?   @db.VarChar(255)
-  redet8                String?   @db.VarChar(255)
-  redet9                String?   @db.VarChar(255)
-  redet10               String?   @db.VarChar(255)
-  redet11               String?   @db.VarChar(255)
-  redet12               String?   @db.VarChar(255)
-  Adic_norma_1          Int?
-  Adic_norma_2          Int?
-  Adic_norma_3          Int?
-  Adic_norma_4          Int?
-  ARP_norma_1           Int?
-  ARD_norma_1           Int?
-  AP_norma_1            Int?
-  AP_norma_2            Int?
-  AP_norma_3            Int?
-  AP_norma_4            Int?
-  Monto_Adicional_4     Float?
-  Plazo_Adicional4      Int?
-  Final_adicional4      DateTime?
-  Amp_Cont4             String?   @db.VarChar(50)
-  MemAdic4              String?
-  ARPA_expte_4          Int?
-  ARDA_expte_4          Int?
-  NormaARPA4            String?   @db.VarChar(255)
-  NormaARDA4            String?   @db.VarChar(255)
-  fechaARPA4            DateTime?
-  fechaARDA4            DateTime?
-  Norma4                String?   @db.VarChar(50)
-  ARPA_expte_3          Int?
-  ARDA_expte_3          Int?
-  ARPA_expte_2          Int?
-  ARDA_expte_2          Int?
-  ARPA_expte_1          Int?
-  ARDA_expte_1          Int?
-  pr1                   Int?      @map("3pr1") @db.SmallInt
-  pr2                   Int?      @map("3pr2") @db.SmallInt
-  pr3                   Int?      @map("3pr3") @db.SmallInt
-  pr4                   Int?      @map("3pr4") @db.SmallInt
-  pr5                   Int?      @map("3pr5") @db.SmallInt
-  pr6                   Int?      @map("3pr6") @db.SmallInt
-  pr7                   Int?      @map("3pr7") @db.SmallInt
-  pr8                   Int?      @map("3pr8") @db.SmallInt
-  pr9                   Int?      @map("3pr9") @db.SmallInt
-  pr10                  Int?      @map("3pr10") @db.SmallInt
-  pr11                  Int?      @map("3pr11") @db.SmallInt
-  pr12                  Int?      @map("3pr12") @db.SmallInt
-  IdRepresentante       Int?
-  ARPA_expte_0          Int?
-  ARDA_expte_0          Int?
-  pptotope              Int?      @db.SmallInt
-  presupuestos         presupuestos[]
-
-  @@index([IdEmpresa], map: "obras_IdEmpresa")
-  @@index([IdAreas], map: "obras_IdAreas")
-  @@index([IdAvance], map: "obras_IdAvance")
-  @@index([IdInspectores], map: "obras_IdInspector")
-  @@index([IdLocalidad], map: "obras_IdLocalidad")
-  @@index([IdModalidad], map: "obras_IdModalidad")
-  @@index([IdReparticion], map: "obras_IdReparticion")
-  @@index([IdProyectista], map: "obras_Proyectista")
-  @@index([IdEsc], map: "obras_IdEsc")
-  @@index([IdEstad], map: "obras_IdEstad")
-  @@index([IdRepresentante], map: "obras_IdInspectores")
-  @@index([Idproceso], map: "obras_Idproceso")
-}
-
-model proyectistas {
-  IdProyectista Int     @id @default(autoincrement())
-  Tratamiento   String? @db.VarChar(10)
-  Apellido      String? @db.VarChar(50)
-  Nombres       String? @db.VarChar(50)
-  Profesion     String? @db.VarChar(50)
-  Direcci_n     String? @map("Dirección") @db.VarChar(50)
-  Tel_fono      String? @map("Teléfono") @db.VarChar(50)
-  Inspector     Int?    @db.SmallInt
-  DNI           Int?
-  observaciones String?
-  mail          String? @db.VarChar(255)
-  dependencia   Int?
+  @@index([itemId], map: "prices_itemId_fkey")
 }
 
 model items {
   id           Int      @id @default(autoincrement())
-  cod          String   @db.VarChar(255)
-  publicar     String?  @db.VarChar(255)
-  item_name    String   @db.VarChar(255)
-  unid         String?  @db.VarChar(255)
+  cod          String?  @db.VarChar(255)
+  name         String   @db.VarChar(255)
+  unit         String?  @db.VarChar(255)
   category     String?  @db.VarChar(255)
   type         String?  @db.VarChar(255)
   origin_table String?  @db.VarChar(255)
   prices       prices[]
 }
 
-model areas {
-  IdAreas Int     @id @default(autoincrement())
-  Areas   String? @db.VarChar(50)
-
-  @@index([Areas], map: "areas_IdArea")
-}
-
-model avance {
-  IdAvance    Int     @id @default(autoincrement())
-  Estado      String? @db.VarChar(50)
-  descripcion String? @db.VarChar(255)
-}
-
-model clasificacion {
-  IdClasif Int     @id @default(autoincrement())
-  clasif   String? @db.VarChar(255)
-}
-
-model comercios {
-  IdComercio     Int     @id @default(autoincrement())
-  Nombrecomercio String? @db.VarChar(50)
-  Responsable    String? @db.VarChar(50)
-  Direcci_n      String? @map("Dirección") @db.VarChar(50)
-  Telefono       String? @db.VarChar(255)
-  Cuit           String? @db.VarChar(255)
-  Observaciones  String? @db.VarChar(255)
-}
-
-model dependencias {
-  IdDep       Int     @id @default(autoincrement())
-  dependencia String? @db.VarChar(255)
-  dep         String? @db.VarChar(255)
-}
-
-model dptos {
-  IdDptos       Int     @id @default(autoincrement())
-  Departamentos String? @unique(map: "Departamentos") @db.VarChar(50)
-  abrev         String? @db.VarChar(255)
-}
-
-model edificios {
-  IdEsc         Int     @id @default(autoincrement())
-  acceso        String? @db.VarChar(255)
-  Numero        Int?
-  Adrema        String? @db.VarChar(255)
-  propiedad     String? @db.VarChar(255)
-  lat           String? @db.VarChar(10)
-  lng           String? @db.VarChar(10)
-  Nombre        String? @db.VarChar(50)
-  IdDptos       Int?
-  IdLocalidad   Int?
-  estadoconserv String? @db.VarChar(255)
-  Superficie    Float?
-  dirlote       String? @db.VarChar(255)
-  Extras        String?
-  Observaciones String?
-  Direcci_n     String? @map("Dirección") @db.VarChar(255)
-  Convenio      String? @db.VarChar(255)
-  Categor_a     String? @map("Categoría") @db.VarChar(255)
-  IdFuncio      Int?
-  Distancia     Int?
-  Instespec     String? @db.VarChar(255)
-  A_oconst      String? @map("Añoconst") @db.VarChar(255)
-  Director      String? @db.VarChar(255)
-  dirmanzana    String? @db.VarChar(255)
-  dirnum        String? @db.VarChar(255)
-  Insctomo      String? @db.VarChar(255)
-  Inscfolio     String? @db.VarChar(255)
-  Caraconst     String? @db.VarChar(255)
-  Insca_o       Int?    @map("Inscaño")
-  Empresaejec   String? @db.VarChar(255)
-  Autor         String? @db.VarChar(255)
-  FotoEmp       String? @db.VarChar(255)
-  Foto1         String? @db.VarChar(255)
-  Foto2         String? @db.VarChar(255)
-  Foto3         String? @db.VarChar(255)
-  Img1          String? @db.VarChar(255)
-  mensura       String? @db.VarChar(255)
-  otros_datos   String? @map("otros datos") @db.VarChar(255)
-  frente        Float?
-  fondo         Float?
-
-  @@index([Nombre], map: "edificios_Nombre")
-  @@index([IdDptos], map: "edificios_iddptos")
-}
-
-model estados {
-  Idestad Int     @id @default(autoincrement())
-  estado  String? @db.VarChar(255)
-}
-
-model fuentes {
-  IdFuente Int     @id @default(autoincrement())
-  fuente   String? @db.VarChar(255)
-}
-
-model funcion {
-  IdFuncio Int     @id @default(autoincrement())
-  funcion  String? @db.VarChar(50)
-}
-
-model informes {
-  IdInforme Int       @id @default(autoincrement())
-  fecha     DateTime?
-  IdObras   Int?
-  informe   String?   @db.VarChar(200)
-}
-
-model iniciadores {
-  IdInic    Int     @id @default(autoincrement())
-  iniciador String? @unique(map: "iniciador") @db.VarChar(255)
-  IdEmpresa Int?
-
-  @@index([IdEmpresa], map: "IdEmpresa")
-}
-
-model localidades {
-  IdLocalidad Int     @id @default(autoincrement())
-  Localidad   String? @unique(map: "Localidad") @db.VarChar(50)
-  IdDptos     Int?
-  Categor_a   Int?    @map("Categoría")
-  Poblaci_n   Int?    @map("Población")
-  intendente  String? @db.VarChar(255)
-  codpostal   String? @db.VarChar(255)
-  Datos       String? @db.VarChar(255)
-  abrevloc    String? @db.VarChar(255)
-
-  @@index([IdDptos], map: "localidades_iddptos")
-}
-
-model modalidad {
-  IdModalidad Int     @id @default(autoincrement())
-  Tipo        String? @db.VarChar(50)
-}
-
-model plan_trabajo {
-  IdPlan          Int       @id @default(autoincrement())
-  IdObras         Int?
-  Mes_1           DateTime? @map("Mes 1")
-  Montos_1        Float?    @map("Montos 1")
-  P__de_Trabajo_1 Float?    @map("P_ de Trabajo_1")
-
-  @@index([IdObras], map: "IdObras")
-}
-
-model procesos {
-  Idproceso Int     @id @default(autoincrement())
-  proceso   String? @db.VarChar(255)
-}
-
-model programas {
-  IdProg       Int     @id @default(autoincrement())
-  Denominacion String? @db.VarChar(255)
-}
-
-model representantes {
-  IdRep       Int     @id @default(autoincrement())
-  TratRep     String? @db.VarChar(255)
-  ApellidoRep String? @db.VarChar(255)
-  NombresRep  String? @db.VarChar(255)
-  DNIRep      String? @db.VarChar(255)
-  Mat         String? @db.VarChar(255)
-}
-
-model rubros {
-  IdRubro    Int     @id @default(autoincrement())
-  Rubro      String? @db.VarChar(50)
-  comentario String? @db.VarChar(255)
-
-  @@index([Rubro], map: "rubros_IdArea")
-}
-
-model tipocertificados {
-  IdTipos         Int     @id @default(autoincrement())
-  tipocertificado String? @db.VarChar(50)
-}
-
-model tipocomprobante {
-  IdCompro   Int     @id @default(autoincrement())
-  compro     String? @db.VarChar(50)
-  comentario String? @db.VarChar(255)
-
-  @@index([compro], map: "compro_IdArea")
-}
-
-model usuarios {
-  IdUsuario Int     @id @default(autoincrement())
-  Login     String? @db.VarChar(255)
-  pass      String? @db.VarChar(255)
-  Id_acceso Int?
-  usuario   String? @db.VarChar(255)
-  identif   String? @db.VarChar(255)
-  IdDep     Int?
-
-  @@index([identif], map: "identif")
-}
-
-model repartici_n {
-  IdReparticion     Int     @id @default(autoincrement())
-  NombreRepartici_n String? @map("NombreRepartición") @db.VarChar(50)
-
-  @@map("repartición")
-}
-
-model prices {
-  id         Int      @id @default(autoincrement())
-  item_id    Int
-  price_date DateTime
-  price      Float?
-  items      items    @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "prices_ibfk_1")
-
-  @@index([item_id], map: "item_id")
-}
-
 model presupuestos {
-  id          Int      @id @default(autoincrement())
-  obraId      Int
-  data        Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  obra        obras    @relation(fields: [obraId], references: [IdObras])
+  id         Int          @id @default(autoincrement())
+  obraId     Int
+  data       Json
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  mediciones mediciones[]
+  obra       obras        @relation(fields: [obraId], references: [id])
 
-  @@index([obraId])
+  @@index([obraId], map: "presupuestos_obraId_fkey")
+}
+
+model mediciones {
+  id            Int          @id @default(autoincrement())
+  presupuestoId Int
+  data          Json
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  presupuesto   presupuestos @relation(fields: [presupuestoId], references: [id])
+
+  @@index([presupuestoId], map: "mediciones_presupuestoId_fkey")
+}
+
+model obras {
+  id                    Int               @id @default(autoincrement())
+  NombreObra            String?           @unique(map: "NombreObra") @db.VarChar(200)
+  Monto_Contrato        Float?
+  inaugurada            Int?              @db.SmallInt
+  plazo                 Int?
+  Fecha_de_Contrato     DateTime?         @map("Fecha de Contrato")
+  Fecha_de_Inicio       DateTime?         @map("Fecha de Inicio")
+  Fecha_de_Finalizaci_n DateTime?         @map("Fecha de Finalización")
+  Fechalicit            DateTime?
+  data                  Json
+  certificaciones       certificaciones[]
+  presupuestos          presupuestos[]
+}
+
+model certificaciones {
+  id             Int       @id @default(autoincrement())
+  NumCertificado String?   @db.VarChar(50)
+  Monto          Float?
+  MesCertificado DateTime?
+  data           Json
+  IdObras        Int?
+  IdEmpresa      Int?
+  FechaLiq       DateTime?
+  FechaIng       DateTime?
+  pagado         Int?      @db.SmallInt
+  netoapagar     Float?
+  obra           obras?    @relation(fields: [IdObras], references: [id])
+
+  @@index([IdObras], map: "certificaciones_IdObras_fkey")
 }

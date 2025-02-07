@@ -36,43 +36,37 @@ export default function UploadSQLPage() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-
-    const sqlFiles = files.filter(file => file.name.toLowerCase().endsWith('.sql'));
-    if (sqlFiles.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Por favor, sube solo archivos .sql",
-      });
-      return;
-    }
-
-    await uploadFiles(sqlFiles);
+    await processFiles(files);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    await processFiles(files);
+  };
+
+  const processFiles = async (files: File[]) => {
     if (files.length === 0) return;
 
-    const sqlFiles = files.filter(file => file.name.toLowerCase().endsWith('.sql'));
-    if (sqlFiles.length === 0) {
+    const validFiles = files.filter(file => {
+      const ext = file.name.toLowerCase().split('.').pop();
+      return ext === 'sql' || ext === 'csv';
+    });
+
+    if (validFiles.length === 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Por favor, sube solo archivos .sql",
+        description: "Por favor, sube solo archivos .sql o .csv",
       });
       return;
     }
 
-    await uploadFiles(sqlFiles);
+    await uploadFiles(validFiles);
   };
 
   const uploadFiles = async (files: File[]) => {
-    // Validate file size
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 10MB
     const invalidFiles = files.filter(file => file.size > MAX_FILE_SIZE);
 
     if (invalidFiles.length > 0) {
@@ -84,7 +78,6 @@ export default function UploadSQLPage() {
       return;
     }
 
-    // Add files to uploading state
     setUploadingFiles(prev => new Set([...prev, ...files.map(f => f.name)]));
 
     try {
@@ -93,7 +86,9 @@ export default function UploadSQLPage() {
           const formData = new FormData();
           formData.append("file", file);
 
-          const response = await fetch("/api/upload-sql", {
+          const endpoint = file.name.toLowerCase().endsWith('.csv') ? '/api/upload-csv' : '/api/upload-sql';
+
+          const response = await fetch(endpoint, {
             method: "POST",
             body: formData,
           });
@@ -138,18 +133,17 @@ export default function UploadSQLPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">Subir Archivos SQL</h1>
+      <h1 className="text-2xl font-bold mb-6">Subir Archivos SQL o CSV</h1>
 
       <div
-        className={`border-2 border-dashed rounded-lg p-10 text-center mb-6 ${isDragging ? "border-primary bg-primary/10" : "border-gray-300"
-          }`}
+        className={`border-2 border-dashed rounded-lg p-10 text-center mb-6 ${isDragging ? "border-primary bg-primary/10" : "border-gray-300"}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <div className="mb-4">
           <p className="text-lg mb-2">
-            Arrastra y suelta archivos SQL aquí o
+            Arrastra y suelta archivos SQL o CSV aquí o
           </p>
           <Button
             variant="outline"
@@ -162,7 +156,7 @@ export default function UploadSQLPage() {
             id="file-upload"
             type="file"
             className="hidden"
-            accept=".sql"
+            accept=".sql,.csv"
             multiple
             onChange={handleFileSelect}
             disabled={uploadingFiles.size > 0}
@@ -189,11 +183,10 @@ export default function UploadSQLPage() {
             <Card key={index} className="p-4">
               <h3 className="font-medium mb-2">{result.fileName}</h3>
               <div className="space-y-2">
-                {result.results.map((r: any, i: number) => (
+                {result.results.map((r: SQLResult, i: number) => (
                   <div
                     key={i}
-                    className={`p-2 rounded ${r.success ? "bg-green-50" : "bg-red-50"
-                      }`}
+                    className={`p-2 rounded ${r.success ? "bg-green-50" : "bg-red-50"}`}
                   >
                     <p className="font-mono text-sm break-all">
                       {r.statement}
@@ -212,4 +205,4 @@ export default function UploadSQLPage() {
       )}
     </div>
   );
-} 
+}

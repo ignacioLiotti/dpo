@@ -1,13 +1,27 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCachedData } from "@/lib/cache";
+import { NextRequest, NextResponse } from "next/server";
+import { handleAPIError } from "@/lib/utils/errorHandler";
+import { validateRequiredFields } from "@/lib/utils/validation";
+import { createObra, getAllObras } from "@/app/controllers/obras.controller";
 
 export async function GET() {
-	// Query 'obras' table from your local DB
-	const obras = await getCachedData("obras", async () => {
-		return prisma.obras.findMany({
-			take: 10,
-		});
-	});
-	return NextResponse.json(obras);
+	try {
+		const obras = await getAllObras();
+		if (!obras) {
+			return NextResponse.json({ obras: [] });
+		}
+		return NextResponse.json(obras);
+	} catch (error) {
+		return handleAPIError(error);
+	}
+}
+
+export async function POST(request: NextRequest) {
+	try {
+		const data = await request.json();
+		validateRequiredFields(data, ["NombreObra"]);
+		const obra = await createObra(data);
+		return NextResponse.json(obra, { status: 201 });
+	} catch (error) {
+		return handleAPIError(error);
+	}
 }

@@ -8,7 +8,7 @@ function getSortClause(sortParam: string | null): string {
 		return "ORDER BY i.id ASC"; // default
 	}
 
-	// Example: sort=cod:asc or sort=item_name:desc
+	// Example: sort=cod:asc or sort=name:desc
 	const [field, dir] = sortParam.split(":");
 	const sortField = (field || "").trim();
 	const sortDir = (dir || "").trim().toUpperCase() === "DESC" ? "DESC" : "ASC";
@@ -17,8 +17,8 @@ function getSortClause(sortParam: string | null): string {
 	const validColumns = [
 		"id",
 		"cod",
-		"item_name",
-		"unid",
+		"name",
+		"unit",
 		"category",
 		"type",
 		"origin_table",
@@ -47,41 +47,46 @@ export async function GET(request: Request) {
 		const orderByClause = getSortClause(sortParam);
 
 		// 4) Build a small WHERE clause for search
-		//    Below we match `item_name` to the searchTerm (case-insensitive).
+		//    Below we match `name` to the searchTerm (case-insensitive).
 		//    Adjust for your DB or additional columns as needed.
 		//    If you are on Postgres, you can do ILIKE. MySQL only has LOWER().
 		const safeSearch = searchTerm.replace(/'/g, "''"); // naive escaping example
 		const whereClause = safeSearch
-			? `WHERE LOWER(i.item_name) LIKE LOWER('%${safeSearch}%')`
+			? `WHERE LOWER(i.name) LIKE LOWER('%${safeSearch}%')`
 			: "";
 
 		// 5) Use the cache or fetch anew
 		const data = await getCachedData(
 			`items_page_${page}_limit_${limit}_search_${searchTerm}_sort_${sortParam}`,
 			async () => {
-				// 5a) Fetch paginated items
+				// Debug query to see the actual data in prices table
+				const debugQuery = `
+          SELECT *
+          FROM prices
+          LIMIT 3;
+        `;
+
 				const itemsQuery = `
           SELECT
             i.id,
             i.cod,
-            i.item_name,
-            i.unid,
+            i.name,
+            i.unit,
             i.category,
             i.type,
             i.origin_table,
-            i.publicar,
-            p.price,
-            p.price_date
+            COALESCE(p.price, 0) as price,
+            p.priceDate
           FROM items i
           LEFT JOIN (
-            SELECT item_id, price, price_date
+            SELECT itemId, price, priceDate
             FROM prices p1
-            WHERE (item_id, price_date) IN (
-              SELECT item_id, MAX(price_date) as max_date
+            WHERE (itemId, priceDate) IN (
+              SELECT itemId, MAX(priceDate) as max_date
               FROM prices
-              GROUP BY item_id
+              GROUP BY itemId
             )
-          ) p ON i.id = p.item_id
+          ) p ON i.id = p.itemId
           ${whereClause}
           ${orderByClause}
           LIMIT ${limit} OFFSET ${start}
@@ -94,26 +99,22 @@ export async function GET(request: Request) {
           ${whereClause}
         `;
 
-				const [items] = await Promise.all([
+				const [items, totals, debugResults] = await Promise.all([
 					prisma.$queryRawUnsafe(itemsQuery),
 					prisma.$queryRawUnsafe(totalQuery),
+					prisma.$queryRawUnsafe(debugQuery),
 				]);
+
+				console.log("Debug - First few prices:", debugResults);
 
 				// 6) Process items to match the expected format
 				const itemsWithDetails = (items as any[]).map((item) => ({
 					id: item.id,
-					name: item.item_name,
-					unit: item.unid,
+					name: item.name,
+					unit: item.unit,
 					price: item.price,
 					precio: item.price,
 					category: item.category,
-					element_tags: [
-						{
-							tags: {
-								name: item.category,
-							},
-						},
-					],
 					type: item.type,
 					origin_table: item.origin_table,
 				}));

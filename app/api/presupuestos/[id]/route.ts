@@ -1,7 +1,13 @@
 // app/api/presupuestos/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { handleAPIError } from "@/lib/utils/errorHandler";
+import {
+	getPresupuestoById,
+	updatePresupuesto,
+	deletePresupuesto,
+} from "@/app/controllers/presupuestos.controller";
 
 const prisma = new PrismaClient();
 
@@ -38,55 +44,40 @@ export async function POST(req: Request) {
 }
 
 // GET Handler
-export async function GET(req: Request) {
+export async function GET(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
 	try {
-		const urlParts = req.url.split("/");
-		const id = urlParts[urlParts.length - 1]; // Extract the id from the URL path
-		console.log("id", id);
-
-		if (id) {
-			// Fetch a specific presupuesto by ID
-			const presupuesto = await prisma.presupuestos.findUnique({
-				where: { id: Number(id) },
-			});
-
-			if (!presupuesto) {
-				return NextResponse.json(
-					{ error: "Presupuesto not found" },
-					{ status: 404 }
-				);
-			}
-
-			return NextResponse.json(presupuesto, { status: 200 });
-		} else {
-			return NextResponse.json({ error: "id is required" }, { status: 400 });
-		}
+		const presupuesto = await getPresupuestoById(Number(params.id));
+		return NextResponse.json(presupuesto);
 	} catch (error) {
-		if (error instanceof Error) {
-			console.log("Error: ", error.stack);
-		}
+		return handleAPIError(error);
 	}
 }
 
 // PUT Handler
-export async function PUT(req: Request) {
+export async function PUT(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
 	try {
-		const { id, data } = await req.json();
-
-		if (!id) {
-			return NextResponse.json({ error: "id is required" }, { status: 400 });
-		}
-
-		// Update an existing presupuesto
-		const updatedPresupuesto = await prisma.presupuestos.update({
-			where: { id: Number(id) },
-			data: { data },
-		});
-
-		return NextResponse.json(updatedPresupuesto, { status: 200 });
+		const data = await request.json();
+		const presupuesto = await updatePresupuesto(Number(params.id), data);
+		return NextResponse.json(presupuesto);
 	} catch (error) {
-		if (error instanceof Error) {
-			console.log("Error: ", error.stack);
-		}
+		return handleAPIError(error);
+	}
+}
+
+export async function DELETE(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	try {
+		await deletePresupuesto(Number(params.id));
+		return new NextResponse(null, { status: 204 });
+	} catch (error) {
+		return handleAPIError(error);
 	}
 }

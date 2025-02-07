@@ -25,8 +25,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { EditableCell } from './editable-cell'
-import { SortDirection } from '../types/table-types'
-import { highlightText, sortData } from '../utils/table-utils'
+import { SortDirection } from '../lib/types/table-types'
+import { highlightText, sortData } from '../lib/utils/table-utils'
 import { Card } from './ui/card'
 
 // ─────────────────────────────────────────────────────
