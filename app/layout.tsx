@@ -47,22 +47,22 @@ export default function RootLayout({
           "url": "/obras",
           "iconKey": "House"
         },
+        // {
+        //   "title": "Create",
+        //   "url": "/obras/create",
+        //   "iconKey": "FilePlus",
+        //   "items": [
+        //     {
+        //       "title": "Main",
+        //       "url": "/obras/create",
+        //       "iconKey": "House"
+        //     }
+        //   ]
+        // },
         {
-          "title": "Create",
-          "url": "/obras/create",
-          "iconKey": "FilePlus",
-          "items": [
-            {
-              "title": "Main",
-              "url": "/obras/create",
-              "iconKey": "House"
-            }
-          ]
-        },
-        {
-          "title": "[id]",
+          "title": "Obra de Ejemplo",
           "url": "/obras/1",
-          "iconKey": "Bot",
+          "iconKey": "HardHatIcon",
           "items": [
             {
               "title": "Main",
@@ -74,49 +74,7 @@ export default function RootLayout({
       ]
     },
     {
-      "title": "Presupuesto",
-      "url": "/presupuesto",
-      "iconKey": "Coins",
-      "items": [
-        {
-          "title": "Main",
-          "url": "/presupuesto",
-          "iconKey": "House"
-        },
-        {
-          "title": "All",
-          "url": "/presupuesto/all",
-          "iconKey": "Bot",
-          "items": [
-            {
-              "title": "Main",
-              "url": "/presupuesto/all",
-              "iconKey": "House"
-            }
-          ]
-        },
-        {
-          "title": "Components",
-          "url": "/presupuesto/components",
-          "iconKey": "Bot",
-          "items": []
-        },
-        {
-          "title": "[id]",
-          "url": "/presupuesto/1",
-          "iconKey": "Bot",
-          "items": [
-            {
-              "title": "Main",
-              "url": "/presupuesto/1",
-              "iconKey": "House"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "Home",
+      "title": "Items de Construcción",
       "url": "/",
       "iconKey": "Coins",
       "items": []
