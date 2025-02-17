@@ -334,7 +334,7 @@ export default function ObraPage({ id, initialObra, initialPresupuestos }: ObraP
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="mediciones"
+                  value="certificados"
                   className="group"
                   onMouseEnter={() => prefetchMediciones(obra.id)}
                 >
@@ -344,10 +344,10 @@ export default function ObraPage({ id, initialObra, initialPresupuestos }: ObraP
                     strokeWidth={2}
                     aria-hidden="true"
                   />
-                  Mediciones
-                  <Badge className="ms-1.5 transition-opacity group-data-[state=inactive]:opacity-50">
+                  Certificados
+                  {/* <Badge className="ms-1.5 transition-opacity group-data-[state=inactive]:opacity-50">
                     New
-                  </Badge>
+                  </Badge> */}
                 </TabsTrigger>
               </TabsList>
               <ScrollBar orientation="horizontal" />
@@ -679,7 +679,7 @@ export default function ObraPage({ id, initialObra, initialPresupuestos }: ObraP
             />
           </TabsContent>
 
-          <TabsContent value="mediciones">
+          <TabsContent value="certificados">
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">Certificados de Obra</h2>
