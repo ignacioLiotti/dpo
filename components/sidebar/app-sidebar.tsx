@@ -184,7 +184,7 @@ export function AppSidebar({ mappedData }: { mappedData: { iconKey: keyof typeof
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={itemsWithIcons} />
-        <NavProjects projects={projects} /> {/* Add projects if applicable */}
+        {/* <NavProjects projects={projects} />  */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={{ name: "User", email: "user@example.com", avatar: "" }} />
