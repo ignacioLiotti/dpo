@@ -76,7 +76,7 @@ export default function RootLayout({
     {
       "title": "Items de Construcción",
       "url": "/",
-      "iconKey": "Coins",
+      "iconKey": "LayoutListIcon",
       "items": []
     },
   ]

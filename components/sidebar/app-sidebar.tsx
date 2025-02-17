@@ -15,6 +15,7 @@ import {
   GalleryVerticalEnd,
   HardHatIcon,
   House,
+  LayoutListIcon,
   LayoutTemplateIcon,
   Map,
   PieChart,
@@ -115,7 +116,8 @@ const iconMap = {
   HardHatIcon,
   Coins,
   FlaskConicalIcon,
-  Bot
+  Bot,
+  LayoutListIcon
 };
 // Function to map icon keys back to components
 const mapIconsToComponents = (navItems: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[]) => {
