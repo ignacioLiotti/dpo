@@ -1,0 +1,22 @@
+"data":{
+  "memoria":"",
+  "observaciones":"",
+
+  "ampliaciones":[
+    {
+      "expediente":"",
+      "fecha":"",
+      "monto":"",
+      "norma":"",
+      "ampliacion":"",
+    },
+    {
+      "expediente":"",
+      "fecha":"",
+      "monto":"",
+      "norma":"",
+      "ampliacion":"",
+    },
+    
+  ]
+}"

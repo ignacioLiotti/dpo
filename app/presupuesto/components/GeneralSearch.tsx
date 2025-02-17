@@ -21,7 +21,7 @@ export const GeneralSearch = memo(({
 
   const debouncedSearch = useCallback(
     debounce((searchTerm: string) => {
-      if (searchTerm.length >= 2) {
+      if (searchTerm.length >= 4) {
         const filtered = allElements.filter(element =>
           element.name?.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !existingItems.some(existing => existing.id === element.id)

@@ -5,7 +5,7 @@ import {
 	Medicion,
 	GroupedMedicionData,
 } from "@/lib/types/medicion";
-import { calculateMedicionAcumulado } from "@/lib/utils/calculations";
+import { calculateMedicionAcumulado } from "@/utils/calculations";
 
 interface UseMedicionProps {
 	presupuestoId: string | number;

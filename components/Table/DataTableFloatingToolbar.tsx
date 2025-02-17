@@ -6,7 +6,7 @@ import { CheckCircle, CrossIcon, Download, PlusCircle, Trash2Icon, XIcon } from 
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { useToast } from "../../lib/hooks/use-toast";
+import { useToast } from "../../hooks/use-toast";
 import DataTableFacetedFilter from "./DataTableFacetedFilter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Separator } from "@radix-ui/react-dropdown-menu";

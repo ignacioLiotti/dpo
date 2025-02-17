@@ -1,55 +1,51 @@
-// Base item interface with common properties
-export interface BaseItem {
-	id: string | number;
-	name: string;
-	category: string;
+export interface TagObject {
+	tags: {
+		name: string;
+	};
 }
 
-// Presupuesto-specific item interface
-export interface PresupuestoItem extends BaseItem {
-	unit: string;
-	price: number;
-	quantity: number;
-	unitPrice: number;
-	totalPrice: number;
-	accumulated?: string | number;
-	parcial?: number;
-	rubro?: string | number;
-	element_tags?: Array<{ tags: { name: string } }>;
-	originalUnit?: string;
+export interface Measurement {
+	monthlyProgress: number;
+	cumulativePrevious: number;
+	cumulativeCurrent: number;
 }
 
-// Medicion-specific item interface
-export interface MedicionItem extends BaseItem {
-	anterior: number;
-	presente: number;
-	acumulado: number;
-}
-
-// Grouped data interfaces
-export interface GroupedPresupuestoData {
-	[tag: string]: PresupuestoItem[];
-}
-
-export interface GroupedMedicionData {
-	[tag: string]: MedicionItem[];
-}
-
-// Medicion data interfaces
-export interface MedicionData {
-	fecha: string;
-	items: {
-		itemId: string | number;
-		anterior: number;
-		presente: number;
-		acumulado: number;
-	}[];
+export interface Measurements {
+	[itemId: string]: Measurement;
 }
 
 export interface Medicion {
 	id: number;
-	presupuestoId: number;
-	data: MedicionData;
-	createdAt: string;
-	updatedAt: string;
+	month: string;
+	measurements: {
+		[key: string]: {
+			monthlyProgress: number;
+			cumulativePrevious: number;
+			cumulativeCurrent: number;
+		};
+	};
+}
+
+export interface TableItem {
+	id: string;
+	name: string;
+	unit: string;
+	quantity: number;
+	unitPrice: number;
+	totalPrice: number;
+	price: number;
+	category: string;
+	parcial: number;
+	rubro: number;
+	accumulated: number;
+	element_tags?: { tags: { name: string } }[];
+	originalUnit?: string;
+	originalQuantity?: number;
+	originalUnitPrice?: number;
+	targetSection?: string;
+	nombre?: string;
+}
+
+export interface GroupedData {
+	[key: string]: TableItem[];
 }

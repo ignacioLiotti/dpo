@@ -1,0 +1,117 @@
+import { QueryClient } from "@tanstack/react-query";
+
+interface Obra {
+	id: number;
+	nombre: string;
+	ubicacion: string;
+	descripcion: string;
+	created_at?: string;
+}
+
+const queryClient = new QueryClient();
+
+// Fetch a single obra
+export async function getObra(id: string | number) {
+	return queryClient.fetchQuery({
+		queryKey: ["obra", id],
+		queryFn: async () => {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_APP_URL}/api/obras/${id}`
+			);
+			if (!response.ok) {
+				throw new Error("Failed to fetch obra");
+			}
+			return response.json() as Promise<Obra>;
+		},
+	});
+}
+
+// Fetch all obras
+export async function useObras() {
+	return queryClient.fetchQuery({
+		queryKey: ["obras"],
+		queryFn: async () => {
+			const response = await fetch("/api/obras");
+			if (!response.ok) {
+				throw new Error("Failed to fetch obras");
+			}
+			return response.json() as Promise<Obra[]>;
+		},
+	});
+}
+
+// Create a new obra
+export async function useCreateObra(newObra: Omit<Obra, "id" | "created_at">) {
+	const { data, isLoading, error } = await queryClient.fetchQuery({
+		queryKey: ["createObra"],
+		queryFn: async () => {
+			const response = await fetch("/api/obras", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(newObra),
+			});
+			if (!response.ok) {
+				throw new Error("Failed to create obra");
+			}
+			return response.json();
+		},
+	});
+	await queryClient.invalidateQueries({ queryKey: ["obras"] });
+	return {
+		data: data,
+		isLoading: isLoading,
+		error: error,
+	};
+}
+
+// Update an obra
+export async function useUpdateObra(updatedObra: Obra) {
+	const { data, isLoading, error } = await queryClient.fetchQuery({
+		queryKey: ["updateObra", updatedObra.id],
+		queryFn: async () => {
+			const response = await fetch("/api/obras", {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(updatedObra),
+			});
+			if (!response.ok) {
+				throw new Error("Failed to update obra");
+			}
+			return response.json();
+		},
+	});
+	await queryClient.invalidateQueries({ queryKey: ["obras"] });
+	await queryClient.invalidateQueries({ queryKey: ["obra", updatedObra.id] });
+	return {
+		data: data,
+		isLoading: isLoading,
+		error: error,
+	};
+}
+
+// Delete an obra
+export async function useDeleteObra(id: number) {
+	const { data, isLoading, error } = await queryClient.fetchQuery({
+		queryKey: ["deleteObra", id],
+		queryFn: async () => {
+			const response = await fetch(`/api/obras?id=${id}`, {
+				method: "DELETE",
+			});
+			if (!response.ok) {
+				throw new Error("Failed to delete obra");
+			}
+			return response.json();
+		},
+	});
+	await queryClient.invalidateQueries({ queryKey: ["obras"] });
+	await queryClient.invalidateQueries({ queryKey: ["obra", id] });
+	return {
+		data: data,
+		isLoading: isLoading,
+		error: error,
+	};
+}

@@ -8,7 +8,7 @@ import { CheckCircle, CrossIcon, Download, PlusCircle } from "lucide-react";
 import { Input } from "../ui/input.tsx";
 import { Button } from "../ui/button.tsx";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.tsx";
-import { useToast } from "../../lib/hooks/use-toast.ts";
+import { useToast } from "../../hooks/use-toast.ts";
 import DataTableFacetedFilter from "./DataTableFacetedFilter";
 
 interface DataTableToolbarProps<TData> {

@@ -3,11 +3,11 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Search, SearchIcon } from "lucide-react"
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, hidden, children, ...props }, ref) => {
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input"> & { icon?: boolean }>(
+  ({ className, type, hidden, children, icon = true, ...props }, ref) => {
     return (
       <div className="relative flex items-center">
-        <SearchIcon className="absolute left-4 text-foreground-secondary size-4" />
+        {icon && <SearchIcon className="absolute left-4 text-foreground-secondary size-4" />}
         <input
           type={type}
           className={cn(

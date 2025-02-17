@@ -1,8 +1,9 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
+import Link from "next/link"
+
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 leading-3 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -13,6 +14,11 @@ const buttonVariants = cva(
           "inline-flex items-center justify-center bg-[#F8F7FC] text-blue-500 shadow-[inset_0_1px_0_#fff,inset_0_-2px_0_#3b82f621,0_0_0_1px_#3b82f64a,0_2px_7px_0px_#3b85f64a,0_0_0_3px_#3b82f614] font-medium",
           "relative transition-all duration-100 cursor-pointer will-change-transform ",
           "active:scale-[0.97] hover:bg-[#ece9f7] active:shadow-[inset_0_-1px_0_#fff,inset_0_2px_0_#3b82f621,0_0_0_1px_#3b82f64a,0_2px_7px_0px_#3b85f64a,0_0_0_3px_#3b82f614]"
+        ),
+        box: cn(
+          "inline-flex flex-col items-center justify-center bg-muted/20 text-neutral-600 shadow-simple font-medium",
+          "relative transition-all duration-100 cursor-pointer will-change-transform ",
+          "active:scale-[0.97] hover:bg-muted/70"
         ),
         default: cn(
           "inline-flex items-center justify-center bg-black text-white shadow-simple font-medium",
@@ -91,11 +97,25 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
   VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  href?: string
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size = 'default', asChild = false, ...props }, ref) => {
+  ({ className, variant, size = 'default', asChild = false, href, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+
+    if (href) {
+      return (
+        <Link href={href} asChild>
+          <Comp
+            className={cn(buttonVariants({ variant, size, className }))}
+            ref={ref}
+            {...props}
+          />
+        </Link>
+      )
+    }
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}

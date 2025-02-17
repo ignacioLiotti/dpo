@@ -1,33 +1,25 @@
 'use client'
 import Link from 'next/link';
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 // Assuming you have a function to fetch all presupuestos
 const fetchPresupuestos = async () => {
-  try {
-    const response = await fetch('/api/presupuestos');
-    if (!response.ok) {
-      throw new Error('Failed to fetch presupuestos');
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching presupuestos:', error);
-    return [];
+  const response = await fetch('/api/presupuestos');
+  if (!response.ok) {
+    throw new Error('Failed to fetch presupuestos');
   }
+  return response.json();
 };
 
 const PresupuestoList = () => {
-  const [presupuestos, setPresupuestos] = React.useState([]);
+  const { data: presupuestos = [], isLoading, error } = useQuery({
+    queryKey: ['presupuestos'],
+    queryFn: fetchPresupuestos,
+  });
 
-  React.useEffect(() => {
-    const loadPresupuestos = async () => {
-      const data = await fetchPresupuestos();
-      console.log(data);
-      setPresupuestos(data);
-    };
-    loadPresupuestos();
-  }, []);
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
   return (
     <ul>

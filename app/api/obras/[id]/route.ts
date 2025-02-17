@@ -1,11 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { handleAPIError } from "@/lib/utils/errorHandler";
-import { validateRequiredFields } from "@/lib/utils/validation";
-import {
-	getObraById,
-	updateObra,
-	deleteObra,
-} from "@/app/controllers/obras.controller";
+import { createClient } from "@/utils/supabase/server";
+import { NextResponse } from "next/server";
 
 export async function GET(
 	request: Request,
@@ -13,31 +7,93 @@ export async function GET(
 ) {
 	try {
 		const { id } = await params;
-		const paramsId = Number(id);
-		const obra = await getObraById(paramsId);
 
-		if (!obra) {
-			return NextResponse.json({ error: "Obra not found" }, { status: 404 });
+		const supabase = await createClient();
+
+		console.log("id", id);
+
+		if (id) {
+			const { data: obra, error } = await supabase
+				.from("obras")
+				.select("*")
+				.eq("id", id)
+				.single();
+
+			if (error) {
+				console.error("Error:", error);
+				return NextResponse.json(
+					{ error: "Failed to fetch obra" },
+					{ status: 500 }
+				);
+			}
+			return NextResponse.json(obra);
 		}
 
-		return NextResponse.json(obra);
+		// Get all obras
+		const { data: obras, error } = await supabase
+			.from("obras")
+			.select("*")
+			.order("created_at", { ascending: false });
+
+		if (error) throw error;
+		return NextResponse.json(obras);
 	} catch (error) {
-		return handleAPIError(error);
+		console.error("Error:", error);
+		return NextResponse.json(
+			{ error: "Failed to fetch obras" },
+			{ status: 500 }
+		);
 	}
 }
 
-export async function PUT(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
 	try {
-		const { id } = await params;
+		const supabase = await createClient();
 		const data = await request.json();
-		validateRequiredFields(data, ["NombreObra"]);
-		const obra = await updateObra(Number(id), data);
+
+		const { data: obra, error } = await supabase
+			.from("obras")
+			.insert([
+				{
+					nombre: data.nombre,
+					ubicacion: data.ubicacion,
+					descripcion: data.descripcion,
+				},
+			])
+			.select()
+			.single();
+
+		if (error) throw error;
 		return NextResponse.json(obra);
 	} catch (error) {
-		return handleAPIError(error);
+		console.error("Error:", error);
+		return NextResponse.json(
+			{ error: "Failed to create obra" },
+			{ status: 500 }
+		);
+	}
+}
+
+export async function PUT(request: Request) {
+	try {
+		const supabase = await createClient();
+		const { id, ...data } = await request.json();
+
+		const { data: obra, error } = await supabase
+			.from("obras")
+			.update(data)
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error) throw error;
+		return NextResponse.json(obra);
+	} catch (error) {
+		console.error("Error:", error);
+		return NextResponse.json(
+			{ error: "Failed to update obra" },
+			{ status: 500 }
+		);
 	}
 }
 
@@ -46,10 +102,22 @@ export async function DELETE(
 	{ params }: { params: { id: string } }
 ) {
 	try {
+		const supabase = await createClient();
 		const { id } = await params;
-		await deleteObra(Number(id));
-		return new NextResponse(null, { status: 204 });
+
+		if (!id) {
+			return NextResponse.json({ error: "ID is required" }, { status: 400 });
+		}
+
+		const { error } = await supabase.from("obras").delete().eq("id", id);
+
+		if (error) throw error;
+		return NextResponse.json({ success: true });
 	} catch (error) {
-		return handleAPIError(error);
+		console.error("Error:", error);
+		return NextResponse.json(
+			{ error: "Failed to delete obra" },
+			{ status: 500 }
+		);
 	}
 }
