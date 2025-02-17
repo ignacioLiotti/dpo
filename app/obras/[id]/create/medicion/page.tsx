@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import MedicionCreateClient from "./MedicionCreateClient";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     presupuestoId?: string;
-  };
+  }>;
 }
 
 export default async function CreateMedicionPage({ params, searchParams }: PageProps) {

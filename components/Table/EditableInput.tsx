@@ -6,6 +6,7 @@ interface EditableInputProps {
   onChange: (val: string) => void
   suffix?: string
   prefix?: string
+  className?: string
   editable?: boolean
 }
 

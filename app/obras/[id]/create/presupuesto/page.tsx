@@ -3,17 +3,17 @@ import { redirect } from "next/navigation";
 import PresupuestoCreateClient from "./PresupuestoCreateClient";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     step?: string;
-  };
+  }>;
 }
 
 export default async function CreatePresupuestoPage({ params, searchParams }: PageProps) {
-  const { id } = params;
-  const { step = "1" } = searchParams;
+  const { id } = await params;
+  const { step = "1" } = await searchParams;
   const supabase = await createClient();
 
   // Verify obra exists

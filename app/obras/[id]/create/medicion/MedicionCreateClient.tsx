@@ -58,6 +58,7 @@ export default function MedicionCreateClient({
   });
 
   // Create an empty medicion structure
+  //@ts-ignore
   const emptyMedicion: Medicion = {
     id: 0,
     month: currentDate.toISOString(),

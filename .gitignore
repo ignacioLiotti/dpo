@@ -36,6 +36,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# custom files
+*.txt
+*.csv
+*.xlsx
+*.xls
+*.doc
+*.docx
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

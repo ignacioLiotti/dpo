@@ -1,15 +1,15 @@
 // tableComponent/Components/DataTableFacetedFilter.tsx
 import * as React from "react"
 import { Column } from "@tanstack/react-table"
-import { Label } from "../ui/label.tsx"
+import { Label } from "@/components/ui/label"
 import { CheckIcon, PlusCircleIcon } from "lucide-react"
-import { Button } from "../ui/button.tsx"
-import { Badge } from "../ui/badge.tsx"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command.tsx"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.tsx"
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group.tsx"
-import { Separator } from "../ui/separator.tsx"
-import { cn } from "@/lib/utils.ts"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>

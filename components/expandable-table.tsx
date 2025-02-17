@@ -25,8 +25,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { EditableCell } from './editable-cell'
-import { SortDirection } from '../types/table-types'
-import { highlightText, sortData } from '../utils/table-utils'
 import { Card } from './ui/card'
 
 // ─────────────────────────────────────────────────────
@@ -39,6 +37,7 @@ import {
   ColumnDef,
   ExpandedState,
   flexRender,
+  SortDirection,
 } from '@tanstack/react-table'
 
 /** 
@@ -143,6 +142,19 @@ function duplicateSelected(data: Item[], selectedIds: Set<string>): Item[] {
 
   traverse(data)
   return newData
+}
+
+/**
+ * Sort data based on column and direction
+ */
+function sortData(data: Item[], column: keyof Item, direction: SortDirection): Item[] {
+  return [...data].sort((a, b) => {
+    const aVal = a[column]?.toString() || '';
+    const bVal = b[column]?.toString() || '';
+    return direction === 'asc'
+      ? aVal.localeCompare(bVal)
+      : bVal.localeCompare(aVal);
+  });
 }
 
 export default function ExpandableTable() {
@@ -387,9 +399,9 @@ export default function ExpandableTable() {
               )}
               <EditableCell
                 className={depth === 0 ? 'font-bold' : ''}
-                value={item.insumos}
+                value={getValue<string>()}
                 onChange={(val) => handleEdit(item.id, 'insumos', val)}
-                displayValue={highlightText(getValue<string>(), searchTerm)}
+                displayValue={getValue<string>()}
               />
             </div>
           )

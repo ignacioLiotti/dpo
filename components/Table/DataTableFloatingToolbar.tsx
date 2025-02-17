@@ -2,14 +2,10 @@
 
 import * as React from "react"
 import { Table } from "@tanstack/react-table";
-import { CheckCircle, CrossIcon, Download, PlusCircle, Trash2Icon, XIcon } from "lucide-react";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { useToast } from "../../hooks/use-toast";
-import DataTableFacetedFilter from "./DataTableFacetedFilter";
+import { Download, PlusCircle, Trash2Icon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
-import { Separator } from "@radix-ui/react-dropdown-menu";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;

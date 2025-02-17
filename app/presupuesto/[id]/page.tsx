@@ -69,9 +69,9 @@ async function getPresupuesto(id: string): Promise<Presupuesto> {
   return rawData;
 }
 
-export default async function PresupuestoPage({ params }: { params: { id: string } }) {
+export default async function PresupuestoPage({ params }: { params: Promise<{ id: string }> }) {
   const queryClient = getQueryClient()
-  const { id } = params
+  const { id } = await params
 
   // Fetch presupuesto data
   const presupuesto = await getPresupuesto(id)

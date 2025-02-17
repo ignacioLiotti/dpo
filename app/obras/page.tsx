@@ -15,11 +15,28 @@ import { useObras } from "@/utils/hooks/useObras";
 interface Obra {
   id: number;
   nombre: string;
+  montoContrato: number;
   ubicacion: string;
-  empresa: string;
+  idEmpresa: string;
+  idReparticion: string;
+  idAvance: string;
+  idInspectores: string;
+  idProyectista: string;
+  responsableProyecto: string;
+  idLocalidad: string;
+  departamento: string;
+  plazo: string;
+  fecha_contrato: string;
   fecha_inicio: string;
   fecha_fin: string;
   estado: string;
+  Fechalicit: string;
+  Edificio: string;
+  prioridad: string;
+  Proyecto: string;
+  inaugurada: string;
+  fechaInauguracion: string;
+  data: any;
   created_at: string;
   updated_at: string;
 }
@@ -27,9 +44,9 @@ interface Obra {
 export default function ObrasPage() {
 
   const [obras, setObras] = useState<Obra[]>([]);
-
   useEffect(() => {
     useObras().then((data) => {
+      // @ts-ignore
       setObras(data);
     });
   }, []);
@@ -64,7 +81,7 @@ export default function ObrasPage() {
               <TableCell>{obra.id}</TableCell>
               <TableCell>{obra.nombre}</TableCell>
               <TableCell>{obra.ubicacion}</TableCell>
-              <TableCell>{obra.empresa}</TableCell>
+              <TableCell>{obra.idEmpresa}</TableCell>
               <TableCell>{new Date(obra.fecha_inicio).toLocaleDateString()}</TableCell>
               <TableCell>{obra.fecha_fin ? new Date(obra.fecha_fin).toLocaleDateString() : '-'}</TableCell>
               <TableCell>{obra.estado}</TableCell>

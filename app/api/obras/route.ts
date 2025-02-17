@@ -1,10 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
 
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
 	try {
 		const supabase = await createClient();
 
@@ -79,8 +76,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
 	try {
 		const supabase = await createClient();
-		const { searchParams } = new URL(request.url);
-		const id = searchParams.get("id");
+		const { id } = await request.json();
 
 		if (!id) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });

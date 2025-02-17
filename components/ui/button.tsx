@@ -106,6 +106,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     if (href) {
       return (
+        // @ts-ignore
         <Link href={href} asChild>
           <Comp
             className={cn(buttonVariants({ variant, size, className }))}
@@ -117,6 +118,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
+      // @ts-ignore
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}

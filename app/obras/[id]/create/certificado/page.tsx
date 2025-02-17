@@ -3,18 +3,18 @@ import { redirect } from "next/navigation";
 import CertificadoCreateClient from "./CertificadoCreateClient";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     presupuestoId?: string;
     medicionId?: string;
-  };
+  }>;
 }
 
 export default async function CreateCertificadoPage({ params, searchParams }: PageProps) {
-  const { id } = params;
-  const { presupuestoId, medicionId } = searchParams;
+  const { id } = await params;
+  const { presupuestoId, medicionId } = await searchParams;
   const supabase = await createClient();
 
   if (!presupuestoId) {

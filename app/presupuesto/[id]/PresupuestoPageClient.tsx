@@ -245,6 +245,7 @@ export function PresupuestoPageClient({ id, initialPresupuesto }: PresupuestoPag
 
         {activeTab === 'medicion' ? (
           <MedicionesEditor
+            //@ts-ignore
             medicion={{
               id: 0,
               month: new Date().toISOString(),

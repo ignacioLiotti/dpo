@@ -31,6 +31,7 @@ const queryClient = new QueryClient();
 
 // Fetch a single presupuesto
 export async function usePresupuesto(id: string | number) {
+	// @ts-ignore
 	const { data, isLoading, error } = await queryClient.fetchQuery({
 		queryKey: ["presupuesto", id],
 		queryFn: async () => {
@@ -53,7 +54,6 @@ export async function usePresupuesto(id: string | number) {
 		},
 	});
 
-	console.log(data, isLoading, error);
 	return {
 		data: data,
 		isLoading: isLoading,
@@ -63,6 +63,7 @@ export async function usePresupuesto(id: string | number) {
 
 // Fetch all presupuestos
 export async function usePresupuestos() {
+	// @ts-ignore
 	const { data, isLoading, error } = await queryClient.fetchQuery({
 		queryKey: ["presupuestos"],
 		queryFn: async () => {

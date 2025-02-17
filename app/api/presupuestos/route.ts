@@ -4,8 +4,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
 	try {
 		const supabase = await createClient();
-		const { searchParams } = new URL(request.url);
-		const obraId = searchParams.get("obraId");
+		const obraId = request.url.split("=")[1];
 
 		if (!obraId) {
 			return NextResponse.json(
@@ -120,8 +119,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
 	try {
 		const supabase = await createClient();
-		const { searchParams } = new URL(request.url);
-		const id = searchParams.get("id");
+		const { id } = await request.json();
 
 		if (!id) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });

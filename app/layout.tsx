@@ -1,5 +1,5 @@
 // layout.tsx
-import { Geist, Geist_Mono, GeistMono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
@@ -130,7 +130,7 @@ export default function RootLayout({
           {/* rest of your scripts go under */}
         </head>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.className} ${geistMono.className} antialiased`}
         >
           <ReactScanWrapper>
             <SidebarProvider>

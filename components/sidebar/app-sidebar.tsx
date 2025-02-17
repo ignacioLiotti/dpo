@@ -181,8 +181,6 @@ export function AppSidebar({ mappedData }: { mappedData: { iconKey: keyof typeof
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <TeamSwitcher teams={teams} />
-        <a href="/obras/1">OBRA</a>
-        <a href="/">Home</a>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={itemsWithIcons} />

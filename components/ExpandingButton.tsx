@@ -17,9 +17,8 @@ export default function CreateFAB({ height, width, children }: CreateFABProps) {
   const [formState, setFormState] = useState("idle");
   const [feedback, setFeedback] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-
   const usingHeight = height ? Math.trunc(height) : 48;
-  const usingWidth = open ? Math.trunc(width) : 0;
+  const usingWidth = open ? Math.trunc(width ?? 0) : 0;
 
   console.log('usingWidth', usingWidth)
 
@@ -44,6 +43,7 @@ export default function CreateFAB({ height, width, children }: CreateFABProps) {
       <div className={cn("flex gap-2 absolute top-[80vh] left-[40vw] translate-x-[-50%]",
         open ? `bottom-64 translate-y-[-70px]` : "")}
         style={{
+          // @ts-ignore
           "--tw-translate-x": `-${usingWidth / 3}px`,
         }}
       >

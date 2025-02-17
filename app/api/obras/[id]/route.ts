@@ -1,10 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function GET(_: NextRequest, { params }: any) {
 	try {
 		const { id } = await params;
 
@@ -97,10 +97,7 @@ export async function PUT(request: Request) {
 	}
 }
 
-export async function DELETE(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
+export async function DELETE(_: NextRequest, { params }: any) {
 	try {
 		const supabase = await createClient();
 		const { id } = await params;

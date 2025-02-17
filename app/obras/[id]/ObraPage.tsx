@@ -756,17 +756,23 @@ export default function ObraPage({ id, initialObra, initialPresupuestos }: ObraP
                         if (!certificado) return null;
 
                         const matchingMedicion = mediciones?.find(m => m.id === certificado.medicion_id);
+
                         if (!matchingMedicion) return null;
+
+                        console.log('matchingMedicion', matchingMedicion);
+
+                        // Add null check for measurements
+                        const measurements = matchingMedicion.measurements || {};
 
                         // Transform medicion to match MedicionInput type
                         const transformedMedicion: MedicionInput = {
                           id: matchingMedicion.id,
                           obra_id: Number(id),
-                          periodo: matchingMedicion.month,
+                          periodo: matchingMedicion.month || matchingMedicion.periodo || '',
                           data: {
-                            secciones: Object.entries(matchingMedicion.measurements).reduce((acc, [itemId, values]) => {
+                            secciones: Object.entries(measurements).reduce((acc, [itemId, values]) => {
                               let sectionName = '';
-                              const presupuestoData = certificado.data.presupuestoData;
+                              const presupuestoData = certificado.data.presupuestoData || {};
 
                               for (const section of Object.keys(presupuestoData)) {
                                 const items = presupuestoData[section];

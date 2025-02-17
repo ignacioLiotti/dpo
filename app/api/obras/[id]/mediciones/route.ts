@@ -1,13 +1,13 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function GET(_: NextRequest, { params }: any) {
 	try {
 		const supabase = await createClient();
-		const { id } = params;
+		const { id } = await params;
 
 		if (!id) {
 			return NextResponse.json(

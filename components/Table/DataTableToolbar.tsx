@@ -5,11 +5,11 @@
 import * as React from "react"
 import { Table } from "@tanstack/react-table";
 import { CheckCircle, CrossIcon, Download, PlusCircle } from "lucide-react";
-import { Input } from "../ui/input.tsx";
-import { Button } from "../ui/button.tsx";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.tsx";
-import { useToast } from "../../hooks/use-toast.ts";
-import DataTableFacetedFilter from "./DataTableFacetedFilter";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+// import { useToast } from "@/hooks/use-toast";
+import DataTableFacetedFilter from "@/components/Table/DataTableFacetedFilter";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -28,7 +28,6 @@ export function DataTableToolbar<TData>({
   const isFiltered = table.getState().columnFilters.length > 0;
   const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
   const filterColumn = columnsConfig?.config?.textInputFilter || "id"; // Use the first column as the default filter column
-  const { toast } = useToast()
 
   // Add this state to manage filter reset callbacks
   const [resetCallbacks, setResetCallbacks] = React.useState<(() => void)[]>([]);

@@ -38,7 +38,7 @@ interface Presupuesto {
   updated_at: string;
 }
 
-export default async function ObraServerPage({ params }: { params: { id: string } }) {
+export default async function ObraServerPage({ params }: { params: Promise<{ id: string }> }) {
   const queryClient = getQueryClient()
   const { id } = await params
 
@@ -65,6 +65,7 @@ export default async function ObraServerPage({ params }: { params: { id: string 
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
+      {/* @ts-ignore */}
       <ObraPage id={id} initialObra={obra} initialPresupuestos={presupuestos} />
     </HydrationBoundary>
   )

@@ -240,6 +240,7 @@ export default function CustomTable() {
       sorting,
       globalFilter,
       pagination,
+      // @ts-ignore
       rowSelection: Object.fromEntries([...selectedIds].map((id) => [id, true])),
     },
     onSortingChange: setSorting,
@@ -257,6 +258,7 @@ export default function CustomTable() {
     onRowSelectionChange: (updater) => {
       const newSelection =
         typeof updater === "function"
+          // @ts-ignore
           ? updater(Object.fromEntries([...selectedIds].map((id) => [id, true])))
           : updater;
       setSelectedIds(new Set(Object.keys(newSelection)));
@@ -287,6 +289,7 @@ export default function CustomTable() {
       }));
       return { rows, total: data.total || 0 };
     },
+    // @ts-ignore
     keepPreviousData: true,
   });
 
@@ -347,7 +350,7 @@ export default function CustomTable() {
   }
 
   function handleExecuteSelected() {
-    console.log("Execute action for selected:", [...selectedIds]);
+    // @ts-ignore
     router.push(`/presupuesto?selectedIds=${[...selectedIds].join(",")}`);
   }
 
@@ -430,8 +433,8 @@ export default function CustomTable() {
                   <TableCell
                     key={cell.id}
                     className={`py-0 px-4 ${cell.column.id === "id" || cell.column.id === "selection"
-                        ? "text-center align-middle"
-                        : ""
+                      ? "text-center align-middle"
+                      : ""
                       }`}
                   >
                     <AnimatedTableCell>

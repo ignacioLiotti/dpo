@@ -160,8 +160,7 @@ const ArrayTable = ({ items, path, columns, onChange }: {
                 <EditableInput
                   editable
                   value={item[col.key] || ''}
-                  path={`${path}.${index}.${col.key}`}
-                  onChange={onChange}
+                  onChange={(val) => onChange(`${path}.${index}.${col.key}`, val)}
                 />
               </TableCell>
             ))}
@@ -192,8 +191,6 @@ export default function CertificadoCreateClient({
       return certificado.data.progress;
     }
 
-    console.log("aca", { obraId, fechaInicio, fechaFin, certificado, obraData, display, selectedMedicion, editedData, progress, presupuestoData });
-
     // Generate months between fechaInicio and fechaFin
     const months = [];
     let currentDate = new Date(fechaInicio);
@@ -219,6 +216,12 @@ export default function CertificadoCreateClient({
 
     return months;
   });
+
+  console.log('selectedMedicion', selectedMedicion);
+
+  if (!selectedMedicion.periodo) {
+    return 'bolas'
+  }
 
   const handleDataChange = (path: string, value: any) => {
     const keys = path.split('.');
@@ -255,6 +258,7 @@ export default function CertificadoCreateClient({
   }, {} as Record<string, { id: string; name: string; totalPrice: number }[]>);
 
   // Transform medicion data for MedicionesEditor
+  //@ts-ignore
   const transformedMedicion: MedicionOutput = {
     id: selectedMedicion.id,
     month: selectedMedicion.periodo,
@@ -312,6 +316,8 @@ export default function CertificadoCreateClient({
       </div>
     );
   }
+
+
 
   const totalItems = selectedMedicion.data.secciones.reduce((acc, seccion) => acc + seccion.items.length, 0);
   const totalAcumulado = selectedMedicion.data.secciones.reduce((acc, seccion) =>
