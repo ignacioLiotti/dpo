@@ -1,71 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { MedicionesEditor } from "@/components/editores/MedicionesEditor";
-import type { Medicion as MedicionOutput } from "@/hooks/useMediciones";
+import type { Medicion, TableItem, CertificadoProgress, Certificado } from '@/types';
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Table, TableHeader, TableBody, TableCell, TableRow, TableHead } from "@/components/ui/table";
 import { EditableInput } from "@/components/Table/EditableInput";
-
-interface MedicionInput {
-  id: number;
-  obra_id: number;
-  periodo: string;
-  data: {
-    secciones: Array<{
-      nombre: string;
-      items: Array<{
-        id: string;
-        anterior: number;
-        presente: number;
-        acumulado: number;
-      }>;
-    }>;
-  };
-  created_at: string;
-  updated_at: string;
-}
+import { useObra } from "@/app/providers/ObraProvider";
 
 interface CertificadoCreateClientProps {
   obraId: string;
   obraName: string;
-  presupuestoData: Record<string, any>;
-  selectedMedicion: MedicionInput;
+  presupuestoData: Record<string, TableItem[]>;
+  selectedMedicion: Medicion;
   fechaInicio: string;
   fechaFin: string;
   obraData: Record<string, any>;
   display?: boolean;
-  certificado?: {
-    id: number;
-    obra_id: number;
-    medicion_id: number;
-    periodo: string;
-    data: {
-      editedData: Record<string, any>;
-      presupuestoData: Record<string, any>;
-      progress: ProgressData[];
-    };
-    created_at: string;
-  };
+  certificado?: Certificado;
 }
 
-interface TableItem {
-  [key: string]: string | number;
+interface ProrrogaItem {
+  nroProrroga: string;
+  disposicion: string;
+  plazo: string;
+  fechaDeFinalizacion: string;
 }
 
-interface ProgressData {
-  month: string;
-  value1: number;
-  value2: number;
-  value3: number;
+interface AmpliacionItem {
+  nroAmpliacion: string;
+  nroResolucion: string;
+  nroExpediente: string;
+  Monto: string;
+}
+
+interface GarantiaItem {
+  nroPoliza: string;
+  sumaPoliza: string;
+  nombrePoliza: string;
 }
 
 const InfoRow = ({ label, value, path, onChange, editable }: {
@@ -102,75 +82,6 @@ const InfoRow = ({ label, value, path, onChange, editable }: {
   );
 };
 
-const EditableInpuasdasdasdt = ({ value, path, onChange }: {
-  value: string | number;
-  path: string;
-  onChange: (path: string, value: any) => void;
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-
-  const handleChange = (newValue: string) => {
-    setEditValue(newValue);
-    onChange(path, newValue);
-  };
-
-  return (
-    <div
-      className="group relative"
-      onMouseEnter={() => setIsEditing(true)}
-      onMouseLeave={() => setIsEditing(false)}
-    >
-      {isEditing ? (
-        <Input
-          value={editValue}
-          onChange={(e) => handleChange(e.target.value)}
-          className="w-full border-none bg-gray-50 focus:ring-2 focus:ring-blue-500"
-        />
-      ) : (
-        <span className="block p-2 hover:bg-gray-50 rounded transition-colors">
-          {value}
-        </span>
-      )}
-    </div>
-  );
-};
-
-// Add new components for array fields
-const ArrayTable = ({ items, path, columns, onChange }: {
-  items: any[];
-  path: string;
-  columns: { key: string; label: string }[];
-  onChange: (path: string, value: any) => void;
-}) => {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {columns.map(col => (
-            <TableHead key={col.key}>{col.label}</TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item, index) => (
-          <TableRow key={index}>
-            {columns.map(col => (
-              <TableCell key={col.key}>
-                <EditableInput
-                  editable
-                  value={item[col.key] || ''}
-                  onChange={(val) => onChange(`${path}.${index}.${col.key}`, val)}
-                />
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-};
-
 export default function CertificadoCreateClient({
   obraId,
   obraName,
@@ -180,55 +91,74 @@ export default function CertificadoCreateClient({
   fechaFin,
   obraData,
   display = false,
-  certificado,
+  certificado
 }: CertificadoCreateClientProps) {
   const router = useRouter();
+  const { refetchAll } = useObra();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editedData, setEditedData] = useState(certificado?.data.editedData || obraData);
-  const [progress, setProgress] = useState<ProgressData[]>(() => {
-    if (certificado?.data.progress) {
-      return certificado.data.progress;
-    }
 
-    // Generate months between fechaInicio and fechaFin
-    const months = [];
-    let currentDate = new Date(fechaInicio);
+  console.log('aca obraData', obraData);
+  console.log('aca certificado', certificado);
+
+  // Generate progress array based on date range
+  const generateProgressArray = () => {
+    const startDate = new Date(fechaInicio);
     const endDate = new Date(fechaFin);
+    const months: CertificadoProgress[] = [];
 
-    console.log('fechaInicio', fechaInicio);
-    console.log('fechaFin', fechaFin);
-
-    console.log('fechacurrentDate', currentDate);
-    console.log('fechaendDate', endDate);
-
+    let currentDate = startDate;
     while (currentDate <= endDate) {
       months.push({
-        month: format(currentDate, 'MMM yyyy', { locale: es }),
+        month: format(currentDate, 'MMMM', { locale: es }),
         value1: 0,
         value2: 0,
         value3: 0
       });
-      currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
+      currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     }
 
-    console.log('months', months);
+    console.log('aca months', months);
 
     return months;
-  });
+  };
 
-  console.log('selectedMedicion', selectedMedicion);
+  const [editedData, setEditedData] = useState<Record<string, any>>(
+    obraData || certificado?.data.editedData || {
+      ubicacion: '',
+      contratista: '',
+      nroLicitacion: '',
+      nroResolucion: '',
+      imputacion: '',
+      fechaDeContrato: '',
+      fechaDeInicio: '',
+      plazoDias: '',
+      prorroga: [],
+      Ampliacion: [],
+      Balance: {},
+      Certificacion: {},
+      garantias: [],
+      autores: [],
+      links: []
+    }
+  );
+  const [progress, setProgress] = useState<CertificadoProgress[]>(
+    certificado?.data.progress || generateProgressArray()
+  );
 
   if (!selectedMedicion.periodo) {
-    return 'bolas'
+    return <div>No hay período seleccionado</div>;
   }
 
   const handleDataChange = (path: string, value: any) => {
     const keys = path.split('.');
     const lastKey = keys.pop()!;
-    let current = editedData;
+    let current = { ...editedData };
 
     for (const key of keys) {
+      if (!current[key]) {
+        current[key] = {};
+      }
       current = current[key];
     }
 
@@ -243,35 +173,6 @@ export default function CertificadoCreateClient({
       [field]: Number(value) || 0
     };
     setProgress(newProgress);
-  };
-
-  // Transform presupuestoData for MedicionesEditor
-  const transformedPresupuestoData = Object.entries(presupuestoData).reduce((acc, [section, items]) => {
-    if (Array.isArray(items)) {
-      acc[section] = items.map(item => ({
-        id: String(item.id),
-        name: item.name,
-        totalPrice: item.totalPrice
-      }));
-    }
-    return acc;
-  }, {} as Record<string, { id: string; name: string; totalPrice: number }[]>);
-
-  // Transform medicion data for MedicionesEditor
-  //@ts-ignore
-  const transformedMedicion: MedicionOutput = {
-    id: selectedMedicion.id,
-    month: selectedMedicion.periodo,
-    measurements: selectedMedicion.data.secciones.reduce((acc: Record<string, { monthlyProgress: number; cumulativePrevious: number; cumulativeCurrent: number }>, seccion) => {
-      seccion.items.forEach(item => {
-        acc[item.id] = {
-          monthlyProgress: item.presente,
-          cumulativePrevious: item.anterior,
-          cumulativeCurrent: item.acumulado
-        };
-      });
-      return acc;
-    }, {})
   };
 
   const handleSubmit = async () => {
@@ -300,6 +201,7 @@ export default function CertificadoCreateClient({
         throw new Error("Error al crear el certificado");
       }
 
+      await refetchAll();
       router.push(`/obras/${obraId}`);
       router.refresh();
     } catch (err) {
@@ -317,15 +219,13 @@ export default function CertificadoCreateClient({
     );
   }
 
-
-
   const totalItems = selectedMedicion.data.secciones.reduce((acc, seccion) => acc + seccion.items.length, 0);
   const totalAcumulado = selectedMedicion.data.secciones.reduce((acc, seccion) =>
     acc + seccion.items.reduce((itemAcc, item) => itemAcc + item.acumulado, 0), 0);
   const promedioAcumulado = totalItems > 0 ? (totalAcumulado / totalItems).toFixed(2) : "0";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {!display && (
         <div className="flex justify-between items-center mb-6">
           <Button
@@ -396,7 +296,7 @@ export default function CertificadoCreateClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(editedData.prorroga || []).map((item: TableItem, index: number) => (
+                    {(editedData.prorroga || []).map((item: ProrrogaItem, index: number) => (
                       <TableRow key={index}>
                         <TableCell className="py-2 border-r hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)] cursor-text">
                           <EditableInput
@@ -444,7 +344,7 @@ export default function CertificadoCreateClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(editedData.Ampliacion || []).map((item: TableItem, index: number) => (
+                    {(editedData.Ampliacion || []).map((item: AmpliacionItem, index: number) => (
                       <TableRow key={index}>
                         <TableCell className="py-2 border-r hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)] cursor-text">
                           <EditableInput
@@ -527,7 +427,7 @@ export default function CertificadoCreateClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(editedData.garantias || []).map((item: TableItem, index: number) => (
+                  {(editedData.garantias || []).map((item: GarantiaItem, index: number) => (
                     <TableRow key={index}>
                       <TableCell className="py-2 border-r hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)] cursor-text">
                         <EditableInput
@@ -590,8 +490,8 @@ export default function CertificadoCreateClient({
         {/* Page 2: Medicion Details */}
         <h2 className="text-xl font-semibold mb-4">Detalles de la Medición</h2>
         <MedicionesEditor
-          medicion={transformedMedicion}
-          presupuestoData={certificado?.data.presupuestoData || transformedPresupuestoData}
+          medicion={selectedMedicion}
+          presupuestoData={certificado?.data.presupuestoData || presupuestoData}
           display={true}
           obraId={Number(obraId)}
         />
@@ -685,46 +585,34 @@ export default function CertificadoCreateClient({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Mes</TableHead>
-                      <TableHead>Línea 1 (%)</TableHead>
-                      <TableHead>Línea 2 (%)</TableHead>
-                      <TableHead>Línea 3 (%)</TableHead>
+                      <TableHead>Valor 1</TableHead>
+                      <TableHead>Valor 2</TableHead>
+                      <TableHead>Valor 3</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {progress.map((item, index) => (
+                    {progress.map((item: CertificadoProgress, index: number) => (
                       <TableRow key={item.month}>
                         <TableCell>{item.month}</TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
+                          <EditableInput
+                            editable={!display}
                             value={item.value1}
-                            onChange={(e) => handleProgressChange(index, 'value1', e.target.value)}
-                            className="w-24"
-                            disabled={display}
+                            onChange={(val) => handleProgressChange(index, 'value1', val)}
                           />
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
+                          <EditableInput
+                            editable={!display}
                             value={item.value2}
-                            onChange={(e) => handleProgressChange(index, 'value2', e.target.value)}
-                            className="w-24"
-                            disabled={display}
+                            onChange={(val) => handleProgressChange(index, 'value2', val)}
                           />
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
+                          <EditableInput
+                            editable={!display}
                             value={item.value3}
-                            onChange={(e) => handleProgressChange(index, 'value3', e.target.value)}
-                            className="w-24"
-                            disabled={display}
+                            onChange={(val) => handleProgressChange(index, 'value3', val)}
                           />
                         </TableCell>
                       </TableRow>
@@ -733,6 +621,16 @@ export default function CertificadoCreateClient({
                 </Table>
               </div>
 
+              {!display && (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Guardando..." : "Guardar Certificado"}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </Card>

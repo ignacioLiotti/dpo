@@ -1,40 +1,20 @@
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
-import PresupuestoCreateClient from "./PresupuestoCreateClient";
+import { Suspense } from 'react'
+import PresupuestoPageClient from './PresupuestoCreateClient'
 
-interface PageProps {
-  params: Promise<{
-    id: string;
-  }>;
-  searchParams: Promise<{
-    step?: string;
-  }>;
+export default function PresupuestoPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto p-4 space-y-4">
+        <div className="h-10 w-full bg-muted animate-pulse rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-[200px] bg-muted animate-pulse rounded" />
+          <div className="h-[200px] bg-muted animate-pulse rounded" />
+        </div>
+      </div>
+    }>
+      <PresupuestoPageClient />
+    </Suspense>
+  )
 }
 
-export default async function CreatePresupuestoPage({ params, searchParams }: PageProps) {
-  const { id } = await params;
-  const { step = "1" } = await searchParams;
-  const supabase = await createClient();
 
-  // Verify obra exists
-  const { data: obra, error: obraError } = await supabase
-    .from("obras")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (obraError || !obra) {
-    redirect("/obras");
-  }
-
-  return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Crear Presupuesto para {obra.nombre}</h1>
-      <PresupuestoCreateClient
-        obraId={id}
-        obraData={obra}
-        currentStep={parseInt(step)}
-      />
-    </div>
-  );
-} 

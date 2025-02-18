@@ -1,27 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MedicionesEditor } from "@/components/editores/MedicionesEditor";
-import type { Medicion } from "@/hooks/useMediciones";
+import type { Medicion, MedicionItem, MedicionSection, TableItem } from "@/types";
 import { format, addMonths, isBefore, isAfter, startOfMonth, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
-interface PresupuestoItem {
-  id: number;
-  name: string;
-  unit: string;
-  price: number;
-  rubro: number;
-  quantity?: number;
-  totalPrice?: number;
-}
+import { useObra } from "@/app/providers/ObraProvider";
 
 interface MedicionCreateClientProps {
   obraId: string;
   obraName: string;
-  presupuestoData: Record<string, PresupuestoItem[]>;
+  presupuestoData: Record<string, TableItem[]>;
   fechaInicio: string;
   fechaFin: string;
 }
@@ -57,13 +48,66 @@ export default function MedicionCreateClient({
     return startDate;
   });
 
-  // Create an empty medicion structure
-  //@ts-ignore
-  const emptyMedicion: Medicion = {
-    id: 0,
-    month: currentDate.toISOString(),
-    measurements: {},
-  };
+  const { state } = useObra();
+  const { mediciones } = state;
+
+  // Create an empty medicion structure with previous data if available
+  const emptyMedicion: Medicion = useMemo(() => {
+    const currentPeriod = currentDate.toISOString();
+    const [currentYear, currentMonth] = currentPeriod.substring(0, 7).split('-').map(Number);
+
+    // Find closest previous medicion by comparing dates
+    const previousMedicion = mediciones?.reduce((closest: Medicion | null, m: Medicion) => {
+      const [mYear, mMonth] = m.periodo.substring(0, 7).split('-').map(Number);
+
+      // Skip if medicion is in the future
+      if (mYear > currentYear || (mYear === currentYear && mMonth >= currentMonth)) {
+        return closest;
+      }
+
+      // If no closest yet, use this one
+      if (!closest) return m;
+
+      const [closestYear, closestMonth] = closest.periodo.substring(0, 7).split('-').map(Number);
+
+      // Compare which date is closer
+      const currentDiff = (currentYear - mYear) * 12 + (currentMonth - mMonth);
+      const closestDiff = (currentYear - closestYear) * 12 + (currentMonth - closestMonth);
+
+      return currentDiff < closestDiff ? m : closest;
+    }, null);
+
+    // Create sections with previous data if available
+    const secciones: MedicionSection[] = Object.entries(presupuestoData).map(([name, items]) => {
+      const prevSection = previousMedicion?.data.secciones.find(s => s.nombre === name);
+      return {
+        nombre: name,
+        items: items.map(item => {
+          const prevItem = prevSection?.items.find(i => String(i.id) === item.id);
+          return {
+            id: item.id,
+            anterior: prevItem?.acumulado || 0,
+            presente: 0,
+            acumulado: prevItem?.acumulado || 0
+          };
+        })
+      };
+    });
+
+    return {
+      id: 0,
+      periodo: currentDate.toISOString(),
+      obra_id: Number(obraId),
+      presupuesto_id: 0,
+      data: {
+        secciones
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }, [currentDate, mediciones, presupuestoData, obraId]);
+
+  console.log('aca emptyMedicion', emptyMedicion);
 
   if (!presupuestoData) {
     return <div>No se encontró presupuesto</div>;
@@ -83,25 +127,6 @@ export default function MedicionCreateClient({
   };
 
   const monthsInRange = getMonthsInRange();
-
-  0  // Transform presupuestoData into the format expected by MedicionesEditor
-  const transformedPresupuestoData = Object.entries(presupuestoData).reduce(
-    (acc, [sectionName, items]) => {
-      // Skip empty sections or the 'categoria' section if it's empty
-      console.log('items', items)
-      if (!items || items.length === 0 || (sectionName === 'categoria' && items.length === 1 && items[0].name === 'item')) {
-        return acc;
-      }
-
-      acc[sectionName] = items.map((item) => ({
-        id: String(item.id),
-        name: item.name,
-        totalPrice: item.price * (item.quantity || 1), // Use quantity if available, default to 1
-      }));
-      return acc;
-    },
-    {} as Record<string, { id: string; name: string; totalPrice: number }[]>
-  );
 
   const handleMonthChange = (newDate: Date) => {
     setCurrentDate(newDate);
@@ -150,11 +175,8 @@ export default function MedicionCreateClient({
       </div>
 
       <MedicionesEditor
-        medicion={{
-          ...emptyMedicion,
-          month: currentDate.toISOString(),
-        }}
-        presupuestoData={transformedPresupuestoData}
+        medicion={emptyMedicion}
+        presupuestoData={presupuestoData}
         display={false}
         obraId={Number(obraId)}
       />

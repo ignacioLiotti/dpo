@@ -42,6 +42,8 @@ export default async function ObraServerPage({ params }: { params: Promise<{ id:
   const queryClient = getQueryClient()
   const { id } = await params
 
+  console.log('params', params)
+
   // Fetch obra data
   const obra = await getObra(Number(id)) as unknown as Obra
 
@@ -62,6 +64,8 @@ export default async function ObraServerPage({ params }: { params: Promise<{ id:
     queryKey: ['presupuestos', id],
     queryFn: () => Promise.resolve(presupuestos)
   })
+
+  console.log('fetching data')
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

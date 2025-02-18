@@ -4,16 +4,7 @@ import {
 	getPersistedQueryData,
 	persistQueryData,
 } from "@/utils/api-client";
-
-export interface Obra {
-	id: number;
-	nombre: string;
-	ubicacion: string;
-	empresa: string;
-	fechaInicio: string;
-	fechaFin: string;
-	estado: string;
-}
+import { Obra } from "@/types";
 
 // Fetch all obras
 async function fetchObras() {

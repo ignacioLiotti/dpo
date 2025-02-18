@@ -1,7 +1,10 @@
-import { createClient } from "@/utils/supabase/server";
-import type { TableItem, GroupedData, Medicion } from "@/app/presupuesto/types";
-import type { Obra } from "@/hooks/useObras";
-import type { Presupuesto } from "@/hooks/usePresupuestos";
+import type {
+	Obra,
+	Presupuesto,
+	Medicion,
+	TableItem,
+	GroupedData,
+} from "@/types";
 
 export type { TableItem, GroupedData, Medicion };
 

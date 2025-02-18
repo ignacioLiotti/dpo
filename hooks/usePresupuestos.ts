@@ -105,6 +105,7 @@ export function usePresupuestos(obraId: number) {
 		queryKey: queryKeys.presupuesto.byObraId(obraId),
 		queryFn: () => fetchPresupuestos(obraId),
 		enabled: !!obraId,
+		//@ts-ignore
 		initialData: () => {
 			const data = getPersistedQueryData<"presupuestos">([
 				"presupuestos",
@@ -122,6 +123,7 @@ export function usePresupuesto(id: number) {
 		queryKey: queryKeys.presupuesto.detail(id),
 		queryFn: () => fetchPresupuesto(id),
 		enabled: !!id,
+		//@ts-ignore
 		initialData: () => {
 			const presupuestos = getPersistedQueryData<"presupuestos">([
 				"presupuestos",

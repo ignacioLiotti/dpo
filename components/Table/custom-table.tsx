@@ -139,7 +139,7 @@ export default function CustomTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const obraParam = searchParams.get("obra");
+  const obraParam = searchParams.get("obraId");
 
   // 1) Table Data & Local States
   const [tableData, setTableData] = useState<ElementRow[]>([]);
@@ -351,7 +351,7 @@ export default function CustomTable() {
 
   function handleExecuteSelected() {
     // @ts-ignore
-    router.push(`/presupuesto?selectedIds=${[...selectedIds].join(",")}`);
+    router.push(`/obras/${obraParam}/create/presupuesto?selectedIds=${[...selectedIds].join(",")}`);
   }
 
   // 8) Render

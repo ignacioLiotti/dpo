@@ -4,19 +4,6 @@ import { Package, Plus, Check, Trash2, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   Table,
   TableBody,
   TableCell,
@@ -26,32 +13,23 @@ import {
 } from "@/components/ui/table"
 import { debounce } from 'lodash'
 import { EditableInput } from '../Table/EditableInput'
+import type { TableItem } from '@/types'
 
-interface TableItem {
-  id: string | number
-  name: string
-  unit: string
-  quantity: number
-  unitPrice: number
-  totalPrice: number
-  price: number
-  category: string
-  accumulated?: string | number
-  parcial?: string | number
-  rubro?: string | number
-  element_tags?: { tags: { name: string } }[]
+// Extend the TableItem type for our specific needs
+interface ExtendedTableItem extends TableItem {
+  element_tags?: { tags: { name: string } }[];
 }
 
 interface PresupuestoSectionProps {
   tag: string
   tagIndex: number
-  items: TableItem[]
+  items: ExtendedTableItem[]
   previewVersion: string | boolean
   grandTotal: number
   sectionRubros: number[]
   sectionIacums: number[]
   addElementToSection: (tag: string, element: any) => void
-  updateData: (tag: string, itemId: string | number, key: keyof TableItem, newValue: string) => void
+  updateData: (tag: string, itemId: string | number, key: keyof ExtendedTableItem, newValue: string) => void
   handleDeleteRow: (tag: string, itemId: string | number) => void
   isNewSection?: boolean
   allElements: any[]
@@ -137,17 +115,18 @@ export function PresupuestoSection({
 
   // Handle custom element creation
   const handleCreateCustomElement = () => {
-    const customElement = {
+    const customElement: ExtendedTableItem = {
       id: `custom-${Date.now()}`,
-      nombre: searchValue,
       name: searchValue,
-      unidad: '',
       unit: '',
-      cantidad: 0,
       quantity: 0,
-      precio: 0,
+      unitPrice: 0,
+      totalPrice: 0,
       price: 0,
       category: tag,
+      parcial: 0,
+      rubro: 0,
+      accumulated: 0
     };
     handleElementSelect(customElement);
   }
@@ -203,7 +182,7 @@ export function PresupuestoSection({
           </div>
         </h3>
 
-        <Table className="bg-white border-l-none">
+        <Table className="bg-white border-l-none h-full">
           {(!Array.isArray(items) || items.length > 0) && (
             <TableHeader>
               <TableRow className="bg-white border-l-none">
@@ -300,7 +279,7 @@ export function PresupuestoSection({
                   {(previewVersion === 'false' && !display) && (
                     <TableCell className={cn("text-center border-r", (previewVersion === 'false' && !display) ? "hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]" : "text-muted-foreground")}>
                       <Button
-                        variant="destructive"
+                        variant="destructiveSecondary"
                         className="flex items-center gap-1 h-6 w-7 p-0 mx-auto"
                         onClick={() => handleDeleteRow(tag, item.id)}
                       >

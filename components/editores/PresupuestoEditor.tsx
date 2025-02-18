@@ -12,19 +12,28 @@ import { SearchDialog } from '@/components/SearchDialog'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { TableItem, GroupedData } from '../../app/presupuesto/types'
 import { useSearchParams } from 'next/navigation'
+import { useObra } from '@/app/providers/ObraProvider'
+import type { TableItem, GroupedData, Obra, Presupuesto } from '@/types'
+import { EditableInput } from '@/components/Table/EditableInput'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface PresupuestoEditorProps {
   presupuestoData: Record<string, TableItem[]>;
   allElements: TableItem[];
   display?: boolean;
+  obraId?: string | number;
+  obraData?: Obra;
+  onUpdate?: (presupuesto: Presupuesto) => void;
 }
 
 export function PresupuestoEditor({
   presupuestoData = {},
   allElements = [],
-  display = false
+  display = false,
+  obraId,
+  obraData,
+  onUpdate
 }: PresupuestoEditorProps) {
   const searchParams = useSearchParams()
   const idsParam = searchParams.get('selectedIds') ?? ''
@@ -40,6 +49,8 @@ export function PresupuestoEditor({
   const [newSectionName, setNewSectionName] = useState('')
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+
+  const { state, dispatch } = useObra()
 
   // Handle global element selection
   const handleGlobalElementSelect = (elements: TableItem[]) => {
@@ -72,108 +83,101 @@ export function PresupuestoEditor({
     key: keyof TableItem,
     newValue: string
   ) => {
-    setData(prev => {
-      const newData = { ...prev }
-      const arr = newData[tag] || []
-      const itemIndex = arr.findIndex(it => String(it.id) === String(itemId))
-      if (itemIndex > -1) {
-        const oldItem = arr[itemIndex]
-        newData[tag] = [
-          ...arr.slice(0, itemIndex),
-          { ...oldItem, [key]: newValue },
-          ...arr.slice(itemIndex + 1),
-        ]
+    if (display) return;
+
+    setData(prevData => {
+      const newData = { ...prevData };
+      const items = [...(newData[tag] || [])];
+      const itemIndex = items.findIndex(item => String(item.id) === String(itemId));
+
+      if (itemIndex === -1) return prevData;
+
+      const item = { ...items[itemIndex] };
+      const numericValue = Number(newValue) || 0;
+
+      // Update the specific field
+      if (key === 'quantity' || key === 'unitPrice') {
+        item[key] = numericValue;
+        item.totalPrice = item.quantity * item.unitPrice;
+      } else if (key === 'name' || key === 'unit' || key === 'category') {
+        // Handle string properties
+        item[key] = newValue;
       }
-      return newData
-    })
+
+      items[itemIndex] = item;
+      newData[tag] = items;
+
+      return newData;
+    });
   }
 
   // Add element to a section
-  const addElementToSection = (tag: string, element: any) => {
-    setData(prev => {
-      const newData = { ...prev }
-      if (!newData[tag]) {
-        newData[tag] = []
-      }
+  const addElementToSection = (tag: string, element: TableItem) => {
+    if (display) return;
 
-      newData[tag] = [
-        ...newData[tag],
-        {
-          id: element.id,
-          name: element.nombre || element.name || 'Sin descripción',
-          unit: element.unidad || element.unit || '',
-          quantity: Number(element.cantidad || element.quantity || 0),
-          unitPrice: Number(element.precio || element.price || element.unitPrice || 0),
-          totalPrice: Number(element.cantidad || element.quantity || 0) * Number(element.precio || element.price || element.unitPrice || 0),
-          price: Number(element.precio || element.price || element.unitPrice || 0),
-          category: element.category || tag || 'Sin categoría',
-          parcial: 0,
-          rubro: 0,
-          accumulated: 0,
-        },
-      ]
-      return newData
-    })
+    setData(prevData => {
+      const newData = { ...prevData };
+      const items = [...(newData[tag] || [])];
+
+      // Check if element already exists in this section
+      const existingIndex = items.findIndex(item => String(item.id) === String(element.id));
+      if (existingIndex !== -1) return prevData;
+
+      items.push({
+        ...element,
+        category: tag
+      });
+
+      newData[tag] = items;
+      return newData;
+    });
   }
 
   // -----------------------------
   //   Delete row from a tag
   // -----------------------------
   const handleDeleteRow = (tag: string, itemId: string | number) => {
-    setData(prev => {
-      const newData = { ...prev }
-      newData[tag] = newData[tag]?.filter(item => String(item.id) !== String(itemId)) || []
-      return newData
-    })
-  }
+    if (display) return;
 
-  console.log('data', data)
+    setData(prevData => {
+      const newData = { ...prevData };
+      const items = newData[tag].filter(item => String(item.id) !== String(itemId));
+      newData[tag] = items;
+      return newData;
+    });
+  }
 
   // -----------------------------
   //   Handle Form Submit
   // -----------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (display || !obraId) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      // First, check if we have a valid obra
-      const obraResponse = await fetch('/api/obras');
-      if (!obraResponse.ok) {
-        throw new Error('Error al obtener la obra');
-      }
-      const obras = await obraResponse.json();
-
-      // Get the first obra or throw an error
-      if (!obras || obras.length === 0) {
-        throw new Error('No hay obras disponibles. Por favor, cree una obra primero.');
-      }
-      const obra = obras[0]; // Use the first obra for now
-
-      // Calculate total amount from all sections
-      const total = Object.entries(data).reduce((acc, [_, items]) => {
-        if (!Array.isArray(items)) return acc;
-        return acc + (items as TableItem[]).reduce((sectionTotal, item) =>
+      // Calculate total
+      const total = Object.values(data).reduce((total, items) => {
+        return total + items.reduce((sectionTotal, item) =>
           sectionTotal + ((item.quantity || 0) * (item.unitPrice || 0)), 0
         );
       }, 0);
 
-      const requestData = {
-        obraId: obra.id,
+      const presupuestoData = {
+        obraId: Number(obraId),
         nombre: "Presupuesto " + new Date().toLocaleDateString(),
         total: Number(total.toFixed(2)),
-        data // Send data directly without transformation
+        data
       };
-
-      console.log('Saving presupuesto:', requestData);
 
       const response = await fetch('/api/presupuestos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(presupuestoData),
       });
 
       if (!response.ok) {
@@ -181,8 +185,15 @@ export function PresupuestoEditor({
         throw new Error(errorData.error || 'Error al guardar los datos.');
       }
 
-      const result = await response.json();
-      console.log('Save successful:', result);
+      const newPresupuesto = await response.json();
+
+      // Update the UI with the new presupuesto
+      dispatch({
+        type: 'ADD_PRESUPUESTO',
+        payload: newPresupuesto
+      });
+
+      onUpdate?.(newPresupuesto);
       alert('Presupuesto guardado exitosamente!');
     } catch (error) {
       console.error('Error saving data:', error);
@@ -260,10 +271,6 @@ export function PresupuestoEditor({
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  console.log('data', data)
-
-  console.log('display', display)
 
   // -----------------------------
   //   Delete section
@@ -550,7 +557,7 @@ export function PresupuestoEditor({
           elements={storedElements}
         />
 
-        <form className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
+        <form onSubmit={handleSubmit} className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">
@@ -559,12 +566,15 @@ export function PresupuestoEditor({
             <Card className="text-gray-600 flex flex-col justify-center items-start p-2 px-4">
               <p className="mb-2">{`Obra: `}
                 <b>
-                  COMISARIA LAGUNA BRAVA - Obra Nueva 1226
+                  {obraData?.nombre || 'Sin nombre'}
+                  <span className="text-xs text-gray-500 ml-2">
+                    ID: {obraId || 'N/A'}
+                  </span>
                 </b>
               </p>
               <p>{`Ubicacion: `}
                 <b>
-                  CORRIENTES CAPITAL
+                  {obraData?.ubicacion || 'Sin ubicación'}
                 </b>
               </p>
             </Card>

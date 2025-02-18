@@ -40,10 +40,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
 	try {
 		const supabase = await createClient();
-		const { obraId, medicionId, progress, data } = await request.json();
+		const { obraId, nombre, total, data } = await request.json();
 
 		// Validate required fields
-		if (!obraId || !medicionId || !progress || !data) {
+		if (!obraId || !data) {
 			return NextResponse.json(
 				{ error: "Faltan campos requeridos" },
 				{ status: 400 }
@@ -55,8 +55,8 @@ export async function POST(request: Request) {
 			.from("presupuestos")
 			.insert({
 				obra_id: obraId,
-				medicion_id: medicionId,
-				progress: progress,
+				nombre: nombre,
+				total: total,
 				data: data,
 				created_at: new Date().toISOString(),
 			})

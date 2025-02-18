@@ -3,10 +3,10 @@ import { TabsContent } from '@/components/ui/tabs';
 import { motion } from "framer-motion";
 import { cn } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
-import { TableItem } from '@/app/presupuesto/types';
+import type { TableItem, Presupuesto, Medicion } from '@/types';
 import { PresupuestoEditor } from '@/components/editores/PresupuestoEditor';
 import { MedicionesEditor } from '@/components/editores/MedicionesEditor';
-import { useMediciones } from '@/hooks/useMediciones';
+import { useObra } from '@/app/providers/ObraProvider';
 
 interface OldPresupuestoItem {
   id: number;
@@ -26,50 +26,27 @@ interface OldPresupuestoData {
   secciones: OldPresupuestoSection[];
 }
 
-interface Presupuesto {
-  id: number;
-  obra_id: number;
-  nombre: string;
-  total: number;
-  data: Record<string, TableItem[]> | OldPresupuestoData;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MedicionItem {
-  id: string;
-  anterior: number;
-  presente: number;
-  acumulado: number;
-}
-
-interface MedicionSeccion {
-  nombre: string;
-  items: MedicionItem[];
-}
-
 interface PresupuestosSelectorProps {
   obraId: string;
-  initialPresupuestos: Presupuesto[];
 }
 
-function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelectorProps) {
-  // Sort initial presupuestos from newest to oldest based on created_at
-  const sortedInitialPresupuestos = [...initialPresupuestos].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
+  const { state: { presupuestos, mediciones, loading, error } } = useObra();
 
-  // Initialize state with sorted presupuestos
+  console.log('PresupuestosSelector presupuestos', presupuestos)
+
+  // Sort presupuestos from newest to oldest based on created_at
+  const sortedPresupuestos = React.useMemo(() => {
+    return [...presupuestos].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [presupuestos]);
+
+  // Initialize state
   const [selectedPresupuesto, setSelectedPresupuesto] = useState<Presupuesto | null>(null);
-  const [selectedMedicion, setSelectedMedicion] = useState<any | null>(null);
-  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>(sortedInitialPresupuestos);
+  const [selectedMedicion, setSelectedMedicion] = useState<Medicion | null>(null);
   const [transformedPresupuestos, setTransformedPresupuestos] = useState<Record<number, Record<string, TableItem[]>>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // Get mediciones for the selected presupuesto
-  const { data: mediciones = [] } = useMediciones(selectedPresupuesto?.obra_id || 0);
 
   // Reset selected medicion when presupuesto changes
   useEffect(() => {
@@ -78,20 +55,20 @@ function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelec
 
   // Set default selection to the newest presupuesto if none is selected
   useEffect(() => {
-    if (!selectedPresupuesto && presupuestos.length > 0) {
-      setSelectedPresupuesto(presupuestos[0]);
+    if (!selectedPresupuesto && sortedPresupuestos.length > 0) {
+      setSelectedPresupuesto(sortedPresupuestos[0]);
     }
-  }, [selectedPresupuesto, presupuestos]);
+  }, [selectedPresupuesto, sortedPresupuestos]);
 
   // Transform all presupuestos on initial load
   useEffect(() => {
-    const transformed = presupuestos.reduce((acc, presupuesto) => {
+    const transformed = sortedPresupuestos.reduce((acc, presupuesto) => {
       acc[presupuesto.id] = transformPresupuestoData(presupuesto);
       return acc;
     }, {} as Record<number, Record<string, TableItem[]>>);
 
     setTransformedPresupuestos(transformed);
-  }, [presupuestos]);
+  }, [sortedPresupuestos]);
 
   // Use transformed data directly when selecting a presupuesto
   const selectedPresupuestoData = selectedPresupuesto
@@ -103,10 +80,6 @@ function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelec
     if (!selectedPresupuesto) return { grandTotal: 0, sectionRubros: [] };
 
     const total = selectedPresupuesto.total;
-    console.log('selectedPresupuestoData', selectedPresupuestoData)
-    Object.entries(selectedPresupuestoData).forEach(([_, items]) => {
-      console.log('items', items)
-    })
     const rubros = Object.entries(selectedPresupuestoData).map(([_, items]) => {
       return (items.reduce((sum, item) => sum + item.totalPrice, 0) * 100) / total;
     });
@@ -143,8 +116,8 @@ function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelec
     }
 
     // For backwards compatibility with old format
-    const oldData = presupuesto.data as OldPresupuestoData;
-    if (oldData.secciones) {
+    const oldData = presupuesto.data as unknown as OldPresupuestoData;
+    if ('secciones' in presupuesto.data) {
       const result: Record<string, TableItem[]> = {};
 
       oldData.secciones.forEach(seccion => {
@@ -206,7 +179,7 @@ function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelec
   return (
     <div className="flex gap-4 h-full items-start mt-24">
       <div className="flex flex-col gap-5">
-        {presupuestos.map((presupuesto) => (
+        {sortedPresupuestos.map((presupuesto) => (
           <div
             key={presupuesto.id}
             onClick={() => setSelectedPresupuesto(presupuesto)}
@@ -257,14 +230,7 @@ function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelec
             {selectedMedicion ? (
               <MedicionesEditor
                 medicion={selectedMedicion}
-                presupuestoData={Object.entries(selectedPresupuestoData).reduce((acc, [section, items]) => {
-                  acc[section] = items.map(item => ({
-                    id: String(item.id),
-                    name: item.name,
-                    totalPrice: item.totalPrice
-                  }))
-                  return acc
-                }, {} as Record<string, { id: string; name: string; totalPrice: number }[]>)}
+                presupuestoData={selectedPresupuesto.data}
                 display={true}
                 obraId={selectedPresupuesto.obra_id}
               />
@@ -298,7 +264,7 @@ function PresupuestosSelector({ obraId, initialPresupuestos }: PresupuestosSelec
                 >
                   <p className="font-medium text-sm">Medición #{medicion.id}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(medicion.month).toLocaleDateString()}
+                    {new Date(medicion.periodo).toLocaleDateString()}
                   </p>
                 </div>
               ))}

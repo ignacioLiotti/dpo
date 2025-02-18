@@ -1,18 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Save, CalendarDaysIcon, Package } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { TableItem, GroupedData } from '../../app/presupuesto/types'
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useMediciones, useSaveMedicion, Medicion } from '@/hooks/useMediciones'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from "@/lib/utils"
-import { EditableInput } from '@/components/Table/EditableInput'
 import {
   Table,
   TableBody,
@@ -22,6 +15,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { cn } from "@/lib/utils"
+import { useObra } from '@/app/providers/ObraProvider'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Save, CalendarDaysIcon, Package } from "lucide-react"
+import { EditableInput } from '@/components/Table/EditableInput'
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import type { TableItem, Medicion, MedicionSection } from '@/types'
+
 interface PresupuestoItem {
   id: string
   name: string
@@ -30,41 +33,42 @@ interface PresupuestoItem {
 
 interface MedicionesEditorProps {
   medicion: Medicion
-  presupuestoData: Record<string, PresupuestoItem[]>
-  display: boolean
+  presupuestoData: Record<string, TableItem[]>
+  onUpdate?: (medicion: Medicion) => void
+  display?: boolean
   obraId?: number
 }
 
 export function MedicionesEditor({
   medicion: initialMedicion,
   presupuestoData = {},
+  onUpdate,
   display = false,
   obraId
 }: MedicionesEditorProps) {
   const searchParams = useSearchParams()
   const urlPeriod = searchParams.get('periodo')
-  const { data: mediciones } = useMediciones(obraId || 0)
+  const { state, dispatch } = useObra()
+  const { mediciones } = state
   const [medicion, setMedicion] = useState<Medicion>(initialMedicion)
-
-  console.log('presupuestoData', presupuestoData)
+  const [error, setError] = useState<string | null>(null)
+  const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     if (display) {
-      // When in display mode, use initialMedicion directly
       setMedicion(initialMedicion)
-      return;
+      return
     }
 
-    if (!mediciones) return;
+    if (!mediciones) return
 
-    const currentPeriod = urlPeriod || initialMedicion.month || new Date().toISOString().slice(0, 10)
-
+    const currentPeriod = urlPeriod || initialMedicion.periodo
     const [currentYear, currentMonth] = currentPeriod.substring(0, 7).split('-').map(Number)
 
     // Find closest previous medicion by comparing dates
     const previousMedicion = mediciones.reduce((closest: Medicion | null, m) => {
-      const [mYear, mMonth] = m.month.substring(0, 7).split('-').map(Number)
-
+      const [mYear, mMonth] = m.periodo.substring(0, 7).split('-').map(Number)
 
       // Skip if medicion is in the future
       if (mYear > currentYear || (mYear === currentYear && mMonth >= currentMonth)) {
@@ -74,7 +78,7 @@ export function MedicionesEditor({
       // If no closest yet, use this one
       if (!closest) return m
 
-      const [closestYear, closestMonth] = closest.month.substring(0, 7).split('-').map(Number)
+      const [closestYear, closestMonth] = closest.periodo.substring(0, 7).split('-').map(Number)
 
       // Compare which date is closer
       const currentDiff = (currentYear - mYear) * 12 + (currentMonth - mMonth)
@@ -83,75 +87,72 @@ export function MedicionesEditor({
       return currentDiff < closestDiff ? m : closest
     }, null)
 
-
-    // If we have a previous medicion, use its accumulated values as the previous values
+    // If we have a previous medicion, use its accumulated values
     if (previousMedicion) {
+      const newSecciones = Object.entries(presupuestoData).map(([nombre, items]) => ({
+        nombre,
+        items: items.map(item => {
+          const prevSection = previousMedicion.data.secciones.find(s => s.nombre === nombre)
+          const prevItem = prevSection?.items.find(i => i.id === item.id)
+          return {
+            id: String(item.id),
+            anterior: prevItem?.acumulado || 0,
+            presente: 0,
+            acumulado: prevItem?.acumulado || 0
+          }
+        })
+      }))
+
       setMedicion({
         ...initialMedicion,
-        month: currentPeriod,
-        measurements: Object.entries(presupuestoData).reduce((acc, [_, items]) => {
-          items.forEach(item => {
-            const prevMeasurement = previousMedicion.measurements[item.id]
-            console.log('prevMeasurement', prevMeasurement)
-            if (prevMeasurement) {
-              acc[item.id] = {
-                monthlyProgress: 0,
-                cumulativePrevious: prevMeasurement.cumulativeCurrent,
-                cumulativeCurrent: prevMeasurement.cumulativeCurrent
-              }
-            } else {
-              acc[item.id] = {
-                monthlyProgress: 0,
-                cumulativePrevious: 0,
-                cumulativeCurrent: 0
-              }
-            }
-          })
-          return acc
-        }, {} as Record<string, { monthlyProgress: number; cumulativePrevious: number; cumulativeCurrent: number }>)
+        periodo: currentPeriod,
+        data: {
+          secciones: newSecciones
+        }
       })
     } else {
+      // If no previous medicion, start fresh
+      const newSecciones = Object.entries(presupuestoData).map(([nombre, items]) => ({
+        nombre,
+        items: items.map(item => ({
+          id: String(item.id),
+          anterior: 0,
+          presente: 0,
+          acumulado: 0
+        }))
+      }))
+
       setMedicion({
         ...initialMedicion,
-        month: currentPeriod,
-        measurements: Object.entries(presupuestoData).reduce((acc, [_, items]) => {
-          items.forEach(item => {
-            acc[item.id] = {
-              monthlyProgress: 0,
-              cumulativePrevious: 0,
-              cumulativeCurrent: 0
-            }
-          })
-          return acc
-        }, {} as Record<string, { monthlyProgress: number; cumulativePrevious: number; cumulativeCurrent: number }>)
+        periodo: currentPeriod,
+        data: {
+          secciones: newSecciones
+        }
       })
     }
   }, [mediciones, urlPeriod, initialMedicion, presupuestoData, display])
 
-  const [error, setError] = useState<string | null>(null)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false)
-  const saveMedicion = useSaveMedicion()
-  const router = useRouter()
-
-  // Calculate total budget (sum of all items' total prices)
+  // Calculate total budget
   const totalBudget = React.useMemo(() => {
-    return Object.values(presupuestoData).reduce((total: number, items: PresupuestoItem[]) => {
-      return total + items.reduce((sectionTotal: number, item: PresupuestoItem) => sectionTotal + Number(item.totalPrice || 0), 0)
+    return Object.values(presupuestoData).reduce((total: number, items: TableItem[]) => {
+      return total + items.reduce((sectionTotal: number, item: TableItem) => sectionTotal + Number(item.totalPrice || 0), 0)
     }, 0)
   }, [presupuestoData])
 
-  // Calculate advancement totals for a medicion
+  // Calculate advancement totals
   const calculateAdvancementTotals = (medicion: Medicion) => {
     let currentTotal = 0
     let previousTotal = 0
 
-    Object.entries(presupuestoData).forEach(([_, items]: [string, PresupuestoItem[]]) => {
-      items.forEach(item => {
-        const measurement = medicion.measurements[item.id]
-        if (measurement) {
-          currentTotal += Number(item.totalPrice) * (Number(measurement.monthlyProgress) / 100)
-          previousTotal += Number(item.totalPrice) * (Number(measurement.cumulativePrevious) / 100)
+    console.log('aca medicion', medicion)
+
+    medicion.data?.secciones.forEach(section => {
+      const sectionItems = presupuestoData[section.nombre] || []
+      section.items.forEach(item => {
+        const presupuestoItem = sectionItems.find(i => String(i.id) === item.id)
+        if (presupuestoItem) {
+          currentTotal += Number(presupuestoItem.totalPrice) * (Number(item.presente) / 100)
+          previousTotal += Number(presupuestoItem.totalPrice) * (Number(item.anterior) / 100)
         }
       })
     })
@@ -170,90 +171,84 @@ export function MedicionesEditor({
 
   // Update measurement data
   const updateMedicion = (
+    sectionName: string,
     itemId: string,
-    field: 'monthlyProgress' | 'cumulativePrevious' | 'cumulativeCurrent',
-    value: number
+    presente: number
   ) => {
-    if (display) return;
+    if (display) return
 
     setMedicion(prevMedicion => {
-      const existingMeasurement = prevMedicion.measurements[itemId] || {
-        monthlyProgress: 0,
-        cumulativePrevious: 0,
-        cumulativeCurrent: 0
-      };
+      const newSecciones = prevMedicion.data.secciones.map(section => {
+        if (section.nombre !== sectionName) return section
 
-      return {
-        ...prevMedicion,
-        measurements: {
-          ...prevMedicion.measurements,
-          [itemId]: {
-            ...existingMeasurement,
-            [field]: value,
-            ...(field === 'monthlyProgress' && {
-              cumulativeCurrent: existingMeasurement.cumulativePrevious + value
-            })
-          }
+        return {
+          ...section,
+          items: section.items.map(item => {
+            if (item.id !== itemId) return item
+            return {
+              ...item,
+              presente,
+              acumulado: item.anterior + presente
+            }
+          })
         }
-      };
-    });
+      })
+
+      const newMedicion = {
+        ...prevMedicion,
+        data: {
+          ...prevMedicion.data,
+          secciones: newSecciones
+        }
+      }
+
+      onUpdate?.(newMedicion)
+      return newMedicion
+    })
   }
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (display || !obraId) return;
+    if (display || !obraId) return
 
     try {
-      // Transform the data into the format expected by the API
-      const formattedData = {
-        secciones: Object.entries(presupuestoData).map(([nombre, items]) => ({
-          nombre,
-          items: items.map(item => {
-            const measurement = medicion.measurements[item.id]
-            return {
-              id: String(item.id),
-              anterior: measurement?.cumulativePrevious || 0,
-              presente: measurement?.monthlyProgress || 0,
-              acumulado: measurement?.cumulativeCurrent || 0
-            }
-          })
-        }))
+      const response = await fetch('/api/mediciones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          obraId,
+          periodo: medicion.periodo,
+          data: medicion.data
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al guardar la medición')
       }
 
-      await saveMedicion.mutateAsync({
-        obraId,
-        periodo: medicion.month,
-        data: formattedData
-      });
+      const newMedicion = await response.json()
 
+      dispatch({
+        type: 'ADD_MEDICION',
+        payload: newMedicion
+      })
 
       router.push(`/obras/${obraId}`)
-
       alert('Medición guardada exitosamente!')
-
     } catch (error) {
       console.error('Error saving medicion:', error)
       setError(error instanceof Error ? error.message : 'Error al guardar la medición')
     }
   }
 
-  // Update scroll detection
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    handleScroll()
-
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   const handlePeriodChange = (newDate: string) => {
     setMedicion(prev => ({
       ...prev,
-      month: newDate
+      periodo: newDate
     }))
     setIsPeriodDialogOpen(false)
   }
@@ -261,12 +256,14 @@ export function MedicionesEditor({
   const renderMedicionPeriod = () => {
     const advancementTotals = calculateAdvancementTotals(medicion)
 
+    console.log('aca medicion', medicion)
+
     return (
       <div key={medicion.id} className="border rounded-lg p-4">
         <div className="flex flex-col gap-2 mb-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">
-              Período: {new Date(new Date(medicion.month).setMonth(new Date(medicion.month).getMonth() + 1)).toLocaleDateString('es', { month: 'long', year: 'numeric' })}
+              Período: {medicion.periodo}
             </h3>
           </div>
           <div className="text-sm text-gray-600">
@@ -292,23 +289,22 @@ export function MedicionesEditor({
           </div>
         </div>
 
-        {Object.entries(presupuestoData).map(([section, items], sectionIndex) => (
+        {medicion.data.secciones.map((section, sectionIndex) => (
           <motion.div
-            key={section}
+            key={section.nombre}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: sectionIndex * 0.1 }}
-            className="mt-6 bg-white rounded-lg "
+            className="mt-6 bg-white rounded-lg"
           >
             <h3 className={cn(
               "text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2",
-              (!Array.isArray(items) || items.length === 0) && "text-muted-foreground"
+              (!Array.isArray(section.items) || section.items.length === 0) && "text-muted-foreground"
             )}>
               <span className="flex items-center gap-2">
                 <Package size={16} strokeWidth={2} aria-hidden="true" />
-                {sectionIndex + 1}. {section.toUpperCase()}
+                {sectionIndex + 1}. {section.nombre.toUpperCase()}
               </span>
-
             </h3>
             <div className="overflow-x-auto">
               <Table>
@@ -316,32 +312,32 @@ export function MedicionesEditor({
                   <TableRow>
                     <TableHead className="w-[50px] bg-white">N°</TableHead>
                     <TableHead className="text-left bg-white">Item</TableHead>
-                    <TableHead className="text-center bg-white">Acumulado Anterior </TableHead>
-                    <TableHead className="text-center bg-white">Avance Mensual </TableHead>
-                    <TableHead className="text-center bg-white">Acumulado Actual </TableHead>
+                    <TableHead className="text-center bg-white">Acumulado Anterior</TableHead>
+                    <TableHead className="text-center bg-white">Avance Mensual</TableHead>
+                    <TableHead className="text-center bg-white">Acumulado Actual</TableHead>
                     <TableHead className="text-center bg-white">Monto Actual</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item, itemIndex) => {
-                    const measurement = medicion.measurements[item.id]
-                    const currentAmount = Number(item.totalPrice) * (Number(measurement?.monthlyProgress) || 0) / 100
+                  {section.items.map((item, itemIndex) => {
+                    const presupuestoItem = presupuestoData[section.nombre]?.find(i => String(i.id) === item.id)
+                    const currentAmount = (presupuestoItem?.totalPrice || 0) * (Number(item.presente) / 100)
                     const rowNumber = `${sectionIndex + 1}.${itemIndex + 1}`
 
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="text-gray-600 border-r">{rowNumber}</TableCell>
-                        <TableCell className="border-r">{item.name}</TableCell>
-                        <TableCell className="text-center border-r">{measurement?.cumulativePrevious || 0}%</TableCell>
+                        <TableCell className="border-r">{presupuestoItem?.name}</TableCell>
+                        <TableCell className="text-center border-r">{item.anterior}%</TableCell>
                         <TableCell className={cn("text-center group cursor-text border-r", !display && "hover:shadow-[inset_0px_0px_0px_2px_rgba(188,202,220,1)]")}>
                           {display ? (
-                            `${measurement?.monthlyProgress || 0}%`
+                            `${item.presente}%`
                           ) : (
                             <EditableInput
-                              value={measurement?.monthlyProgress || 0}
+                              value={item.presente}
                               onChange={(val) => updateMedicion(
-                                String(item.id),
-                                'monthlyProgress',
+                                section.nombre,
+                                item.id,
                                 Number(val)
                               )}
                               suffix="%"
@@ -349,7 +345,7 @@ export function MedicionesEditor({
                             />
                           )}
                         </TableCell>
-                        <TableCell className="text-center border-r">{measurement?.cumulativeCurrent || 0}%</TableCell>
+                        <TableCell className="text-center border-r">{item.acumulado}%</TableCell>
                         <TableCell className="text-center">${currentAmount.toLocaleString('es-AR')}</TableCell>
                       </TableRow>
                     )
@@ -366,7 +362,7 @@ export function MedicionesEditor({
   return (
     <div className='flex items-start justify-center gap-8 relative'>
       <div className='flex flex-col gap-2 mb-16'>
-        <form className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
+        <form onSubmit={handleSubmit} className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">
@@ -425,7 +421,7 @@ export function MedicionesEditor({
                   <div className="grid gap-2">
                     <Input
                       type="month"
-                      value={medicion.month.substring(0, 7)}
+                      value={medicion.periodo.substring(0, 7)}
                       onChange={(e) => handlePeriodChange(e.target.value + "-01")}
                     />
                   </div>
