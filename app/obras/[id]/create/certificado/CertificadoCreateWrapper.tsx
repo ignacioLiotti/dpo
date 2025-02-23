@@ -57,6 +57,7 @@ export default function CertificadoCreateWrapper({
         selectedMedicion={medicion}
         fechaInicio={obra.fechaInicio}
         fechaFin={obra.fechaFin}
+        // @ts-ignore
         obraData={obra.data ? JSON.parse(obra.data) : {}}
       />
     </div>

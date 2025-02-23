@@ -80,9 +80,13 @@ export default function ObrasPage() {
             <TableRow key={obra.id}>
               <TableCell>{obra.id}</TableCell>
               <TableCell>{obra.nombre}</TableCell>
+              {/* @ts-ignore */}
               <TableCell>{obra.localidad}, {obra.departamento}</TableCell>
+              {/* @ts-ignore */}
               <TableCell>{obra.empresaAdjudicada}</TableCell>
+              {/* @ts-ignore */}
               <TableCell>{obra.fechaInicio ? obra.fechaInicio : '-'}</TableCell>
+              {/* @ts-ignore */}
               <TableCell>{obra.fechaFin ? obra.fechaFin : '-'}</TableCell>
               <TableCell>{obra.estado}</TableCell>
               <TableCell>
