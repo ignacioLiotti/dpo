@@ -1,11 +1,46 @@
 import { QueryClient } from "@tanstack/react-query";
 
 interface Obra {
+	"3p": string;
+	ainaugurar: string;
+	area: string;
+	avance: string;
+	basico: string;
+	clasificacion: string;
+	codigoSIG: string;
+	departamento: string;
+	empresaAdjudicada: string;
+	empresaPoliza: string;
+	expte: string;
+	expte2: string;
+	fechaAdjudicacion: string;
+	fechaAdjudicacion_1: string;
+	fechaContrato: string;
+	fechaFin: string;
+	fechaInauguracion: string;
+	fechaInicio: string;
+	fechaLicitacion: string;
+	fechaNormaLegal: string;
 	id: number;
+	idEdificio: string;
+	inaugurada: string;
+	inspectores: string;
+	localidad: string;
+	memoriaDesc: string;
+	modalidad: string;
+	montoContrato: string;
+	montoPoliza: string;
+	noInaugurado: string;
 	nombre: string;
-	ubicacion: string;
-	descripcion: string;
-	created_at?: string;
+	normaLegalAdjudicacion: string;
+	normaLegalLicitacion: string;
+	numeroLicitacion: string;
+	numeroPoliza: string;
+	observaciones: string;
+	plazo: string;
+	presupuestoOficial: string;
+	prioridad: string;
+	proyectista: string;
 }
 
 const queryClient = new QueryClient();

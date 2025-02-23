@@ -37,6 +37,7 @@ export default function ObraPage() {
   const pathname = usePathname();
   const { state } = useObra();
   const { obra, presupuestos, mediciones, certificados, loading, error } = state;
+  console.log('obra', obra)
 
   // Get current tab from URL or default to 'overview'
   const currentTab = searchParams.get('tab') || 'overview';
@@ -124,11 +125,11 @@ export default function ObraPage() {
 
   // Get all months between start and end date
   const getMonthsInRange = () => {
-    if (!obra?.fecha_inicio || !obra?.fecha_fin) return [];
+    if (!obra?.fechaInicio || !obra?.fechaFin) return [];
 
     const months = [];
-    let currentMonth = startOfMonth(new Date(obra.fecha_inicio));
-    const endDate = startOfMonth(new Date(obra.fecha_fin));
+    let currentMonth = startOfMonth(new Date(obra.fechaInicio));
+    const endDate = startOfMonth(new Date(obra.fechaFin));
 
     while (isBefore(currentMonth, endDate) || isSameMonth(currentMonth, endDate)) {
       const utcMidnight = new Date(Date.UTC(
@@ -166,11 +167,11 @@ export default function ObraPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="font-medium">Created At:</label>
-          <p>{new Date(obra.created_at).toLocaleString()}</p>
+          <p>  {obra.createdAt ? new Date(obra.createdAt).toLocaleString() : 'No disponible'}</p>
         </div>
         <div>
           <label className="font-medium">Last Updated:</label>
-          <p>{new Date(obra.updated_at).toLocaleString()}</p>
+          <p>{obra.updatedAt ? new Date(obra.updatedAt).toLocaleString() : 'No disponible'}</p>
         </div>
       </div>
     );
@@ -196,9 +197,9 @@ export default function ObraPage() {
           onValueChange={handleTabChange}
         >
           <div className="flex justify-between items-center">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 max-w-[50%]">
               <h1 className="text-3xl font-semibold">{obra.nombre}</h1>
-              <p className="text-sm text-input/60 font-semibold">{obra.ubicacion}</p>
+              <p className="text-sm text-input/60 font-semibold">{obra.localidad}, {obra.departamento}</p>
             </div>
 
             <ScrollArea>
@@ -252,21 +253,21 @@ export default function ObraPage() {
                   <CardDescription>Basic details about the obra</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <label className="font-medium">ID:</label>
-                    <p>{obra.id}</p>
+                  <div className="flex gap-2">
+                    <label className="font-normal text-muted-foreground">ID:</label>
+                    <p className="font-semibold">{obra.id}</p>
                   </div>
-                  <div>
-                    <label className="font-medium">Nombre:</label>
-                    <p>{obra.nombre}</p>
+                  <div className="flex flex-col gap-2">
+                    <label className="font-normal text-muted-foreground">Nombre:</label>
+                    <p className="font-semibold text-lg">{obra.nombre}</p>
                   </div>
-                  <div>
-                    <label className="font-medium">Ubicación:</label>
-                    <p>{obra.ubicacion}</p>
+                  <div className="flex gap-2">
+                    <label className="font-normal text-muted-foreground">Ubicación:</label>
+                    <p className="font-semibold">{obra.localidad}, {obra.departamento}</p>
                   </div>
-                  <div>
-                    <label className="font-medium">Empresa:</label>
-                    <p>{obra.idEmpresa}</p>
+                  <div className="flex gap-2">
+                    <label className="font-normal text-muted-foreground">Empresa:</label>
+                    <p className="font-semibold">{obra.empresaAdjudicada}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -277,17 +278,17 @@ export default function ObraPage() {
                   <CardDescription>Current status and important dates</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <label className="font-medium">Estado:</label>
-                    <p>{obra.estado || 'No establecido'}</p>
+                  <div className="flex gap-2">
+                    <label className="font-normal text-muted-foreground">Estado:</label>
+                    <p className="font-semibold">{obra.estado || 'No establecido'}</p>
                   </div>
-                  <div>
-                    <label className="font-medium">Fecha de Inicio:</label>
-                    <p>{obra.fecha_inicio ? new Date(obra.fecha_inicio).toLocaleDateString() : 'No establecida'}</p>
+                  <div className="flex gap-2">
+                    <label className="font-normal text-muted-foreground">Fecha de Inicio:</label>
+                    <p className="font-semibold">{obra.fechaInicio ? obra.fechaInicio : 'No establecida'}</p>
                   </div>
-                  <div>
-                    <label className="font-medium">Fecha de Fin:</label>
-                    <p>{obra.fecha_fin ? new Date(obra.fecha_fin).toLocaleDateString() : 'No establecida'}</p>
+                  <div className="flex gap-2">
+                    <label className="font-normal text-muted-foreground">Fecha de Fin:</label>
+                    <p className="font-semibold">{obra.fechaFin ? obra.fechaFin : 'No establecida'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -346,6 +347,8 @@ export default function ObraPage() {
                         {getMonthsInRange().map((date) => {
                           const monthStr = format(date, 'yyyy-MM-dd');
 
+                          console.log(mediciones)
+
                           // Find the last completed month from mediciones
                           const sortedMediciones = mediciones?.sort((a, b) =>
                             new Date(a.periodo).getTime() - new Date(b.periodo).getTime()
@@ -361,8 +364,6 @@ export default function ObraPage() {
                               m.periodo?.split('-')[1] === date.split('-')[1];
                             return monthMatch;
                           });
-
-                          console.log('lastCompletedDate', lastCompletedDate, 'date', date)
 
                           // This month is next if:
                           // 1. No completed months exist and this is the first month, OR

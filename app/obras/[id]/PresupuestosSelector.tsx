@@ -204,9 +204,9 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
                   : ''
               )}
               animate={{
-                width: selectedPresupuesto?.id === presupuesto.id ? 310 : 275,
+                width: selectedPresupuesto?.id === presupuesto.id ? '100%' : '50%',
               }}
-              exit={{ width: 275 }}
+              exit={{ width: '275px' }}
             />
             <motion.span
               className={cn(
@@ -216,15 +216,15 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
                   : 'bg-gray-200'
               )}
               animate={{
-                width: selectedPresupuesto?.id === presupuesto.id ? 310 : 275,
+                width: selectedPresupuesto?.id === presupuesto.id ? '100%' : '50%',
               }}
-              exit={{ width: 275 }}
+              exit={{ width: '275px' }}
             />
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-lg w-full h-full min-h-[500px] flex-1 relative shadow-md flex justify-end">
+      <div className="bg-white rounded-lg w-full h-full min-h-[500px] min-w-[1220px] flex-1 relative shadow-md flex justify-end">
         {selectedPresupuesto ? (
           <div className='flex flex-col gap-2 mb-16 absolute -top-20 left-20 h-full'>
             {selectedMedicion ? (

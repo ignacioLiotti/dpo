@@ -55,9 +55,9 @@ export default function CertificadoCreateWrapper({
         obraName={obra.nombre}
         presupuestoData={presupuesto.data}
         selectedMedicion={medicion}
-        fechaInicio={obra.fecha_inicio}
-        fechaFin={obra.fecha_fin}
-        obraData={JSON.parse(obra.data)}
+        fechaInicio={obra.fechaInicio}
+        fechaFin={obra.fechaFin}
+        obraData={obra.data ? JSON.parse(obra.data) : {}}
       />
     </div>
   );

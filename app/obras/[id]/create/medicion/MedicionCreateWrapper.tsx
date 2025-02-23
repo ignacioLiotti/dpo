@@ -65,7 +65,7 @@ export default function MedicionCreateWrapper({ obraId, presupuestoId }: Medicio
   }
 
   // Validate obra dates
-  if (!obra.fecha_inicio || !obra.fecha_fin) {
+  if (!obra.fechaInicio || !obra.fechaFin) {
     redirect(`/obras/${obraId}?error=invalid-obra-dates`);
   }
 
@@ -79,8 +79,8 @@ export default function MedicionCreateWrapper({ obraId, presupuestoId }: Medicio
         obraId={obraId}
         obraName={obra.nombre}
         presupuestoData={presupuestoData}
-        fechaInicio={obra.fecha_inicio}
-        fechaFin={obra.fecha_fin}
+        fechaInicio={obra.fechaInicio}
+        fechaFin={obra.fechaFin}
       />
     </div>
   );

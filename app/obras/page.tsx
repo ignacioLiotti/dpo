@@ -80,10 +80,10 @@ export default function ObrasPage() {
             <TableRow key={obra.id}>
               <TableCell>{obra.id}</TableCell>
               <TableCell>{obra.nombre}</TableCell>
-              <TableCell>{obra.ubicacion}</TableCell>
-              <TableCell>{obra.idEmpresa}</TableCell>
-              <TableCell>{new Date(obra.fecha_inicio).toLocaleDateString()}</TableCell>
-              <TableCell>{obra.fecha_fin ? new Date(obra.fecha_fin).toLocaleDateString() : '-'}</TableCell>
+              <TableCell>{obra.localidad}, {obra.departamento}</TableCell>
+              <TableCell>{obra.empresaAdjudicada}</TableCell>
+              <TableCell>{obra.fechaInicio ? obra.fechaInicio : '-'}</TableCell>
+              <TableCell>{obra.fechaFin ? obra.fechaFin : '-'}</TableCell>
               <TableCell>{obra.estado}</TableCell>
               <TableCell>
                 <div className="flex gap-2">

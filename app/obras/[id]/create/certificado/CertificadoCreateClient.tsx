@@ -125,14 +125,14 @@ export default function CertificadoCreateClient({
 
   const [editedData, setEditedData] = useState<Record<string, any>>(
     obraData || certificado?.data.editedData || {
-      ubicacion: '',
+      localidad: '',
       contratista: '',
-      nroLicitacion: '',
+      numeroLicitacion: '',
       nroResolucion: '',
       imputacion: '',
-      fechaDeContrato: '',
-      fechaDeInicio: '',
-      plazoDias: '',
+      fechaContrato: '',
+      fechaInicio: '',
+      plazo: '',
       prorroga: [],
       Ampliacion: [],
       Balance: {},
@@ -265,9 +265,9 @@ export default function CertificadoCreateClient({
               <div>
                 <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">Información Básica</h3>
                 <div className="space-y-2 px-4">
-                  <InfoRow label="UBICACIÓN" value={editedData.ubicacion || ''} path="ubicacion" onChange={handleDataChange} editable={!display} />
+                  <InfoRow label="UBICACIÓN" value={editedData.localidad || ''} path="localidad" onChange={handleDataChange} editable={!display} />
                   <InfoRow label="CONTRATISTA" value={editedData.contratista || ''} path="contratista" onChange={handleDataChange} editable={!display} />
-                  <InfoRow label="N° LICITACIÓN" value={editedData.nroLicitacion || ''} path="nroLicitacion" onChange={handleDataChange} editable={!display} />
+                  <InfoRow label="N° LICITACIÓN" value={editedData.numeroLicitacion || ''} path="numeroLicitacion" onChange={handleDataChange} editable={!display} />
                   <InfoRow label="N° RESOLUCIÓN" value={editedData.nroResolucion || ''} path="nroResolucion" onChange={handleDataChange} editable={!display} />
                   <InfoRow label="IMPUTACIÓN" value={editedData.imputacion || ''} path="imputacion" onChange={handleDataChange} editable={!display} />
                 </div>
@@ -275,9 +275,9 @@ export default function CertificadoCreateClient({
               <div>
                 <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">Fechas y Plazos</h3>
                 <div className="space-y-2 px-4">
-                  <InfoRow label="FECHA DE CONTRATO" value={editedData.fechaDeContrato || ''} path="fechaDeContrato" onChange={handleDataChange} editable={!display} />
-                  <InfoRow label="FECHA DE INICIO" value={editedData.fechaDeInicio || ''} path="fechaDeInicio" onChange={handleDataChange} editable={!display} />
-                  <InfoRow label="PLAZO (DÍAS)" value={editedData.plazoDias || ''} path="plazoDias" onChange={handleDataChange} editable={!display} />
+                  <InfoRow label="FECHA DE CONTRATO" value={editedData.fechaContrato || ''} path="fechaContrato" onChange={handleDataChange} editable={!display} />
+                  <InfoRow label="FECHA DE INICIO" value={editedData.fechaInicio || ''} path="fechaInicio" onChange={handleDataChange} editable={!display} />
+                  <InfoRow label="PLAZO (DÍAS)" value={editedData.plazo || ''} path="plazo" onChange={handleDataChange} editable={!display} />
                 </div>
               </div>
             </div>

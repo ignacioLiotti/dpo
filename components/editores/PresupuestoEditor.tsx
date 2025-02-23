@@ -572,9 +572,9 @@ export function PresupuestoEditor({
                   </span>
                 </b>
               </p>
-              <p>{`Ubicacion: `}
+              <p>{`Localidad: `}
                 <b>
-                  {obraData?.ubicacion || 'Sin ubicación'}
+                  {obraData?.localidad || 'Sin ubicación'}
                 </b>
               </p>
             </Card>
