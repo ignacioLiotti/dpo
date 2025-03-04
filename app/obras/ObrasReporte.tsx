@@ -9,12 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
-import { ObraTimeline } from './page';
 import { Obra } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TabsTrigger } from '@/components/ui/tabs';
 import { TabsList } from '@/components/ui/tabs';
+import { ObraTimeline } from '@/components/ui/ObraTimeline';
 
 // FolderTabs component for the folder-style tabs
 interface TabItem {
