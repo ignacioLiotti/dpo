@@ -88,6 +88,7 @@ export function ObraProvider({
       return response.json();
     },
     staleTime: Infinity, // Keep the data fresh indefinitely
+    refetchOnWindowFocus: false,
   });
 
   // Fetch presupuestos
@@ -99,6 +100,7 @@ export function ObraProvider({
       return response.json();
     },
     staleTime: Infinity, // Keep the data fresh indefinitely
+    refetchOnWindowFocus: false,
   });
 
   // Fetch mediciones
@@ -110,6 +112,7 @@ export function ObraProvider({
       return response.json();
     },
     staleTime: Infinity, // Keep the data fresh indefinitely
+    refetchOnWindowFocus: false,
   });
 
   // Fetch certificados
@@ -121,6 +124,7 @@ export function ObraProvider({
       return response.json();
     },
     staleTime: Infinity, // Keep the data fresh indefinitely
+    refetchOnWindowFocus: false,
   });
 
   // Update loading state

@@ -7,6 +7,7 @@ import type { TableItem, Presupuesto, Medicion } from '@/types';
 import { PresupuestoEditor } from '@/components/editores/PresupuestoEditor';
 import { MedicionesEditor } from '@/components/editores/MedicionesEditor';
 import { useObra } from '@/app/providers/ObraProvider';
+import { FileChartPie } from 'lucide-react';
 
 interface OldPresupuestoItem {
   id: number;
@@ -32,8 +33,6 @@ interface PresupuestosSelectorProps {
 
 function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
   const { state: { presupuestos, mediciones, loading, error } } = useObra();
-
-  console.log('PresupuestosSelector presupuestos', presupuestos)
 
   // Sort presupuestos from newest to oldest based on created_at
   const sortedPresupuestos = React.useMemo(() => {
@@ -182,7 +181,10 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
         {sortedPresupuestos.map((presupuesto) => (
           <div
             key={presupuesto.id}
-            onClick={() => setSelectedPresupuesto(presupuesto)}
+            onClick={() => {
+              setSelectedPresupuesto(presupuesto)
+              setSelectedMedicion(null)
+            }}
             className={cn(
               'flex flex-col justify-center items-start p-4 w-[15vw] max-w-[15vw] h-20 rounded-lg relative z-20 cursor-pointer'
             )}
@@ -198,25 +200,25 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
             </div>
             <motion.span
               className={cn(
-                '-z-10 w-full h-[80px] absolute',
+                'flex flex-col justify-center items-start p-4 w-[15vw] h-20 rounded-lg absolute left-0 -z-10 cursor-pointer transition-colors',
                 selectedPresupuesto?.id === presupuesto.id
-                  ? 'shadow-[-20px_4px_6px_-1px_#0000001a]'
+                  ? 'shadow-[-2px_4px_6px_-1px_#0000001a]'
                   : ''
               )}
               animate={{
-                width: selectedPresupuesto?.id === presupuesto.id ? '100%' : '50%',
+                width: selectedPresupuesto?.id === presupuesto.id && selectedMedicion === null ? '110%' : '100%',
               }}
               exit={{ width: '275px' }}
             />
             <motion.span
               className={cn(
                 'flex flex-col justify-center items-start p-4 w-[15vw] h-20 rounded-lg absolute left-0 -z-10 cursor-pointer transition-colors',
-                selectedPresupuesto?.id === presupuesto.id
-                  ? 'bg-white'
-                  : 'bg-gray-200'
+                (selectedPresupuesto?.id === presupuesto.id && selectedMedicion === null)
+                  ? 'bg-containerBackground'
+                  : 'bg-containerBackground/50'
               )}
               animate={{
-                width: selectedPresupuesto?.id === presupuesto.id ? '100%' : '50%',
+                width: selectedPresupuesto?.id === presupuesto.id && selectedMedicion === null ? '110%' : '100%',
               }}
               exit={{ width: '275px' }}
             />
@@ -224,16 +226,19 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
         ))}
       </div>
 
-      <div className="bg-white rounded-lg w-full h-full min-h-[500px] min-w-[1220px] flex-1 relative shadow-md flex justify-end">
+      <div className="bg-containerBackground rounded-lg w-full h-full min-h-[500px] min-w-[1220px] flex-1 relative shadow-md flex justify-end">
         {selectedPresupuesto ? (
-          <div className='flex flex-col gap-2 mb-16 absolute -top-20 left-20 h-full'>
+          <div className='flex flex-col gap-2 mb-16 absolute -top-20 left-14 h-full'>
             {selectedMedicion ? (
-              <MedicionesEditor
-                medicion={selectedMedicion}
-                presupuestoData={selectedPresupuesto.data}
-                display={true}
-                obraId={selectedPresupuesto.obra_id}
-              />
+              <div className='flex flex-col gap-2 floating-scroll'>
+                <MedicionesEditor
+                  medicion={selectedMedicion}
+                  presupuestoData={selectedPresupuesto.data}
+                  display={true}
+                  obraId={selectedPresupuesto.obra_id}
+                />
+
+              </div>
             ) : (
               <PresupuestoEditor
                 key={selectedPresupuesto.id}
@@ -244,8 +249,9 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-[500px] text-muted-foreground">
-            <p>Select a presupuesto to view details</p>
+          <div className="flex flex-col items-center w-full bg-white justify-center text-muted-foreground rounded-2xl">
+            <FileChartPie className="w-12 h-12 mb-4 opacity-20" />
+            <p>No hay presupuestos creados para esta obra</p>
           </div>
         )}
         <div className='flex flex-col gap-2 mb-16 h-full'>
@@ -258,14 +264,32 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
                     setSelectedMedicion(medicion);
                   }}
                   className={cn(
-                    "bg-white p-4 h-36 w-28 rounded-lg shadow border hover:shadow-md transition-shadow cursor-pointer",
+                    "bg-white h-36 w-28 rounded-lg shadow border hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-start",
                     selectedMedicion?.id === medicion.id ? "ring-2 ring-primary" : ""
                   )}
                 >
-                  <p className="font-medium text-sm">Medición #{medicion.id}</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(medicion.periodo).toLocaleDateString()}
-                  </p>
+                  <div className="flex flex-col gap-1 bg-gray-200/50  px-3 pt-2 pb-1 rounded-t-lg">
+                    <p className="font-medium text-sm">Medición</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(medicion.periodo).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1 px-3 pt-2 pb-4 ">
+                    <div className="flex flex-col">
+                      <p className="text-xs text-gray-500 flex items-center justify-between gap-1 ">Medicion
+                      </p>
+                      <span className="text-sm font-bold text-gray-500 ">
+                        {medicion.avanceMedicion}%
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-gray-500 flex items-center justify-between gap-1 ">Acumulado
+                      </p>
+                      <span className="text-sm font-bold text-gray-500">
+                        {medicion.avanceAcumulado}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -273,7 +297,7 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
         </div>
       </div>
 
-    </div>
+    </div >
   );
 }
 

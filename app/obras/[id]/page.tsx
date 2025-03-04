@@ -9,8 +9,6 @@ export default async function ObraServerPage({ params }: { params: Promise<{ id:
   const queryClient = getQueryClient()
   const { id } = await params
 
-  console.log('params', params)
-
   // Fetch obra data
   const obra = await getObra(Number(id)) as unknown as Obra
 

@@ -43,6 +43,7 @@ yarn-error.log*
 *.xls
 *.doc
 *.docx
+*.sql
 
 # typescript
 *.tsbuildinfo

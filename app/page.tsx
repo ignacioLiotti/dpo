@@ -5,7 +5,7 @@ import { Suspense } from "react"
 export default async function Page({ searchParams }: { searchParams: Promise<{ obraId: string }> }) {
   const { obraId } = await searchParams
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 bg-muted/70">
+    <div className="flex flex-1 flex-col gap-4 p-4 bg-white">
       <Card className="min-h-[100vh] flex-1 rounded-xl md:min-h-min p-0">
         <Suspense fallback={<div className="p-4">Loading...</div>}>
           <CustomTable />

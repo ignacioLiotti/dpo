@@ -17,6 +17,29 @@ interface MedicionData {
 	secciones: MedicionSeccion[];
 }
 
+// Helper function to transform database column names to camelCase for frontend
+function transformMedicionToCamelCase(medicion: any) {
+	if (!medicion) return medicion;
+
+	// Transform snake_case to camelCase for the new columns
+	if (medicion.avance_medicion !== undefined) {
+		medicion.avanceMedicion = medicion.avance_medicion;
+		delete medicion.avance_medicion;
+	}
+
+	if (medicion.avance_acumulado !== undefined) {
+		medicion.avanceAcumulado = medicion.avance_acumulado;
+		delete medicion.avance_acumulado;
+	}
+
+	if (medicion.presupuesto_total !== undefined) {
+		medicion.presupuestoTotal = medicion.presupuesto_total;
+		delete medicion.presupuesto_total;
+	}
+
+	return medicion;
+}
+
 export async function GET(request: Request) {
 	try {
 		const { searchParams } = new URL(request.url);
@@ -36,7 +59,7 @@ export async function GET(request: Request) {
 				.single();
 
 			if (error) throw error;
-			return NextResponse.json(medicion);
+			return NextResponse.json(transformMedicionToCamelCase(medicion));
 		}
 
 		console.log("obraId", obraId);
@@ -51,7 +74,7 @@ export async function GET(request: Request) {
 			console.log("mediciones", mediciones);
 
 			if (error) throw error;
-			return NextResponse.json(mediciones);
+			return NextResponse.json(mediciones?.map(transformMedicionToCamelCase));
 		}
 
 		return NextResponse.json(
@@ -72,7 +95,15 @@ export async function POST(request: Request) {
 		const supabase = await createClient();
 		const body = await request.json();
 		console.log("body", body);
-		const { obraId, presupuestoId, periodo, data } = body;
+		const {
+			obraId,
+			presupuestoId,
+			periodo,
+			data,
+			avanceMedicion,
+			avanceAcumulado,
+			presupuestoTotal,
+		} = body;
 
 		// Validate required fields
 		if (!obraId || !periodo || !data) {
@@ -104,6 +135,8 @@ export async function POST(request: Request) {
 			presupuestoId, // Store presupuestoId in the JSONB data field
 		};
 
+		console.log("fullData", fullData);
+
 		// Create medicion
 		const { data: medicion, error: medicionError } = await supabase
 			.from("mediciones")
@@ -112,6 +145,9 @@ export async function POST(request: Request) {
 					obra_id: obraId,
 					periodo: new Date(periodo).toISOString(),
 					data: fullData,
+					avance_medicion: avanceMedicion,
+					avance_acumulado: avanceAcumulado,
+					presupuesto_total: presupuestoTotal,
 				},
 			])
 			.select()
@@ -138,7 +174,15 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
 	try {
 		const supabase = await createClient();
-		const { id, periodo, data, presupuestoId } = await request.json();
+		const {
+			id,
+			periodo,
+			data,
+			presupuestoId,
+			avanceMedicion,
+			avanceAcumulado,
+			presupuestoTotal,
+		} = await request.json();
 
 		if (!id || !periodo || !data) {
 			return NextResponse.json(
@@ -159,6 +203,9 @@ export async function PUT(request: Request) {
 			.update({
 				periodo: new Date(periodo).toISOString(),
 				data: fullData,
+				avance_medicion: avanceMedicion,
+				avance_acumulado: avanceAcumulado,
+				presupuesto_total: presupuestoTotal,
 			})
 			.eq("id", id)
 			.select()
@@ -169,7 +216,7 @@ export async function PUT(request: Request) {
 			throw new Error(updateError.message);
 		}
 
-		return NextResponse.json(updatedMedicion);
+		return NextResponse.json(transformMedicionToCamelCase(updatedMedicion));
 	} catch (error) {
 		console.error("Error updating medicion:", error);
 		return NextResponse.json(

@@ -61,7 +61,7 @@ export default function RootLayout({
         // },
         {
           "title": "Obra de Ejemplo",
-          "url": "/obras/1",
+          "url": "/obras/1284",
           "iconKey": "HardHatIcon",
           "items": [
             {
@@ -88,23 +88,24 @@ export default function RootLayout({
           {/* rest of your scripts go under */}
         </head>
         <body
-          className={`${geistSans.className} ${geistMono.className} antialiased`}
+          className={` ${geistSans.className} antialiased bg-containerBackground`}
         >
           <ReactScanWrapper>
             <SidebarProvider>
               <AppSidebar mappedData={mapped as any} />
-              <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                  <div className="flex items-center gap-2 px-4">
+              <SidebarInset className="flex flex-col p-4 pt-0 pr-10">
+                <header className="flex h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                  <div className="flex items-center gap-2">
                     <SidebarTrigger className="-ml-1" />
                     <Separator className="mr-2 h-4" />
                     <Breadcrumbs />
                   </div>
                 </header>
-
+                {/* <div className="flex flex-1 flex-col w-full h-full mb-4 bg-white rounded-3xl shadow-[0_0_0px_5px_#bcc5e81c,_0_0_0px_2px_#dfe0e4_] px-8"> */}
                 {children}
-                <ReactQueryDevtool />
+                {/* </div> */}
               </SidebarInset>
+              <ReactQueryDevtool />
             </SidebarProvider>
           </ReactScanWrapper>
           <Toaster />

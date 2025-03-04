@@ -16,9 +16,9 @@ const buttonVariants = cva(
           "active:scale-[0.97] hover:bg-[#ece9f7] active:shadow-[inset_0_-1px_0_#fff,inset_0_2px_0_#3b82f621,0_0_0_1px_#3b82f64a,0_2px_7px_0px_#3b85f64a,0_0_0_3px_#3b82f614]"
         ),
         box: cn(
-          "inline-flex flex-col items-center justify-center bg-muted/20 text-neutral-600 shadow-simple font-medium",
+          "inline-flex flex-col items-center justify-center bg-containerBackground/40 text-neutral-600 shadow-simple font-medium",
           "relative transition-all duration-100 cursor-pointer will-change-transform ",
-          "active:scale-[0.97] hover:bg-muted/70"
+          "active:scale-[0.97] hover:bg-containerBackground/70"
         ),
         default: cn(
           "inline-flex items-center justify-center bg-black text-white shadow-simple font-medium",
@@ -107,7 +107,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (href) {
       return (
         // @ts-ignore
-        <Link href={href} asChild>
+        <Link href={href}>
           <Comp
             className={cn(buttonVariants({ variant, size, className }))}
             ref={ref}

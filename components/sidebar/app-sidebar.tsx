@@ -25,6 +25,7 @@ import { NavMain } from "@/components/sidebar/nav-main";
 import { NavProjects } from "@/components/sidebar/nav-projects";
 import { NavUser } from "@/components/sidebar/nav-user";
 import { TeamSwitcher } from "@/components/sidebar/team-switcher";
+import type { NavItem } from "@/components/sidebar/nav-main";
 import {
   Sidebar,
   SidebarContent,
@@ -33,14 +34,39 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-// Modify the transform function to store icon keys
+type IconKey = keyof typeof iconMap;
+
+interface NavItemData {
+  title: string;
+  url: string;
+  iconKey: IconKey;
+}
+
+interface NavData extends NavItemData {
+  items: NavItemData[];
+}
+
+const iconMap = {
+  FilePlus,
+  House,
+  FolderSearch2,
+  BrainCogIcon,
+  LayoutTemplateIcon,
+  DatabaseZapIcon,
+  HardHatIcon,
+  Coins,
+  FlaskConicalIcon,
+  Bot,
+  LayoutListIcon
+};
+
 const transformDirectoryToNav = (
   structure: Record<string, any>,
   basePath: string = ""
-): any[] => {
-  const result: any[] = [];
+): NavData[] => {
+  const result: NavData[] = [];
 
-  const findIconKey = (key: string) => {
+  const findIconKey = (key: string): IconKey => {
     switch (key.toLowerCase()) {
       case "create":
         return "FilePlus";
@@ -61,7 +87,7 @@ const transformDirectoryToNav = (
       case "uitest":
         return "FlaskConicalIcon";
       default:
-        return "Bot"; // Default icon key
+        return "Bot";
     }
   };
 
@@ -75,17 +101,17 @@ const transformDirectoryToNav = (
 
     if (hasPageFile) {
       const iconKey = findIconKey(key);
-
       const items = transformDirectoryToNav(folder, `${basePath}/${key}`);
+
       result.push({
         title: capitalizeFirstLetter(key),
         url: `${basePath}/${key}`.replace(/\/+/g, "/"),
-        iconKey: iconKey, // Store icon key
+        iconKey,
         items: [
           {
             title: "Main",
             url: `${basePath}/${key}`.replace(/\/+/g, "/"),
-            iconKey: "House", // Use the Main icon key for the "Main" page
+            iconKey: "House",
           },
           ...items
         ]
@@ -96,7 +122,7 @@ const transformDirectoryToNav = (
       result.push({
         title: capitalizeFirstLetter(key),
         url: `${basePath}/${key}`.replace(/\/+/g, "/"),
-        iconKey: iconKey, // Store icon key
+        iconKey,
         items: transformDirectoryToNav(folder, `${basePath}/${key}`)
       });
     }
@@ -105,27 +131,14 @@ const transformDirectoryToNav = (
   return result;
 }
 
-// Map icon keys back to components
-const iconMap = {
-  FilePlus,
-  House,
-  FolderSearch2,
-  BrainCogIcon,
-  LayoutTemplateIcon,
-  DatabaseZapIcon,
-  HardHatIcon,
-  Coins,
-  FlaskConicalIcon,
-  Bot,
-  LayoutListIcon
-};
-// Function to map icon keys back to components
-const mapIconsToComponents = (navItems: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[]) => {
+const mapIconsToComponents = (navItems: NavData[]): NavItem[] => {
   return navItems.map(item => ({
-    ...item,
+    title: item.title,
+    url: item.url,
     icon: iconMap[item.iconKey],
     items: item.items.map(subItem => ({
-      ...subItem,
+      title: subItem.title,
+      url: subItem.url,
       icon: iconMap[subItem.iconKey]
     }))
   }));
@@ -135,8 +148,7 @@ const capitalizeFirstLetter = (string: string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-export function AppSidebar({ mappedData }: { mappedData: { iconKey: keyof typeof iconMap; items: { iconKey: keyof typeof iconMap }[] }[] }) {
-
+export function AppSidebar({ mappedData }: { mappedData: NavData[] }) {
   const teams = [
     {
       name: "Acme Inc",
@@ -153,7 +165,7 @@ export function AppSidebar({ mappedData }: { mappedData: { iconKey: keyof typeof
       logo: Command,
       plan: "Free",
     },
-  ]
+  ];
 
   const projects = [
     {
@@ -171,22 +183,22 @@ export function AppSidebar({ mappedData }: { mappedData: { iconKey: keyof typeof
       url: "#",
       icon: Map,
     },
-  ]
+  ];
 
-  const itemsWithIcons = mapIconsToComponents(mappedData)
+  const itemsWithIcons = mapIconsToComponents(mappedData);
 
   if (!mappedData) {
     return <Sidebar collapsible="icon" />;
   }
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className=" !border-r-0">
       <SidebarHeader>
         <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={itemsWithIcons} />
-        {/* <NavProjects projects={projects} />  */}
+        {/* <NavProjects projects={projects} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={{ name: "User", email: "user@example.com", avatar: "" }} />

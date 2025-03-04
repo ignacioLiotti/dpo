@@ -141,6 +141,23 @@ export function MedicionesEditor({
 
   // Calculate advancement totals
   const calculateAdvancementTotals = (medicion: Medicion) => {
+    // If the medicion has the new columns, use them directly
+    if (medicion.avanceMedicion !== undefined &&
+      medicion.avanceAcumulado !== undefined &&
+      medicion.presupuestoTotal !== undefined) {
+
+
+      return {
+        currentAdvancement: (Number(medicion.presupuestoTotal) * Number(medicion.avanceMedicion)) / 100,
+        previousAdvancement: (Number(medicion.presupuestoTotal) * (Number(medicion.avanceAcumulado) - Number(medicion.avanceMedicion))) / 100,
+        accumulatedAdvancement: (Number(medicion.presupuestoTotal) * Number(medicion.avanceAcumulado)) / 100,
+        currentPercentage: Number(medicion.avanceMedicion),
+        previousPercentage: Number(medicion.avanceAcumulado) - Number(medicion.avanceMedicion),
+        accumulatedPercentage: Number(medicion.avanceAcumulado)
+      }
+    }
+
+    // Otherwise, calculate them manually as before
     let currentTotal = 0
     let previousTotal = 0
 
@@ -194,18 +211,41 @@ export function MedicionesEditor({
         }
       })
 
+      // Calculate new totals
+      let currentTotal = 0
+      let previousTotal = 0
+
+      newSecciones.forEach(section => {
+        const sectionItems = presupuestoData[section.nombre] || []
+        section.items.forEach(item => {
+          const presupuestoItem = sectionItems.find(i => String(i.id) === item.id)
+          if (presupuestoItem) {
+            currentTotal += Number(presupuestoItem.totalPrice) * (Number(item.presente) / 100)
+            previousTotal += Number(presupuestoItem.totalPrice) * (Number(item.anterior) / 100)
+          }
+        })
+      })
+
+      const accumulatedTotal = currentTotal + previousTotal
+      const avanceMedicion = (currentTotal / Number(totalBudget)) * 100
+      const avanceAcumulado = (accumulatedTotal / Number(totalBudget)) * 100
+
       const newMedicion = {
         ...prevMedicion,
         data: {
           ...prevMedicion.data,
           secciones: newSecciones
-        }
+        },
+        avanceMedicion,
+        avanceAcumulado,
+        presupuestoTotal: totalBudget
       }
 
       onUpdate?.(newMedicion)
       return newMedicion
     })
   }
+
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,7 +261,11 @@ export function MedicionesEditor({
         body: JSON.stringify({
           obraId,
           periodo: medicion.periodo,
-          data: medicion.data
+          data: medicion.data,
+          presupuestoId: medicion.presupuesto_id || initialMedicion.presupuesto_id,
+          avanceMedicion: medicion.avanceMedicion || initialMedicion.avanceMedicion,
+          avanceAcumulado: medicion.avanceAcumulado || initialMedicion.avanceAcumulado,
+          presupuestoTotal: medicion.presupuestoTotal || initialMedicion.presupuestoTotal
         }),
       })
 
@@ -255,8 +299,6 @@ export function MedicionesEditor({
 
   const renderMedicionPeriod = () => {
     const advancementTotals = calculateAdvancementTotals(medicion)
-
-    console.log('aca medicion', medicion)
 
     return (
       <div key={medicion.id} className="border rounded-lg p-4">

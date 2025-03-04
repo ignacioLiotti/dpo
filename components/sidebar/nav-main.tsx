@@ -24,9 +24,10 @@ import React from "react";
 type SubItem = {
   title: string;
   url: string;
+  icon?: LucideIcon;
 };
 
-type NavItem = {
+export type NavItem = {
   title: string;
   url: string;
   icon?: LucideIcon;
@@ -37,9 +38,8 @@ type NavItem = {
 export function NavMain({
   items,
 }: {
-  items: any;
+  items: NavItem[];
 }) {
-  // Next.js client-side path
   const pathname = usePathname();
 
   // Check if a subitem is active
@@ -50,10 +50,10 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item: any) => {
+        {items.map((item) => {
           const hasActiveSubItem = isSubItemActive(item.items);
 
-          return item.items.length > 0 ? (
+          return item.items && item.items.length > 0 ? (
             <Collapsible
               key={item.title}
               asChild
@@ -64,33 +64,26 @@ export function NavMain({
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className={
-                      item.isActive || hasActiveSubItem
-                        ? "bg-primary text-white"
-                        : ""
-                    }
+                    className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${item.isActive || hasActiveSubItem ? "bg-white text-primary shadow" : ""
+                      }`}
                   >
-                    {item.icon && Object.keys(item.icon).length !== 0 && (
-                      <item.icon />
-                    )}
-                    <span>{item.title}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    {item.icon && <item.icon className="mr-3 h-5 w-5" />}
+                    <span className="text-sm font-medium">{item.title}</span>
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {item.items.map((subItem: any) => (
+                    {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           asChild
-                          className={
-                            subItem.url === pathname
-                              ? "bg-muted text-primary"
-                              : ""
-                          }
+                          className={`flex items-center px-4 py-1.5 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${subItem.url === pathname ? "bg-white text-primary shadow" : ""
+                            }`}
                         >
                           <Link href={subItem.url}>
-                            <span>{subItem.title}</span>
+                            {subItem.icon && <subItem.icon className="mr-3 h-4 w-4" />}
+                            <span className="text-sm">{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -103,17 +96,12 @@ export function NavMain({
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 asChild
-                className={
-                  item.url === pathname
-                    ? "bg-primary text-white"
-                    : ""
-                }
+                className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary transition-colors ${item.url === pathname ? "bg-white text-primary shadow" : ""
+                  }`}
               >
                 <Link href={item.url}>
-                  {item.icon && Object.keys(item.icon).length !== 0 && (
-                    <item.icon />
-                  )}
-                  <span>{item.title}</span>
+                  {item.icon && <item.icon className="mr-3 h-5 w-5" />}
+                  <span className="text-sm font-medium">{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

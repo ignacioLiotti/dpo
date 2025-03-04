@@ -118,8 +118,6 @@ export default function CertificadoCreateClient({
       currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     }
 
-    console.log('aca months', months);
-
     return months;
   };
 
@@ -238,9 +236,9 @@ export default function CertificadoCreateClient({
       )}
 
       <div className="space-y-8">
-        <Card className="max-w-[1000px] mx-auto p-8 bg-white">
+        <Card className="max-w-[1000px] mx-auto p-8 bg-white shadow-lg">
           {/* Header */}
-          <div className="flex justify-between items-start mb-12 bg-gray-50 -m-8 p-8 rounded-lg">
+          <div className="flex justify-between items-start mb-12 bg-gray-50 -m-8 p-8 rounded-2xl">
             <div>
               <div className="w-16 h-16 bg-gray-200 mb-4"></div>
               <h1 className="text-xl font-bold text-gray-800">Gobierno Provincial</h1>
@@ -488,7 +486,6 @@ export default function CertificadoCreateClient({
         </Card>
 
         {/* Page 2: Medicion Details */}
-        <h2 className="text-xl font-semibold mb-4">Detalles de la Medición</h2>
         <MedicionesEditor
           medicion={selectedMedicion}
           presupuestoData={certificado?.data.presupuestoData || presupuestoData}
@@ -497,7 +494,7 @@ export default function CertificadoCreateClient({
         />
 
         {/* Page 3: Summary */}
-        <Card className="p-6 max-w-[1000px] mx-auto">
+        <Card className="p-6 max-w-[1000px] mx-auto shadow-lg">
           <h2 className="text-xl font-semibold mb-4">Resumen del Certificado</h2>
           <div className="space-y-6">
             <div className="grid grid-cols-4 gap-4">

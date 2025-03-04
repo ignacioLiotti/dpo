@@ -102,6 +102,9 @@ export interface Medicion {
 	};
 	created_at: string;
 	updated_at: string;
+	avanceMedicion?: number;
+	avanceAcumulado?: number;
+	presupuestoTotal?: number;
 }
 
 export interface MedicionInput {
@@ -121,6 +124,9 @@ export interface MedicionInput {
 	};
 	created_at: string;
 	updated_at: string;
+	avanceMedicion?: number;
+	avanceAcumulado?: number;
+	presupuestoTotal?: number;
 }
 
 export interface CertificadoProgress {
