@@ -340,18 +340,18 @@ export function PresupuestoEditor({
         {!display && (
           <AnimatePresence mode="wait">
             <Tabs defaultValue="tab-1" className={cn("sticky top-0 z-10 p-3 pt-5 -mt-5", isScrolled ? "-ml-20" : "w-1/2")}>
-              <OnboardingStep
-                set="presupuesto"
-                stepOrder={1}
-                tooltipTitle="Modos de Vista"
-                tooltipContent="Aquí puedes cambiar entre diferentes modos de visualización del presupuesto:
-                      - Modo Editable: Para agregar y modificar elementos
-                      - Vista Previa (Total): Ver el presupuesto completo
-                      - Vista Previa (Parcial): Ver secciones específicas"
-                tooltipSide="right"
-              >
-                {!isScrolled ? (
-                  <TabsList>
+              {!isScrolled ? (
+                <TabsList>
+                  <OnboardingStep
+                    set="presupuesto"
+                    stepOrder={1}
+                    tooltipTitle="Modos de Vista"
+                    tooltipContent="Aquí puedes cambiar entre diferentes modos de visualización del presupuesto:
+                            - Modo Editable: Para agregar y modificar elementos
+                            - Vista Previa (Total): Ver el presupuesto completo
+                            - Vista Previa (Parcial): Ver secciones específicas"
+                    tooltipSide="right"
+                  >
                     <motion.div
                       key="expanded"
                       className="bg-muted rounded-lg flex"
@@ -444,122 +444,123 @@ export function PresupuestoEditor({
 
                       </span>
                     </motion.div>
-                  </TabsList>
-                ) : (
-                  <TabsList className="flex-col">
-                    <motion.div
-                      key="collapsed"
-                      layoutId="tabs-list"
-                      transition={{
-                        duration: 0.3,
-                        width: { duration: 0.2, ease: "easeInOut" },
-                        height: { duration: 0.2, ease: "easeInOut", delay: 0.1 }
-                      }}
-                      className='bg-muted rounded-lg flex flex-col'
-                    >
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <TabsTrigger value="tab-1" className="py-3" asChild onClick={() => setPreviewVersion('false')}>
-                                <motion.button
-                                  className={cn(
-                                    "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium outline-offset-2",
-                                    "transition-all hover:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70",
-                                    "disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
-                                    "data-[state=active]:shadow-sm data-[state=active]:shadow-black/5",
-                                    // custom
-                                    "gap-1.5 group relative",
-                                  )}>
-                                  <motion.div layoutId="icon-1" className="flex-shrink-0">
-                                    <FilePenLine size={16} strokeWidth={2} aria-hidden="true" />
-                                  </motion.div>
-                                  <motion.div layoutId="text-1" className="flex-shrink-0 -mr-1.5">
-                                    <motion.span
-                                      initial={{ opacity: 0, width: 0 }}
-                                      animate={{ opacity: 0, width: 0 }}
-                                      transition={{ duration: 0.15 }}
-                                      className="hidden"
-                                    />
-                                  </motion.div>
-                                </motion.button>
-                              </TabsTrigger>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="px-2 py-1 text-xs">
-                            Modo Editable
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <TabsTrigger value="tab-2" className="py-3" asChild onClick={() => setPreviewVersion('true')}>
-                                <motion.button
-                                  className={cn(
-                                    "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium outline-offset-2",
-                                    "transition-all hover:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70",
-                                    "disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
-                                    "data-[state=active]:shadow-sm data-[state=active]:shadow-black/5",
-                                    // custom
-                                    "gap-1.5 group relative",
-                                  )}>
-                                  <motion.div layoutId="icon-2" className="flex-shrink-0">
-                                    <BookIcon size={16} strokeWidth={2} aria-hidden="true" />
-                                  </motion.div>
-                                  <motion.div layoutId="text-2" className="flex-shrink-0 -mr-1.5">
-                                    <motion.span
-                                      initial={{ opacity: 0, width: 0 }}
-                                      animate={{ opacity: 0, width: 0 }}
-                                      transition={{ duration: 0.15 }}
-                                      className="hidden"
-                                    />
-                                  </motion.div>
-                                </motion.button>
-                              </TabsTrigger>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="px-2 py-1 text-xs">
-                            Vista Previa (Total)
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <TabsTrigger value="tab-3" className="py-3" asChild onClick={() => setPreviewVersion('parcial')}>
-                                <motion.button
-                                  className={cn(
-                                    "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium outline-offset-2",
-                                    "transition-all hover:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70",
-                                    "disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
-                                    "data-[state=active]:shadow-sm data-[state=active]:shadow-black/5",
-                                    // custom
-                                    "gap-1.5 group relative",
-                                  )}>
-                                  <motion.div layoutId="icon-3" className="flex-shrink-0">
-                                    <BookLockIcon size={16} strokeWidth={2} aria-hidden="true" />
-                                  </motion.div>
-                                  <motion.div layoutId="text-3" className="flex-shrink-0 -mr-1.5">
-                                    <motion.span
-                                      initial={{ opacity: 0, width: 0 }}
-                                      transition={{ duration: 0.15 }}
-                                      animate={{ opacity: 0, width: 0 }}
-                                      className="hidden"
-                                    />
-                                  </motion.div>
-                                </motion.button>
-                              </TabsTrigger>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="px-2 py-1 text-xs">
-                            Vista Previa (Parcial)
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {/* <TooltipProvider delayDuration={0}>
+                  </OnboardingStep>
+                </TabsList>
+              ) : (
+                <TabsList className="flex-col">
+                  <motion.div
+                    key="collapsed"
+                    layoutId="tabs-list"
+                    transition={{
+                      duration: 0.3,
+                      width: { duration: 0.2, ease: "easeInOut" },
+                      height: { duration: 0.2, ease: "easeInOut", delay: 0.1 }
+                    }}
+                    className='bg-muted rounded-lg flex flex-col'
+                  >
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <TabsTrigger value="tab-1" className="py-3" asChild onClick={() => setPreviewVersion('false')}>
+                              <motion.button
+                                className={cn(
+                                  "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium outline-offset-2",
+                                  "transition-all hover:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70",
+                                  "disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
+                                  "data-[state=active]:shadow-sm data-[state=active]:shadow-black/5",
+                                  // custom
+                                  "gap-1.5 group relative",
+                                )}>
+                                <motion.div layoutId="icon-1" className="flex-shrink-0">
+                                  <FilePenLine size={16} strokeWidth={2} aria-hidden="true" />
+                                </motion.div>
+                                <motion.div layoutId="text-1" className="flex-shrink-0 -mr-1.5">
+                                  <motion.span
+                                    initial={{ opacity: 0, width: 0 }}
+                                    animate={{ opacity: 0, width: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="hidden"
+                                  />
+                                </motion.div>
+                              </motion.button>
+                            </TabsTrigger>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="px-2 py-1 text-xs">
+                          Modo Editable
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <TabsTrigger value="tab-2" className="py-3" asChild onClick={() => setPreviewVersion('true')}>
+                              <motion.button
+                                className={cn(
+                                  "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium outline-offset-2",
+                                  "transition-all hover:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70",
+                                  "disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
+                                  "data-[state=active]:shadow-sm data-[state=active]:shadow-black/5",
+                                  // custom
+                                  "gap-1.5 group relative",
+                                )}>
+                                <motion.div layoutId="icon-2" className="flex-shrink-0">
+                                  <BookIcon size={16} strokeWidth={2} aria-hidden="true" />
+                                </motion.div>
+                                <motion.div layoutId="text-2" className="flex-shrink-0 -mr-1.5">
+                                  <motion.span
+                                    initial={{ opacity: 0, width: 0 }}
+                                    animate={{ opacity: 0, width: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="hidden"
+                                  />
+                                </motion.div>
+                              </motion.button>
+                            </TabsTrigger>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="px-2 py-1 text-xs">
+                          Vista Previa (Total)
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <TabsTrigger value="tab-3" className="py-3" asChild onClick={() => setPreviewVersion('parcial')}>
+                              <motion.button
+                                className={cn(
+                                  "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium outline-offset-2",
+                                  "transition-all hover:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70",
+                                  "disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground",
+                                  "data-[state=active]:shadow-sm data-[state=active]:shadow-black/5",
+                                  // custom
+                                  "gap-1.5 group relative",
+                                )}>
+                                <motion.div layoutId="icon-3" className="flex-shrink-0">
+                                  <BookLockIcon size={16} strokeWidth={2} aria-hidden="true" />
+                                </motion.div>
+                                <motion.div layoutId="text-3" className="flex-shrink-0 -mr-1.5">
+                                  <motion.span
+                                    initial={{ opacity: 0, width: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    animate={{ opacity: 0, width: 0 }}
+                                    className="hidden"
+                                  />
+                                </motion.div>
+                              </motion.button>
+                            </TabsTrigger>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="px-2 py-1 text-xs">
+                          Vista Previa (Parcial)
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    {/* <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span>
@@ -593,10 +594,9 @@ export function PresupuestoEditor({
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider> */}
-                    </motion.div>
-                  </TabsList>
-                )}
-              </OnboardingStep>
+                  </motion.div>
+                </TabsList>
+              )}
             </Tabs>
           </AnimatePresence>
         )}
@@ -624,17 +624,6 @@ export function PresupuestoEditor({
           elements={storedElements}
         >
         </SearchDialog>
-
-        <OnboardingStep
-          set="presupuesto"
-          stepOrder={10}
-          tooltipTitle="Información de la Obra"
-          tooltipContent="Aquí encontrarás los detalles principales de la obra, incluyendo su nombre, ID y localidad."
-          tooltipSide="right"
-        >
-          <></>
-        </OnboardingStep>
-
         <form onSubmit={handleSubmit} className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
           {/* Header */}
           <OnboardingStep
@@ -708,143 +697,144 @@ export function PresupuestoEditor({
         </form>
       </div>
 
-      {!display && (
-        <div className='flex flex-col justify-between gap-8 mt-16 sticky top-5 z-10'>
-          <div className='flex flex-col gap-2'>
-            {obraId == undefined && (
-              <Dialog>
-                <DialogTrigger asChild>
+      {
+        !display && (
+          <div className='flex flex-col justify-between gap-8 mt-16 sticky top-5 z-10'>
+            <div className='flex flex-col gap-2'>
+              {obraId == undefined && (
+                <Dialog>
+                  <DialogTrigger asChild>
 
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-9 w-full justify-start px-3"
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                    Seleccionar Obra
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Seleccionar Obra</DialogTitle>
-                  </DialogHeader>
-
-                  <DialogFooter>
-                    <Button type="button">
-                      Confirmar
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-9 w-full justify-start px-3"
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      Seleccionar Obra
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-            <OnboardingStep
-              set="workflow"
-              stepOrder={2}
-              tooltipTitle="Agregar Sección"
-              tooltipContent="Haz clic aquí para crear una nueva sección donde organizarás tus elementos."
-              nextStepButton={false}
-              prevStepButton={false}
-              exitButton={false}
-              skippable={false}
-              tooltipSide="left"
-            >
-              <Dialog
-                open={isAddSectionOpen}
-                onOpenChange={(open) => {
-                  setIsAddSectionOpen(open);
-                  if (!open && currentTutorialStep === 3) {
-                    // Move to next step when dialog closes
-                    const { nextStep } = useOnboarding();
-                    nextStep();
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-9 w-full justify-start px-3"
-                    onClick={() => {
-                      nextStep();
-                      setIsAddSectionOpen(true)
-                    }}
-                  >
-                    <FolderPlus className="w-4 h-4" />
-                    Agregar Sección
-                  </Button>
-                </DialogTrigger>
-                <OnboardingStep
-                  set="workflow"
-                  stepOrder={3}
-                  tooltipTitle="Crear Nueva Sección"
-                  tooltipContent="Ingresa un nombre descriptivo para la sección, por ejemplo: 'Materiales', 'Mano de Obra', etc. Luego presiona 'Agregar Sección' para crearla."
-                  nextStepButton={false}
-                  prevStepButton={false}
-                  exitButton={false}
-                  skippable={false}
-                  tooltipSide="right"
-                >
+                  </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Agregar Nueva Sección</DialogTitle>
-                      <DialogDescription>
-                        Crea una nueva sección para organizar los elementos del presupuesto
-                      </DialogDescription>
+                      <DialogTitle>Seleccionar Obra</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleAddSection} className="space-y-4">
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Input
-                            id="name"
-                            placeholder="Nombre de la sección"
-                            value={newSectionName}
-                            onChange={(e) => setNewSectionName(e.target.value)}
-                            autoFocus
-                          />
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full" onClick={(e) => {
-                        nextStep();
-                        setIsAddSectionOpen(false)
-                        handleAddSection(e);
-                      }}>
-                        Agregar Sección
+
+                    <DialogFooter>
+                      <Button type="button">
+                        Confirmar
                       </Button>
-                    </form>
+                    </DialogFooter>
                   </DialogContent>
-                </OnboardingStep>
-              </Dialog>
-            </OnboardingStep>
-
-            <OnboardingStep
-              set="workflow"
-              stepOrder={4}
-              tooltipTitle="Agregar Elemento"
-              tooltipContent="Ahora agregaremos un elemento a la sección que acabamos de crear."
-              nextStepButton={false}
-              prevStepButton={false}
-              exitButton={false}
-              skippable={false}
-              tooltipSide="left"
-            >
-              <Button
-                type="button"
-                variant="secondary"
-                className="h-9 w-full justify-start px-3"
-                onClick={() => {
-                  setIsGlobalSearchOpen(true)
-                  setTimeout(() => {
-                    nextStep();
-                  }, 100);
-                }}
+                </Dialog>
+              )}
+              <OnboardingStep
+                set="workflow"
+                stepOrder={2}
+                tooltipTitle="Agregar Sección"
+                tooltipContent="Haz clic aquí para crear una nueva sección donde organizarás tus elementos."
+                nextStepButton={false}
+                prevStepButton={false}
+                exitButton={false}
+                skippable={false}
+                tooltipSide="left"
               >
-                <Plus className="w-4 h-4" />
-                Agregar Elemento
-              </Button>
-            </OnboardingStep>
+                <Dialog
+                  open={isAddSectionOpen}
+                  onOpenChange={(open) => {
+                    setIsAddSectionOpen(open);
+                    if (!open && currentTutorialStep === 3) {
+                      // Move to next step when dialog closes
+                      const { nextStep } = useOnboarding();
+                      nextStep();
+                    }
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-9 w-full justify-start px-3"
+                      onClick={() => {
+                        nextStep();
+                        setIsAddSectionOpen(true)
+                      }}
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                      Agregar Sección
+                    </Button>
+                  </DialogTrigger>
+                  <OnboardingStep
+                    set="workflow"
+                    stepOrder={3}
+                    tooltipTitle="Crear Nueva Sección"
+                    tooltipContent="Ingresa un nombre descriptivo para la sección, por ejemplo: 'Materiales', 'Mano de Obra', etc. Luego presiona 'Agregar Sección' para crearla."
+                    nextStepButton={false}
+                    prevStepButton={false}
+                    exitButton={false}
+                    skippable={false}
+                    tooltipSide="right"
+                  >
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Agregar Nueva Sección</DialogTitle>
+                        <DialogDescription>
+                          Crea una nueva sección para organizar los elementos del presupuesto
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleAddSection} className="space-y-4">
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Input
+                              id="name"
+                              placeholder="Nombre de la sección"
+                              value={newSectionName}
+                              onChange={(e) => setNewSectionName(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        <Button type="submit" className="w-full" onClick={(e) => {
+                          nextStep();
+                          setIsAddSectionOpen(false)
+                          handleAddSection(e);
+                        }}>
+                          Agregar Sección
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </OnboardingStep>
+                </Dialog>
+              </OnboardingStep>
+
+              <OnboardingStep
+                set="workflow"
+                stepOrder={4}
+                tooltipTitle="Agregar Elemento"
+                tooltipContent="Ahora agregaremos un elemento a la sección que acabamos de crear."
+                nextStepButton={false}
+                prevStepButton={false}
+                exitButton={false}
+                skippable={false}
+                tooltipSide="left"
+              >
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-9 w-full justify-start px-3"
+                  onClick={() => {
+                    setIsGlobalSearchOpen(true)
+                    setTimeout(() => {
+                      nextStep();
+                    }, 100);
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar Elemento
+                </Button>
+              </OnboardingStep>
 
 
-            {/* <div className="rounded-lg border border-dashed border-muted-foreground/50 p-4 space-y-4">
+              {/* <div className="rounded-lg border border-dashed border-muted-foreground/50 p-4 space-y-4">
                 <OnboardingStep
                   set="workflow"
                   stepOrder={6.1}
@@ -887,41 +877,42 @@ export function PresupuestoEditor({
                 </div>
               </div> */}
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 w-full justify-start px-3"
-                onClick={() => startOnboarding('presupuesto')}
-              >
-                <HelpCircle className="w-4 h-4" />
-                Tutorial General
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 w-full justify-start px-3"
+                  onClick={() => startOnboarding('presupuesto')}
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Tutorial General
+                </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 w-full justify-start px-3"
-                onClick={startWorkflowTutorial}
-              >
-                <PlayCircle className="w-4 h-4" />
-                Tutorial Paso a Paso
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 w-full justify-start px-3"
+                  onClick={startWorkflowTutorial}
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  Tutorial Paso a Paso
+                </Button>
+              </div>
             </div>
+
+
+            <Button
+              type="submit"
+              variant="default"
+              className="h-9 w-full justify-start px-3"
+              onClick={handleSubmit}
+            >
+              <Save className="w-4 h-4" />
+              Guardar Presupuesto
+            </Button>
           </div>
-
-
-          <Button
-            type="submit"
-            variant="default"
-            className="h-9 w-full justify-start px-3"
-            onClick={handleSubmit}
-          >
-            <Save className="w-4 h-4" />
-            Guardar Presupuesto
-          </Button>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
