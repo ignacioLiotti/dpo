@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress';
 
 interface ProgressBarProps {
   currentStep: number;

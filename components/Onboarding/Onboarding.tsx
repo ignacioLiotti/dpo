@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTour, TourStep } from '@/hooks/useTour'
+import { ProgressBar } from './ProgressBar'
 
 const steps: TourStep[] = [
   { targetId: 'header', content: 'This is the header of our application.' },
@@ -13,7 +14,7 @@ export function Onboarding() {
 
   return (
     <>
-      {/* <ProgressBar currentStep={currentStep} totalSteps={totalSteps} /> */}
+      <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
       <AnimatePresence>
         {isActive && (
           <motion.div
