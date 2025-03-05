@@ -20,8 +20,6 @@ export default function CreateFAB({ height, width, children }: CreateFABProps) {
   const usingHeight = height ? Math.trunc(height) : 48;
   const usingWidth = open ? Math.trunc(width ?? 0) : 0;
 
-  console.log('usingWidth', usingWidth)
-
   // Handle click outside to close the menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,10 +36,12 @@ export default function CreateFAB({ height, width, children }: CreateFABProps) {
     };
   }, []);
 
+
   return (
     <AnimatePresence>
+
       <motion.div
-        className={cn("flex gap-2 fixed top-[90vh] left-[53vw]",
+        className={cn("flex gap-2 fixed top-[90vh] left-[53vw] z-50",
           open ? `bottom-64 translate-y-[-170px] translate-x-[-50%]` : "")}
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0, transform: "translate(var(--tw-translate-x), var(--tw-translate-y))" }}
@@ -67,7 +67,6 @@ export default function CreateFAB({ height, width, children }: CreateFABProps) {
         >
           <motion.span layoutId="title">Crear</motion.span>
         </motion.button>
-
         <AnimatePresence mode="wait">
           {open && (
             <motion.div

@@ -11,11 +11,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ o
           <CustomTable />
         </Suspense>
       </Card>
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+      {/* <div className="grid auto-rows-min gap-4 md:grid-cols-3">
         <div className="aspect-video rounded-xl bg-muted/50" />
         <div className="aspect-video rounded-xl bg-muted/50" />
         <div className="aspect-video rounded-xl bg-muted/50" />
-      </div>
+      </div> */}
     </div>
   );
 }

@@ -136,8 +136,6 @@ export default function PresupuestoPageClient() {
     mediciones: []
   };
 
-  console.log('pageData', obras);
-
   return (
     <div className="container mx-auto p-4">
       <AnimatePresence mode="wait">
@@ -147,7 +145,7 @@ export default function PresupuestoPageClient() {
           presupuestoData={pageData.presupuestoData}
           allElements={pageData.allElements}
           obraId={obraId}
-          obraData={obras?.[0]}
+          obraData={obras?.find(obra => obra.id === Number(obraId))}
         />
       </AnimatePresence>
     </div>

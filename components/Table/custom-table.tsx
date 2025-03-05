@@ -38,7 +38,6 @@ import {
 
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableFloatingToolbar } from "./DataTableFloatingToolbar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 
 // ─────────────────────────────────────────────────────
@@ -188,23 +187,23 @@ export default function CustomTable() {
     {
       accessorKey: "nombre",
       header: ({ column }) => (
-        <HeaderWithSort label="Name" column={column} icon={Tag} />
+        <HeaderWithSort label="Nombre" column={column} icon={Tag} />
       ),
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const value = getValue() as string;
-        return <div className="flex items-center"><span className="truncate">{value}</span></div>;
+        return <div className="flex items-center cursor-pointer" onClick={() => row.toggleSelected()}> <span className="truncate">{value}</span></div>;
       },
     },
     {
       accessorKey: "unidad",
       header: ({ column }) => (
-        <HeaderWithSort label="Unit" column={column} icon={Ruler} />
+        <HeaderWithSort label="Unidad" column={column} icon={Ruler} />
       ),
     },
     {
       accessorKey: "precio",
       header: ({ column }) => (
-        <HeaderWithSort label="Price" column={column} icon={DollarSign} />
+        <HeaderWithSort label="Precio" column={column} icon={DollarSign} />
       ),
       cell: ({ getValue }) => {
         const value = getValue() as number;
@@ -217,13 +216,13 @@ export default function CustomTable() {
     {
       accessorKey: "categoria",
       header: ({ column }) => (
-        <HeaderWithSort label="Category" column={column} icon={HammerIcon} />
+        <HeaderWithSort label="Categoría" column={column} icon={HammerIcon} />
       ),
     },
     {
       accessorKey: "fecha",
       header: ({ column }) => (
-        <HeaderWithSort label="Price Date" column={column} />
+        <HeaderWithSort label="Fecha del Precio" column={column} />
       ),
       cell: ({ getValue }) => {
         const value = getValue() as string;
@@ -368,6 +367,7 @@ export default function CustomTable() {
         </div>
       )}
 
+
       <div className="flex justify-between items-center">
         <div className="flex gap-3">
           <Input
@@ -426,6 +426,7 @@ export default function CustomTable() {
               </TableRow>
             ))}
           </TableHeader>
+
           <TableBody className="text-foreground-dim">
             {table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="h-10">

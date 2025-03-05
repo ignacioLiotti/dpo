@@ -401,8 +401,10 @@ export default function ObraPage() {
 
                   {/* Action Buttons */}
                   <div className="mt-8">
+
                     <ExpandingButton width={390}>
                       <div className="flex gap-2 px-4">
+
                         <Button
                           variant="box"
                           className="h-28 w-28"
@@ -411,6 +413,7 @@ export default function ObraPage() {
                           <FileChartPieIcon className="!size-6" />
                           Presupuesto
                         </Button>
+
                         <Button
                           variant="box"
                           className="h-28 w-28"

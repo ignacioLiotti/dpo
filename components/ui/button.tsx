@@ -105,9 +105,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button"
 
     if (href) {
+      const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (props.onClick) {
+          props.onClick(e);
+        }
+      }
+
+      // handleClick();
+
       return (
         // @ts-ignore
-        <Link href={href}>
+        <Link href={href} onClick={handleClick}>
           <Comp
             className={cn(buttonVariants({ variant, size, className }))}
             ref={ref}

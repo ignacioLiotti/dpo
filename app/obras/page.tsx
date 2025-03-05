@@ -77,7 +77,6 @@ import {
 } from "@tanstack/react-table";
 import React from "react";
 import ObrasReporte from "./ObrasReporte";
-import { Timeline, TimelineItem, TimelineSeparator, TimelineIndicator, TimelineHeader, TimelineDate, TimelineTitle, TimelineContent } from "@/components/ui/timeline";
 import { ObraTimeline } from "@/components/ui/ObraTimeline";
 
 const COLORS = {
@@ -286,6 +285,7 @@ const RecentObrasTable = ({ data }: { data: Obra[] }) => {
 
   return (
     <div className="overflow-hidden rounded-sm border border-gray-100 h-full">
+
       <Table className="w-full text-xs overflow-y-auto max-h-full">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
