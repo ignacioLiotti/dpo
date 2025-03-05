@@ -77,8 +77,6 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   const totalSteps = steps.get(currentSet || '')?.length || 1;
 
   const handleNext = () => {
-    console.log('handleNext', href)
-    console.log('continueOnboarding', continueOnboarding)
     // if (onNext) { 
     //   onNext();
     // }

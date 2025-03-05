@@ -734,7 +734,6 @@ export function PresupuestoEditor({
                 tooltipContent="Haz clic aquí para crear una nueva sección donde organizarás tus elementos."
                 nextStepButton={false}
                 prevStepButton={false}
-                exitButton={false}
                 skippable={false}
                 tooltipSide="left"
               >
@@ -770,7 +769,6 @@ export function PresupuestoEditor({
                     tooltipContent="Ingresa un nombre descriptivo para la sección, por ejemplo: 'Materiales', 'Mano de Obra', etc. Luego presiona 'Agregar Sección' para crearla."
                     nextStepButton={false}
                     prevStepButton={false}
-                    exitButton={false}
                     skippable={false}
                     tooltipSide="right"
                   >
@@ -813,7 +811,6 @@ export function PresupuestoEditor({
                 tooltipContent="Ahora agregaremos un elemento a la sección que acabamos de crear."
                 nextStepButton={false}
                 prevStepButton={false}
-                exitButton={false}
                 skippable={false}
                 tooltipSide="left"
               >

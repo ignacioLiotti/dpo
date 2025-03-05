@@ -187,7 +187,6 @@ export function SearchDialog({
           tooltipTitle="Buscar Elementos"
           tooltipContent="Ahora puedes buscar elementos en la base de datos. Da click en continuar."
           prevStepButton={false}
-          exitButton={false}
           skippable={false}
           tooltipSide="left"
         >
@@ -208,7 +207,6 @@ export function SearchDialog({
               tooltipTitle="Seleccionar Sección"
               tooltipContent="Selecciona la sección a la que quieras agregar el elemento. Para seguir con el ejemplo elige la sección que creaste en el paso 4. Luego da click en continuar."
               prevStepButton={false}
-              exitButton={false}
               skippable={false}
               tooltipSide="left"
             >
@@ -238,7 +236,6 @@ export function SearchDialog({
                   tooltipTitle="Buscar Elementos"
                   tooltipContent="Busca y selecciona los elementos que deseas agregar al presupuesto. Luego da click en continuar."
                   prevStepButton={false}
-                  exitButton={false}
                   skippable={false}
                   tooltipSide="left"
                 >
@@ -393,7 +390,7 @@ export function SearchDialog({
                   tooltipContent="Y por ultimo agrega los elementos seleccionados al presupuesto haciendo click en el botón."
                   nextStepButton={false}
                   prevStepButton={false}
-                  exitButton={false}
+
                   skippable={false}
                   tooltipSide="left"
                 >
