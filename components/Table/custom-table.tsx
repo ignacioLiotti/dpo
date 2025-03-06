@@ -194,6 +194,7 @@ export default function CustomTable() {
         return <div className="flex items-center cursor-pointer" onClick={() => row.toggleSelected()}> <span className="truncate">{value}</span></div>;
       },
     },
+    { accessorKey: "expediente", header: ({ column }) => <HeaderWithSort label="Expediente" column={column} /> },
     {
       accessorKey: "unidad",
       header: ({ column }) => (

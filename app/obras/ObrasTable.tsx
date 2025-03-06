@@ -711,6 +711,26 @@ export default function ObrasTable({
         );
       },
     },
+    // {
+    //   accessorKey: "expte",
+    //   header: ({ column }) => (
+    //     <HeaderWithSort label="Expediente" column={column} />
+    //   ),
+    //   cell: ({ getValue }) => {
+    //     const value = getValue() as string;
+    //     return highlightText(value, searchQuery);
+    //   },
+    // },
+    // {
+    //   accessorKey: "expte2",
+    //   header: ({ column }) => (
+    //     <HeaderWithSort label="Expediente2" column={column} />
+    //   ),
+    //   cell: ({ getValue }) => {
+    //     const value = getValue() as string;
+    //     return highlightText(value, searchQuery);
+    //   },
+    // },
     {
       accessorFn: (row) => `${row.localidad}, ${row.departamento}`,
       id: "ubicacion",

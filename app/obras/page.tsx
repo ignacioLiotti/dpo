@@ -78,6 +78,7 @@ import {
 import React from "react";
 import ObrasReporte from "./ObrasReporte";
 import { ObraTimeline } from "@/components/ui/ObraTimeline";
+import ObrasReporteSimple from "./ObrasReporteSimple";
 
 const COLORS = {
   charts: {
@@ -614,7 +615,9 @@ export default function ObrasPage() {
       obra.nombre?.toLowerCase().includes(query) ||
       obra.localidad?.toLowerCase().includes(query) ||
       obra.departamento?.toLowerCase().includes(query) ||
-      obra.empresaAdjudicada?.toLowerCase().includes(query)
+      obra.empresaAdjudicada?.toLowerCase().includes(query) ||
+      obra.expte?.toLowerCase().includes(query) ||
+      obra.expte2?.toLowerCase().includes(query)
     );
   }, [filteredObrasByDate, searchQuery]);
 
@@ -695,6 +698,7 @@ export default function ObrasPage() {
                         <TabsTrigger value="reporte">Reporte</TabsTrigger>
                         <TabsTrigger value="estadisticas">Tabla</TabsTrigger>
                         <TabsTrigger value="obras">Graficos</TabsTrigger>
+                        <TabsTrigger value="reportesSimples">Reportes Simples</TabsTrigger>
                       </TabsList>
                     </motion.div>
 
@@ -1025,6 +1029,7 @@ export default function ObrasPage() {
                       <TabsTrigger value="reporte">Reporte</TabsTrigger>
                       <TabsTrigger value="estadisticas">Tabla</TabsTrigger>
                       <TabsTrigger value="obras">Graficos</TabsTrigger>
+                      <TabsTrigger value="reportesSimples">Reportes Simples</TabsTrigger>
                     </TabsList>
                   </motion.div>
                 </div>
@@ -1049,6 +1054,11 @@ export default function ObrasPage() {
         <TabsContent value="reporte" className="mt-0 p-0">
 
           <ObrasReporte filteredObras={filteredObras} />
+        </TabsContent>
+
+        <TabsContent value="reportesSimples" className="mt-0 p-0">
+
+          <ObrasReporteSimple />
         </TabsContent>
 
       </Tabs >

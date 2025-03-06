@@ -223,92 +223,80 @@ const FolderTabs: React.FC<FolderTabsProps> = ({ tabs, className }) => {
 };
 
 const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
+
   // Define the tab content for the "Obras en Ejecución" section
   const obrasEnEjecucionTabs = [
     {
       id: "basicas",
-      count: "04",
+      count: "4",
       label: "BASICAS",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between  pt-1">
-            <span className="font-medium">140-1903/07</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">124-1903/27</span>
-            <span>1880 - Subestación TransforMON - Formosa</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-1903/08</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-1903/09</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-1903/10</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-1903/11</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-1903/12</span>
-            <span>1158 - Administración NACIONAL</span>
-          </div>
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-000143/24", "1284 - Teatro Oficial 'Juan de Vera' - Foyer, Pasillos, Fachada y Sala"],
+            ["140-000339/24", "1228 - Parroquia 'San Pedro' - Refaccion y Ampliacion"],
+            ["140-000680/24", "1213 - Teatro Oficial 'Juan de Vera' - Sistema de Incendios"],
+            ["140-000768/23", "1252 - Parroquia 'Ascensión del Señor' - Refaccion General"],
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     },
     {
-      id: "en-proceso",
+      id: "terminadas",
       count: "18",
       label: "EN PROCESO",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">140-1903/13</span>
-            <span>1158 - Proceso Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-2003/14</span>
-            <span>1880 - Subestación TransforMON - Formosa</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-2475/06</span>
-            <span>1158 - Proceso Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-2003/16</span>
-            <span>1158 - Proceso Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-2003/17</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-000720/24", "1292 - Hogar de Ancianos 'Madre Teresa' - 3a etapa"],
+            ["140-001076/24", "1286 - Parroquia 'San Luis Rey de Francia' - Nueva Torre"],
+            ["140-001522/23", "1298 - Hospital 'Angela Iglesia de Llano' - Servicios"],
+            ["140-002489/24", "1314 - Direccion de Transporte Fluvial y Puertos - Pintura"],
+            ["140-003056/23", "1214 - Cuartel de Bomberos Forestales - PDL"],
+            ["140-003840/24", "1329 - Parroquia 'San Luis Rey de Francia' - Campana"],
+            ["140-000841/24", "1297 - Iglesia Catedral 'Ntra Señora del Rosario' - Refaccion"],
+            ["140-000988/24", "1304 - Parroquia Pio X - Refuncionalizacion y Refaccion"],
+            ["140-001128/24", "1303 - Parroquia 'San Luis Rey de Francia' - Sectores varios"],
+            ["140-001280/24", "1193 - Museo de la Cultura Guaranítica - Completamiento"],
+            ["140-001442/24", "1289 - Teatro Oficial 'Juan de Vera' - Instalacion Electrica"],
+            ["140-002030/24", "1312 - Direccion de Tranporte Fluvial y Puertos - Monitoreo"],
+            ["140-002308/24", "1285 - Teatro Oficial 'Juan de Vera' - Caja Escenotecnica"],
+            ["140-002386/24", "1309 - SCI Scholem Aleijem - Casillas de Vigilancia"],
+            ["140-002488/24", "1301 - Centro de Atencion para personas con Discapacidad"],
+            ["140-002629/24", "1215 - Dirección de Transporte Fluvial y Puertos - Baños"],
+            ["140-002836/24", "1282 - Cuartel de Bomberos Forestales - SRO"],
+            ["140-002837/24", "1281 - Cuartel de Bomberos Forestales - PDL"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     },
     {
       id: "finalizadas",
-      count: "05",
+      count: "4",
       label: "FINALIZADAS",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">149-0091-LPU23</span>
-            <span>1158 - Finalizada Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-1694/06</span>
-            <span>1880 - Subestación TransforMON - Formosa</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-0115/07</span>
-            <span>1158 - Finalizada Celíaca Gpo 11C - NACIONAL</span>
-          </div>
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-000720/24", "1292 - Hogar de Ancianos 'Madre Teresa' - 3a etapa"],
+            ["140-001076/24", "1286 - Parroquia 'San Luis Rey de Francia' - Nueva Torre"],
+            ["140-002489/24", "1314 - Direccion de Transporte Fluvial y Puertos - Pintura"],
+            ["140-003840/24", "1329 - Parroquia 'San Luis Rey de Francia' - Campana"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     }
@@ -318,59 +306,22 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
   const obrasPrefinanciamientoTabs = [
     {
       id: "elevados",
-      count: "43",
+      count: "05",
       label: "ELEVADOS",
       content: (
         <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">140-2003/18</span>
-            <span>1158 - Avance Cat Celíaca - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-2003/19</span>
-            <span>1880 - Subestación El Fogón - Formosa - Subalterna D1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-2003/20</span>
-            <span>1158 - Avance Cat Celíaca - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-4423/06</span>
-            <span>1158 - Avance Cat Celíaca - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">140-0230/07</span>
-            <span>1158 - Avance Cat Celíaca - NACIONAL</span>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: "proceso",
-      count: "12",
-      label: "EN PROCESO",
-      content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between  pt-1">
-            <span className="font-medium">149-0042/10</span>
-            <span>1158 - Proceso Prefinanciamiento - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0085/11</span>
-            <span>1880 - Subestación El Fogón - Formosa</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0085/12</span>
-            <span>1880 - Subestación El Fogón - Formosa</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0085/01</span>
-            <span>1880 - Subestación El Fogón - Formosa</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0085/02</span>
-            <span>1880 - Subestación El Fogón - Formosa</span>
-          </div>
+          {[
+            ["140-003055/23", "1242 - Ente Regulador del Agua - Refaccion y Ampliacion"],
+            ["140-003076/23", "1218 - Cuartel de Bomberos Forestales - ITU"],
+            ["140-003313/24", "1290 - Lipton Football Club - Iluminacion"],
+            ["140-003572/24", "1226 - Comisaria de Laguna Brava - Obra Nueva"],
+            ["140-004234/24", "1291 - Direccion de Transporte Fluvial y Puertos - Iluminacion"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     }
@@ -383,41 +334,17 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
       count: "03",
       label: "EN PROCESO",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-betweenpt-1">
-            <span className="font-medium">119-0068/01</span>
-            <span>1880 - Subestación El Fogón - Formosa - Subalterna D1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0222/02</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0222/03</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: "elevar",
-      count: "03",
-      label: "A ELEVAR",
-      content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">149-0099/04</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/05</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/06</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-003055/23", "1242 - Ente Regulador del Agua - Refaccion y Ampliacion"],
+            ["140-003076/23", "1218 - Cuartel de Bomberos Forestales - ITU"],
+            ["140-003313/24", "1290 - Lipton Football Club - Iluminacion"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     },
@@ -426,68 +353,17 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
       count: "03",
       label: "RETRASO",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">120-0089/07</span>
-            <span>1880 - Subestación El Fogón - Formosa - Subalterna D1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/07</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/08</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: "carpeta",
-      count: "12",
-      label: "CARPETA",
-      content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">149-0001/09</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/09</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/10</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/11</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/12</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/13</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/14</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/15</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/16</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0099/17</span>
-            <span>1158 - Comisión Celíaca Gpo 11C - NACIONAL</span>
-          </div>
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-002030/24", "1312 - Direccion de Tranporte Fluvial y Puertos - Monitoreo"],
+            ["140-002308/24", "1285 - Teatro Oficial 'Juan de Vera' - Caja Escenotecnica"],
+            ["140-002386/24", "1309 - SCI Scholem Aleijem - Casillas de Vigilancia"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     }
@@ -500,19 +376,17 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
       count: "03",
       label: "LICITAR",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">149-0044/01</span>
-            <span>1158 - Avance Cat Celíaca - NACIONAL</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0045/02</span>
-            <span>1880 - Subestación El Fogón - Formosa - Subalterna D1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-1045/02</span>
-            <span>1880 - Subestación El Fogón - Formosa - Subalterna D1</span>
-          </div>
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-002488/24", "1301 - Centro de Atencion para personas con Discapacidad"],
+            ["140-002629/24", "1215 - Dirección de Transporte Fluvial y Puertos - Baños"],
+            ["140-002836/24", "1282 - Cuartel de Bomberos Forestales - SRO"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     },
@@ -521,15 +395,16 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
       count: "02",
       label: "ADJUDICAR",
       content: (
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between pt-1">
-            <span className="font-medium">149-0050-CPO23</span>
-            <span>2293 - Centro San Nicolás - Prov. Buenos Aires LD1</span>
-          </div>
-          <div className="flex justify-between border-t pt-1">
-            <span className="font-medium">149-0050/02</span>
-            <span>1880 - Subestación El Fogón - Formosa - Subalterna D1</span>
-          </div>
+        <div className="space-y-1 text-xs max-h-[200px] floating-scroll -mr-4">
+          {[
+            ["140-002837/24", "1281 - Cuartel de Bomberos Forestales - PDL"],
+            ["140-002877/24", "1320 - MOSP Mantenimiento"]
+          ].map(([exp, desc], i) => (
+            <div key={exp} className={cn("flex justify-between pt-1", i > 0 && "border-t")}>
+              <span className="font-medium">{exp}</span>
+              <span>{desc}</span>
+            </div>
+          ))}
         </div>
       )
     }
@@ -551,6 +426,7 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
                 <TabsTrigger value="reporte">Reporte</TabsTrigger>
                 <TabsTrigger value="estadisticas">Tabla</TabsTrigger>
                 <TabsTrigger value="obras">Graficos</TabsTrigger>
+                <TabsTrigger value="reportesSimples">Reportes Simples</TabsTrigger>
               </TabsList>
             </motion.div>
           </div>
