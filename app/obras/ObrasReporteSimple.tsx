@@ -416,9 +416,9 @@ const ObrasReporteSimple = () => {
         </div>
       </motion.div>
 
-      <div className="absolute bottom-4 right-0 print-button">
+      <div className="fixed bottom-4 right-16 print-button">
         <Button
-          variant="outline"
+          variant="default"
           onClick={handleDownloadPDF}
           disabled={isGeneratingPdf}
           className="gap-2"

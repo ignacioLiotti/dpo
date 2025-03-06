@@ -107,7 +107,7 @@ export default function RootLayout({
                   {children}
                   {/* </div> */}
                 </SidebarInset>
-                <ReactQueryDevtool />
+                {/* <ReactQueryDevtool /> */}
               </SidebarProvider>
             </OnboardingProvider>
           </ReactScanWrapper>
