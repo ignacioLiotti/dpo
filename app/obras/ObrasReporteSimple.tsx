@@ -38,7 +38,7 @@ const ObrasReporteSimple = () => {
 
   // Set default date range to last 6 months
   const defaultDateRange = {
-    from: subMonths(startOfToday(), 6),
+    from: subMonths(startOfToday(), 48),
     to: startOfToday()
   } as const;
 
@@ -220,7 +220,7 @@ const ObrasReporteSimple = () => {
                           </>
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0" side="left" align="start">
                         <Calendar
                           initialFocus
                           mode="range"
