@@ -281,8 +281,6 @@ const ObrasReporteSimple = () => {
       {/* Header */}
       <motion.div
         className="flex justify-between items-start mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center">
