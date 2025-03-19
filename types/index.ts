@@ -142,6 +142,7 @@ export interface Certificado {
 	medicion_id: number;
 	periodo: string;
 	data: {
+		totals: boolean;
 		editedData: Record<string, any>;
 		presupuestoData: Record<string, TableItem[]>;
 		progress: CertificadoProgress[];
