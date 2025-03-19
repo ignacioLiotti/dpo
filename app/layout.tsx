@@ -80,6 +80,12 @@ export default function RootLayout({
       "iconKey": "LayoutListIcon",
       "items": []
     },
+    {
+      "title": "Fin de la Presentación",
+      "url": "/fin",
+      "iconKey": "QrCodeIcon",
+      "items": []
+    }
   ]
 
   return (
@@ -95,7 +101,7 @@ export default function RootLayout({
             <OnboardingProvider>
               <SidebarProvider>
                 <AppSidebar mappedData={mapped as any} />
-                <SidebarInset className="flex flex-col p-4 pt-0 pr-10">
+                <SidebarInset className="flex flex-col p-4 pt-0 lg:pr-10">
                   <header className="flex h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
                     <div className="flex items-center gap-2">
                       <SidebarTrigger className="-ml-1" />

@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { format, parseISO, startOfMonth, addMonths, isBefore, isAfter, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, CheckCircle2, Circle, Lock, Stamp, House, PanelsTopLeft, Box, ClipboardPenLineIcon, FileBadgeIcon, FileChartPieIcon } from "lucide-react";
+import { CalendarIcon, CheckCircle2, Circle, Lock, Stamp, House, PanelsTopLeft, Box, ClipboardPenLineIcon, FileBadgeIcon, FileChartPieIcon, MapPin, FileText, Building2, DollarSign, CalendarDays, Clock, UserCog, HardHat } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ExpandingButton from '@/components/ExpandingButton';
 import CertificadoCreateClient from './create/certificado/CertificadoCreateClient';
@@ -22,6 +22,8 @@ import { Separator } from "@/components/ui/separator";
 import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipContent, Tooltip, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import Image from "next/image";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function ObraPage() {
   const router = useRouter();
@@ -263,6 +265,7 @@ export default function ObraPage() {
       <Tabs
         defaultValue={currentTab}
         onValueChange={handleTabChange}
+        className="hidden lg:block"
       >
         <div className="flex justify-between items-center">
           <div className="flex flex-col gap-2 max-w-[50%]">
@@ -947,6 +950,100 @@ export default function ObraPage() {
 
         </AnimatePresence>
       </Tabs>
+      <div className="lg:hidden">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-semibold text-center">{obra.nombre}</h1>
+            {/* @ts-ignore */}
+            <Image src={obra.imagen || '/placeholder.svg'} alt={obra.nombre} width={400} height={100} className="rounded-2xl h-40 w-full object-cover" />
+            <div className="bg-white rounded-xl shadow p-4 space-y-4">
+              {/* Location */}
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <MapPin className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Ubicación</div>
+                  <div className="font-medium">{obra.localidad} - {obra.departamento}</div>
+                </div>
+              </div>
+
+              {/* File Number */}
+              <Popover >
+                <PopoverTrigger asChild>
+                  <div className="flex items-center gap-3 pb-4 border-b cursor-pointer">
+                    <FileText className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm text-muted-foreground">Número de Expediente</div>
+                      <div className="font-medium">{obra.expte || "140-000536/26"}</div>
+                    </div>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" side="top">
+                  <p className="text-sm text-primary flex flex-col gap-2">
+                    El expediente se encuentra en:
+                    <b>
+                      La mesa de entrada del Ministerio de Obras Públicas desde el 13 de agosto de 2024
+                    </b>
+                  </p>
+                </PopoverContent>
+              </Popover>
+
+              {/* Construction Company */}
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <Building2 className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Empresa Constructora</div>
+                  <div className="font-medium">{obra.empresaAdjudicada}</div>
+                </div>
+              </div>
+
+              {/* Contract Amount */}
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <DollarSign className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Monto de Contrato</div>
+                  <div className="font-medium">{obra.montoContrato || "$ 0,00"}</div>
+                </div>
+              </div>
+
+              {/* Start Date */}
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <CalendarDays className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Fecha de Inicio</div>
+                  <div className="font-medium">{obra.fechaInicio || "No establecida"}</div>
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <Clock className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Plazo</div>
+                  <div className="font-medium">{obra.plazo || "360"} días</div>
+                </div>
+              </div>
+
+              {/* Inspector */}
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <UserCog className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Inspector</div>
+                  <div className="font-medium">{obra.inspectores || "No asignado"}</div>
+                </div>
+              </div>
+
+              {/* Technical Representative */}
+              <div className="flex items-center gap-3">
+                <HardHat className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Representante Técnico</div>
+                  <div className="font-medium">{obra.proyectista || "No asignado"}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

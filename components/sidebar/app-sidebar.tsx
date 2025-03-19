@@ -19,6 +19,7 @@ import {
   LayoutTemplateIcon,
   Map,
   PieChart,
+  QrCodeIcon
 } from "lucide-react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
@@ -57,7 +58,8 @@ const iconMap = {
   Coins,
   FlaskConicalIcon,
   Bot,
-  LayoutListIcon
+  LayoutListIcon,
+  QrCodeIcon
 };
 
 const transformDirectoryToNav = (

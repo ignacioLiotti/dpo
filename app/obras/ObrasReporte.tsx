@@ -411,87 +411,88 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
   ];
 
   return (
-    <div className=" min-h-screen bg-containerBackground grid grid-cols-12 gap-4 -mx-8 px-4 -mt-4">
+    <div className="min-h-screen bg-containerBackground grid grid-cols-1 md:grid-cols-12 gap-4 -mx-2 md:-mx-8 px-2 md:px-4 -mt-4">
       {/* Header */}
-      <header className="bg-white flex items-center justify-start border-b col-span-12 -mx-4 px-8 pr-24">
-        <div className="flex items-start space-x-2 w-1/4">
-          <div>
-            <h1 className="font-bold text-4xl text-gray-800 flex items-center gap-4">DPO
-              <Separator className=" bg-gray-400 h-8 w-1" orientation="vertical" />
-              <span className="text-lg text-gray-500">Dirección</span>
+      <header className="bg-white flex flex-col md:flex-row items-start md:items-center justify-start border-b col-span-12 -mx-2 md:-mx-4 px-4 md:px-8 py-4 md:py-0 md:pr-24">
+        <div className="flex items-start space-x-2 w-full md:w-1/4 mb-4 md:mb-0">
+          <div className="w-full">
+            <h1 className="font-bold text-3xl md:text-4xl text-gray-800 flex items-center gap-4">DPO
+              <Separator className="hidden md:block bg-gray-400 h-8 w-1" orientation="vertical" />
+              <span className="text-base md:text-lg text-gray-500">Dirección</span>
             </h1>
-            <p className="text-lg text-gray-500 w-2/3">Dirección de Planificación y Obras</p>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-              <TabsList>
-                <TabsTrigger value="reporte">Reporte</TabsTrigger>
-                <TabsTrigger value="estadisticas">Tabla</TabsTrigger>
-                <TabsTrigger value="obras">Graficos</TabsTrigger>
-                <TabsTrigger value="reportesSimples">Reportes Simples</TabsTrigger>
+            <p className="text-base md:text-lg text-gray-500 w-full md:w-2/3">Dirección de Planificación y Obras</p>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
+              className="w-full overflow-x-auto pb-2">
+              <TabsList className="w-full md:w-auto">
+                <TabsTrigger value="reporte" className="text-sm">Reporte</TabsTrigger>
+                <TabsTrigger value="estadisticas" className="text-sm">Tabla</TabsTrigger>
+                <TabsTrigger value="obras" className="text-sm">Graficos</TabsTrigger>
+                <TabsTrigger value="reportesSimples" className="text-sm">Reportes</TabsTrigger>
               </TabsList>
             </motion.div>
           </div>
         </div>
 
-        <div className="flex items-start justify-between w-full">
-          <div className="flex flex-col items-start pr-8 mr-8">
-            <span className="text-xl font-medium uppercase text-gray-500"><b className="text-primary">OBRAS </b> VIGENTES</span>
-            <span className="text-8xl font-bold text-gray-800">106</span>
+        <div className="flex flex-col md:flex-row items-start justify-between w-full space-y-4 md:space-y-0">
+          <div className="flex flex-col items-start pr-0 md:pr-8 mr-0 md:mr-8">
+            <span className="text-lg md:text-xl font-medium uppercase text-gray-500"><b className="text-primary">OBRAS </b> VIGENTES</span>
+            <span className="text-6xl md:text-8xl font-bold text-gray-800">106</span>
           </div>
 
-          <div className="flex space-x-10">
-            <Separator className=" bg-gray-300 h-24" orientation="vertical" />
+          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-10 w-full">
+            <Separator className="hidden md:block bg-gray-300 h-24" orientation="vertical" />
 
-            <div>
-              <p className="text-xl font-medium text-start uppercase text-gray-500"><b className="text-primary">CERTIFICADOS</b> EMITIDOS</p>
-              <div className="grid grid-cols-3 gap-8 mt-1">
+            <div className="w-full md:w-auto">
+              <p className="text-lg md:text-xl font-medium text-start uppercase text-gray-500"><b className="text-primary">CERTIFICADOS</b> EMITIDOS</p>
+              <div className="grid grid-cols-3 gap-4 md:gap-8 mt-1">
                 <div className="flex flex-col items-start">
-                  <span className="text-2xl font-bold ">03
-                    <span className="text-sm font-light text-gray-500">/28</span>
+                  <span className="text-xl md:text-2xl font-bold">03
+                    <span className="text-xs md:text-sm font-light text-gray-500">/28</span>
                   </span>
                   <span className="text-xs font-semibold">OBRA BÁSICA</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-2xl font-bold ">14
-                    <span className="text-sm font-light text-gray-500">/25</span>
+                  <span className="text-xl md:text-2xl font-bold">14
+                    <span className="text-xs md:text-sm font-light text-gray-500">/25</span>
                   </span>
                   <span className="text-xs font-semibold">REDETERM.</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-2xl font-bold ">02
-                    <span className="text-sm font-light text-gray-500">/05</span>
+                  <span className="text-xl md:text-2xl font-bold">02
+                    <span className="text-xs md:text-sm font-light text-gray-500">/05</span>
                   </span>
                   <span className="text-xs font-semibold">ADICIONALES</span>
                 </div>
               </div>
             </div>
 
-            <Separator className=" bg-gray-300 h-24" orientation="vertical" />
+            <Separator className="hidden md:block bg-gray-300 h-24" orientation="vertical" />
 
-            <div className="flex flex-col items-start">
-              <p className="text-xl font-medium text-start uppercase text-gray-500"><b className="text-primary">AÑO </b> 2025</p>
-              <div className="grid grid-cols-4 gap-8 mt-1">
+            <div className="flex flex-col items-start w-full md:w-auto">
+              <p className="text-lg md:text-xl font-medium text-start uppercase text-gray-500"><b className="text-primary">AÑO </b> 2025</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mt-1">
                 <div className="flex flex-col items-start">
-                  <span className="text-2xl font-bold text-gray-800">35</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-800">35</span>
                   <span className="text-xs font-semibold text-start flex flex-col justify-center items-start">LICITACIONES
                     <span className="text-gray-500 font-light text-center">PUBLICADAS</span>
                   </span>
                 </div>
-                <div className="flex flex-col items-start ">
-                  <span className="text-2xl font-bold text-gray-800">25</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-xl md:text-2xl font-bold text-gray-800">25</span>
                   <span className="text-xs font-semibold text-center flex flex-col justify-center items-start">PLIEGOS
-                    <span className="text-gray-500 font-light text-center"> ELEVADOS</span>
+                    <span className="text-gray-500 font-light text-center">ELEVADOS</span>
                   </span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-2xl font-bold text-gray-800">32</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-800">32</span>
                   <span className="text-xs font-semibold text-center flex flex-col justify-center items-start">CONTRATOS
-                    <span className="text-gray-500 font-light text-center"> FIRMADOS</span>
+                    <span className="text-gray-500 font-light text-center">FIRMADOS</span>
                   </span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-2xl font-bold text-gray-800">32</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-800">32</span>
                   <span className="text-xs font-semibold text-center flex flex-col justify-center items-start">OBRAS
-                    <span className="text-gray-500 font-light text-center"> ENTREGADAS</span>
+                    <span className="text-gray-500 font-light text-center">ENTREGADAS</span>
                   </span>
                 </div>
               </div>
@@ -501,20 +502,19 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
       </header>
 
       {/* Timeline Section */}
-
-      <div className=" w-64 col-span-2 row-span-2  ">
-        <div className=" gap-4 mb-4 row-span-1 max-h-[400px] relative">
+      <div className="w-full md:w-64 col-span-12 md:col-span-2 md:row-span-2">
+        <div className="gap-4 mb-4 row-span-1 max-h-[400px] relative">
           <ObraTimeline obras={filteredObras} />
           <span className='w-full h-4 bg-gradient-to-t rounded-b-2xl from-background to-transparent absolute bottom-0 left-0 right-0' />
         </div>
-        <div className="flex flex-col gap-4 mb-4 row-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-1 gap-4 mb-4 row-span-2">
           {/* Card 1 */}
           <Card className="row-span-1 flex flex-col border-0 shadow-sm">
             <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-xs font-medium text-gray-500">CERTIFICACIÓN MENSUAL</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
-              <p className="text-2xl font-bold">$ 205.365.896</p>
+              <p className="text-xl md:text-2xl font-bold">$ 205.365.896</p>
               <p className="text-xs text-gray-500">ENERO 2025</p>
             </CardContent>
           </Card>
@@ -525,7 +525,7 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
               <CardTitle className="text-xs font-medium text-gray-500">INVERSIÓN TOTAL AUTORIZADA</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
-              <p className="text-2xl font-bold">$ 6.705.365.896</p>
+              <p className="text-xl md:text-2xl font-bold">$ 6.705.365.896</p>
               <p className="text-xs text-gray-500">EJECUCIÓN DEL PRESUPUESTO</p>
             </CardContent>
           </Card>
@@ -536,23 +536,19 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
               <CardTitle className="text-xs font-medium text-gray-500">FONDOS SOLICITADOS</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
-              <p className="text-2xl font-bold">$ 4.205.645.698</p>
+              <p className="text-xl md:text-2xl font-bold">$ 4.205.645.698</p>
               <p className="text-xs text-gray-500">ENERO A FEBRERO 2025</p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-
       {/* Main Content */}
-      <div className="col-span-10 px-2">
-
-
+      <div className="col-span-12 md:col-span-10 px-2">
         <div className="flex flex-col gap-4">
           {/* Obras en Ejecución */}
-          <div className="flex gap-4 items-stretch">
-
-            <div className="w-1/2 flex flex-col flex-1">
+          <div className="flex flex-col md:flex-row gap-4 items-stretch">
+            <div className="w-full md:w-1/2 flex flex-col flex-1">
               <CardTitle className="text-lg font-medium text-gray-500">OBRAS EN EJECUCIÓN</CardTitle>
               <Card className="border-none shadow-none bg-containerBackground flex flex-col flex-1">
                 <FolderTabs tabs={obrasEnEjecucionTabs} />
@@ -560,7 +556,7 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
             </div>
 
             {/* Obras en Prefinanciamiento */}
-            <div className="w-1/2 flex flex-col flex-1">
+            <div className="w-full md:w-1/2 flex flex-col flex-1">
               <CardTitle className="text-lg font-medium text-gray-500">OBRAS EN PREFINANCIAMIENTO</CardTitle>
               <Card className="border-none shadow-none bg-containerBackground flex flex-col flex-1">
                 <FolderTabs tabs={obrasPrefinanciamientoTabs} />
@@ -569,9 +565,9 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
           </div>
 
           {/* Main dashboard content */}
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Obras en Proyecto */}
-            <div className="w-1/2 flex flex-col flex-1">
+            <div className="w-full md:w-1/2 flex flex-col flex-1">
               <CardTitle className="text-lg font-medium text-gray-500">OBRAS EN PROYECTO</CardTitle>
               <Card className="border-none shadow-none bg-containerBackground flex flex-col flex-1">
                 <FolderTabs tabs={obrasProyectoTabs} />
@@ -579,39 +575,35 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
             </div>
 
             {/* Obras en Proceso Licitatorio */}
-            <div className="w-1/2 flex flex-col flex-1">
+            <div className="w-full md:w-1/2 flex flex-col flex-1">
               <CardTitle className="text-lg font-medium text-gray-500">OBRAS EN PROCESO LICITATORIO</CardTitle>
               <Card className="border-none shadow-none bg-containerBackground flex flex-col flex-1">
                 <FolderTabs tabs={obrasLicitatorioTabs} />
               </Card>
-
-              {/* Provision section */}
             </div>
           </div>
+
+          {/* Provision section */}
           <CardTitle className="text-lg font-medium text-gray-500">PROVISION DE OBRAS</CardTitle>
-          <Card className="border-none shadow-none w-1/2">
+          <Card className="border-none shadow-none w-full md:w-1/2">
             <CardHeader className="pb-2 pt-3 px-4">
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
-              <div className="flex justify-between items-center">
-                <div className="text-center pr-8">
-                  <p className="text-3xl font-bold text-gray-800">03</p>
+              <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div className="text-center md:pr-8">
+                  <p className="text-2xl md:text-3xl font-bold text-gray-800">03</p>
                   <p className="text-xs text-gray-500">OBRAS</p>
                 </div>
-                <div className="text-center border-l border-r px-12 py-2">
-                  <p className="text-lg font-bold text-gray-800">$ 55.365.264,18</p>
+                <div className="text-center border-t md:border-t-0 md:border-l md:border-r px-4 md:px-12 py-2">
+                  <p className="text-base md:text-lg font-bold text-gray-800">$ 55.365.264,18</p>
                 </div>
-                <div className="text-center pl-8">
-                  <p className="text-lg font-bold text-gray-800">$ 55.365.264,18</p>
+                <div className="text-center md:pl-8">
+                  <p className="text-base md:text-lg font-bold text-gray-800">$ 55.365.264,18</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
         </div>
-
-        {/* Footer */}
-
       </div>
     </div>
   );
