@@ -503,8 +503,9 @@ const DPODashboard = ({ filteredObras }: { filteredObras: Obra[] }) => {
       {/* Timeline Section */}
 
       <div className=" w-64 col-span-2 row-span-2  ">
-        <div className=" gap-4 mb-4 row-span-1 max-h-[400px] ">
+        <div className=" gap-4 mb-4 row-span-1 max-h-[400px] relative">
           <ObraTimeline obras={filteredObras} />
+          <span className='w-full h-4 bg-gradient-to-t rounded-b-2xl from-background to-transparent absolute bottom-0 left-0 right-0' />
         </div>
         <div className="flex flex-col gap-4 mb-4 row-span-2">
           {/* Card 1 */}

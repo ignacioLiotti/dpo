@@ -29,6 +29,18 @@
 		--chart-3: 197 37% 24%;
 		--chart-4: 43 74% 66%;
 		--chart-5: 27 87% 67%;
+		--slot-color: light-dark(
+			hsla(197, 58%, 22%, 0.171),
+			hsl(215 25% 27% / 0.4)
+		);
+		--slot-line-color: light-dark(hsl(220 14% 80%), hsl(215 25% 40%));
+		--slot-line-color-2: light-dark(
+			hsla(219, 14%, 80%, 0.301),
+			hsl(215 25% 40%)
+		);
+		--slot-line-thickness: 2px;
+		--slot-line-spacing: 15px;
+		--slot-line-angle: 45deg;
 	}
 
 	.dark {

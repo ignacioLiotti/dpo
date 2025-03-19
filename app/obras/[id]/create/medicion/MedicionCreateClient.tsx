@@ -161,7 +161,7 @@ export default function MedicionCreateClient({
                     transition-colors min-w-[50px] justify-center
                     ${isSelected
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                      : 'bg-containerHollowBackground hover:bg-containerHollowBackground/80 text-muted-foreground'
                     }
                   `}
                 >

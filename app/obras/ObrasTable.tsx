@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -16,7 +16,7 @@ import {
   X,
   Check,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -27,6 +27,8 @@ import {
   Column,
   flexRender,
   getPaginationRowModel,
+  PaginationState,
+  Updater,
 } from "@tanstack/react-table";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -603,17 +605,58 @@ export default function ObrasTable({
   onDateRangeChange
 }: ObrasTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   // States
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({
-    pageIndex: parseInt(searchParams.get("page") ?? "0") || 0,
-    pageSize: parseInt(searchParams.get("size") ?? "10") || 10,
+    pageIndex: parseInt(searchParams.get("page") ?? "0"),
+    pageSize: parseInt(searchParams.get("size") ?? "10"),
   });
   const [tableFilters, setTableFilters] = useState<TableFilters>({ hasEmpresa: false });
   const [selectedEstados, setSelectedEstados] = useState<string[]>([]);
   const [presupuestoRange, setPresupuestoRange] = useState<{ min?: number; max?: number }>({});
+
+  // Create URLSearchParams instance for manipulation
+  const createQueryString = useCallback(
+    (params: Record<string, string>) => {
+      const newSearchParams = new URLSearchParams(searchParams?.toString());
+
+      Object.entries(params).forEach(([key, value]) => {
+        newSearchParams.set(key, value);
+      });
+
+      return newSearchParams.toString();
+    },
+    [searchParams]
+  );
+
+  // Update URL when pagination changes without causing refresh
+  const updateUrlWithPagination = useCallback(
+    (newPage: number, newSize: number) => {
+      const queryString = createQueryString({
+        page: newPage.toString(),
+        size: newSize.toString(),
+      });
+
+      router.push(`${pathname}?${queryString}`, { scroll: false });
+    },
+    [pathname, createQueryString, router]
+  );
+
+  // Handle pagination changes
+  const handlePaginationChange = useCallback(
+    (updaterOrValue: Updater<PaginationState>) => {
+      const newPagination = typeof updaterOrValue === 'function'
+        ? updaterOrValue(pagination)
+        : updaterOrValue;
+
+      setPagination(newPagination);
+      updateUrlWithPagination(newPagination.pageIndex, newPagination.pageSize);
+    },
+    [updateUrlWithPagination, pagination]
+  );
 
   // Update DateFilter component to use parent's state
   const handleDateFilterChange = (range: { from: Date | null; to: Date | null } | null) => {
@@ -804,29 +847,12 @@ export default function ObrasTable({
       pagination,
     },
     onSortingChange: setSorting,
-    onPaginationChange: setPagination,
+    onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => String(row.id),
   });
-
-  // Update URL parameters when pagination changes
-  useEffect(() => {
-    if (searchParams) {
-      const currentPage = searchParams.get("page");
-      const currentSize = searchParams.get("size");
-      if (
-        currentPage !== pagination.pageIndex.toString() ||
-        currentSize !== pagination.pageSize.toString()
-      ) {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("page", pagination.pageIndex.toString());
-        params.set("size", pagination.pageSize.toString());
-        router.replace(`?${params.toString()}`, { scroll: false });
-      }
-    }
-  }, [pagination.pageIndex, pagination.pageSize]);
 
   return (
     <Card className="rounded-lg border-none shadow-none">
@@ -860,7 +886,7 @@ export default function ObrasTable({
         </div>
       </div>
 
-      <Table className="overflow-y-scroll max-h-[500px]">
+      <Table className="overflow-y-auto max-h-[500px] min-h-[500px]">
         <TableHeader className="sticky top-0 bg-background">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -905,19 +931,23 @@ export default function ObrasTable({
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium">Rows per page</p>
-            <select
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
+            <Select
+              value={table.getState().pagination.pageSize.toString()}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
               }}
-              className="h-8 w-[70px] rounded-md border border-input bg-transparent"
             >
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <option key={pageSize} value={pageSize}>
-                  {pageSize}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue placeholder={table.getState().pagination.pageSize} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={pageSize.toString()}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
             Page {table.getState().pagination.pageIndex + 1} of{" "}

@@ -354,7 +354,7 @@ export function PresupuestoEditor({
                   >
                     <motion.div
                       key="expanded"
-                      className="bg-muted rounded-lg flex"
+                      className="bg-containerHollowBackground rounded-lg flex"
                     >
                       <span className='w-full'>
                         <TabsTrigger value="tab-1" className="py-2 w-full justify-start" asChild onClick={() => setPreviewVersion('false')}>
@@ -396,7 +396,7 @@ export function PresupuestoEditor({
                               "gap-1.5 group relative",
                             )}>
                             <motion.div layoutId="icon-2" className="flex-shrink-0">
-                              <BookIcon size={16} strokeWidth={2} aria-hidden="true" />
+                              <BookLockIcon size={16} strokeWidth={2} aria-hidden="true" />
                             </motion.div>
                             <motion.div layoutId="text-2" className="flex-shrink-0">
                               <motion.span
@@ -406,7 +406,7 @@ export function PresupuestoEditor({
                                 transition={{ duration: 0.15 }}
                                 className="ml-1.5"
                               >
-                                Vista Previa (Total)
+                                Vista Previa (Parcial)
                               </motion.span>
                             </motion.div>
                           </motion.button>
@@ -424,7 +424,7 @@ export function PresupuestoEditor({
                               "gap-1.5 group relative",
                             )}>
                             <motion.div layoutId="icon-3" className="flex-shrink-0">
-                              <BookLockIcon size={16} strokeWidth={2} aria-hidden="true" />
+                              <BookIcon size={16} strokeWidth={2} aria-hidden="true" />
                             </motion.div>
                             <motion.div layoutId="text-3" className="flex-shrink-0">
                               <motion.span
@@ -434,7 +434,7 @@ export function PresupuestoEditor({
                                 transition={{ duration: 0.15 }}
                                 className="ml-1.5"
                               >
-                                Vista Previa (Parcial)
+                                Vista Previa (Total)
                               </motion.span>
                             </motion.div>
                           </motion.button>
@@ -456,7 +456,7 @@ export function PresupuestoEditor({
                       width: { duration: 0.2, ease: "easeInOut" },
                       height: { duration: 0.2, ease: "easeInOut", delay: 0.1 }
                     }}
-                    className='bg-muted rounded-lg flex flex-col'
+                    className='bg-containerHollowBackground rounded-lg flex flex-col'
                   >
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
@@ -507,7 +507,7 @@ export function PresupuestoEditor({
                                   "gap-1.5 group relative",
                                 )}>
                                 <motion.div layoutId="icon-2" className="flex-shrink-0">
-                                  <BookIcon size={16} strokeWidth={2} aria-hidden="true" />
+                                  <BookLockIcon size={16} strokeWidth={2} aria-hidden="true" />
                                 </motion.div>
                                 <motion.div layoutId="text-2" className="flex-shrink-0 -mr-1.5">
                                   <motion.span
@@ -522,7 +522,7 @@ export function PresupuestoEditor({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="px-2 py-1 text-xs">
-                          Vista Previa (Total)
+                          Vista Previa (Parcial)
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -541,7 +541,7 @@ export function PresupuestoEditor({
                                   "gap-1.5 group relative",
                                 )}>
                                 <motion.div layoutId="icon-3" className="flex-shrink-0">
-                                  <BookLockIcon size={16} strokeWidth={2} aria-hidden="true" />
+                                  <BookIcon size={16} strokeWidth={2} aria-hidden="true" />
                                 </motion.div>
                                 <motion.div layoutId="text-3" className="flex-shrink-0 -mr-1.5">
                                   <motion.span
@@ -556,7 +556,7 @@ export function PresupuestoEditor({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="px-2 py-1 text-xs">
-                          Vista Previa (Parcial)
+                          Vista Previa (Total)
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -624,7 +624,7 @@ export function PresupuestoEditor({
           elements={storedElements}
         >
         </SearchDialog>
-        <form onSubmit={handleSubmit} className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
+        <form onSubmit={handleSubmit} className="max-w-[1000px] flex-1 min-w-[50vw] p-6 bg-white rounded-xl shadow-lg relative border">
           {/* Header */}
           <OnboardingStep
             set="presupuesto"

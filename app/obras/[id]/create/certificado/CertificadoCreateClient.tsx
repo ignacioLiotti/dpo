@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,12 +94,14 @@ export default function CertificadoCreateClient({
   certificado
 }: CertificadoCreateClientProps) {
   const router = useRouter();
-  const { refetchAll } = useObra();
+  const { refetchAll, state } = useObra();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  console.log('aca obraData', obraData);
-  console.log('aca certificado', certificado);
+  // Get the latest certificado from the state
+  const latestCertificado = state.certificados.length > 0
+    ? state.certificados[state.certificados.length - 1]
+    : null;
 
   // Generate progress array based on date range
   const generateProgressArray = () => {
@@ -122,7 +124,7 @@ export default function CertificadoCreateClient({
   };
 
   const [editedData, setEditedData] = useState<Record<string, any>>(
-    obraData || certificado?.data.editedData || {
+    obraData || certificado?.data.editedData || latestCertificado?.data.editedData || {
       localidad: '',
       contratista: '',
       numeroLicitacion: '',
@@ -140,8 +142,59 @@ export default function CertificadoCreateClient({
       links: []
     }
   );
+
   const [progress, setProgress] = useState<CertificadoProgress[]>(
-    certificado?.data.progress || generateProgressArray()
+    certificado?.data.progress || latestCertificado?.data.progress || generateProgressArray()
+  );
+
+  useEffect(() => {
+    if (certificado) {
+      setEditedData(certificado.data.editedData);
+      setProgress(certificado.data.progress);
+    } else if (latestCertificado && !display) {
+      // Only load from latest certificado if we're creating a new one
+      setEditedData(latestCertificado.data.editedData);
+      setProgress(latestCertificado.data.progress);
+    }
+  }, [certificado, latestCertificado, display]);
+
+  // Add new functions to handle array modifications
+  const handleAddItem = (arrayPath: string) => {
+    const newData = { ...editedData };
+    if (!newData[arrayPath]) {
+      newData[arrayPath] = [];
+    }
+
+    const defaultValues: Record<string, any> = {
+      prorroga: { nroProrroga: '', disposicion: '', plazo: '', fechaDeFinalizacion: '' },
+      Ampliacion: { nroAmpliacion: '', nroResolucion: '', nroExpediente: '', Monto: '' },
+      garantias: { nroPoliza: '', sumaPoliza: '', nombrePoliza: '' },
+      autores: '',
+      links: ''
+    };
+
+    newData[arrayPath].push(defaultValues[arrayPath] || '');
+    setEditedData(newData);
+  };
+
+  const handleRemoveItem = (arrayPath: string, index: number) => {
+    const newData = { ...editedData };
+    newData[arrayPath].splice(index, 1);
+    setEditedData(newData);
+  };
+
+  // Add buttons to add/remove items in the tables
+  const renderAddRemoveButtons = (arrayPath: string) => (
+    <div className="flex justify-end gap-2 mt-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleAddItem(arrayPath)}
+        className="text-xs"
+      >
+        Agregar
+      </Button>
+    </div>
   );
 
   if (!selectedMedicion.periodo) {
@@ -151,8 +204,11 @@ export default function CertificadoCreateClient({
   const handleDataChange = (path: string, value: any) => {
     const keys = path.split('.');
     const lastKey = keys.pop()!;
-    let current = { ...editedData };
 
+    const newData = { ...editedData };
+    let current = newData;
+
+    // Navigate to the correct nested object
     for (const key of keys) {
       if (!current[key]) {
         current[key] = {};
@@ -160,8 +216,9 @@ export default function CertificadoCreateClient({
       current = current[key];
     }
 
+    // Set the value
     current[lastKey] = value;
-    setEditedData({ ...editedData });
+    setEditedData(newData);
   };
 
   const handleProgressChange = (index: number, field: 'value1' | 'value2' | 'value3', value: string) => {
@@ -177,6 +234,9 @@ export default function CertificadoCreateClient({
     setIsSubmitting(true);
     setError(null);
 
+    // Calculate totals
+    const totals = currentTotals;
+
     try {
       const response = await fetch("/api/certificados", {
         method: "POST",
@@ -191,6 +251,7 @@ export default function CertificadoCreateClient({
             editedData,
             presupuestoData,
             progress,
+            totals
           }
         }),
       });
@@ -209,6 +270,13 @@ export default function CertificadoCreateClient({
     }
   };
 
+
+  // Calculate current totals for display
+  const currentTotals = {
+    avancePeriodo: selectedMedicion.avanceMedicion,
+    avanceAcumulado: selectedMedicion.avanceAcumulado
+  };
+
   if (error) {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -216,11 +284,6 @@ export default function CertificadoCreateClient({
       </div>
     );
   }
-
-  const totalItems = selectedMedicion.data.secciones.reduce((acc, seccion) => acc + seccion.items.length, 0);
-  const totalAcumulado = selectedMedicion.data.secciones.reduce((acc, seccion) =>
-    acc + seccion.items.reduce((itemAcc, item) => itemAcc + item.acumulado, 0), 0);
-  const promedioAcumulado = totalItems > 0 ? (totalAcumulado / totalItems).toFixed(2) : "0";
 
   return (
     <div className="space-y-8">
@@ -283,7 +346,10 @@ export default function CertificadoCreateClient({
             {/* Table Sections */}
             <div className="space-y-6">
               <div>
-                <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">Prórrogas</h3>
+                <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">
+                  Prórrogas
+                  {!display && renderAddRemoveButtons('prorroga')}
+                </h3>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-gray-200">
@@ -291,6 +357,7 @@ export default function CertificadoCreateClient({
                       <TableHead className="text-left py-2 text-gray-600 bg-white">Disposición</TableHead>
                       <TableHead className="text-left py-2 text-gray-600 bg-white">Plazo</TableHead>
                       <TableHead className="text-left py-2 text-gray-600 bg-white">Fecha Finalización</TableHead>
+                      {!display && <TableHead className="w-[50px]" />}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -324,6 +391,18 @@ export default function CertificadoCreateClient({
                             onChange={(val) => handleDataChange(`prorroga.${index}.fechaDeFinalizacion`, val)}
                           />
                         </TableCell>
+                        {!display && (
+                          <TableCell className="w-[50px]">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveItem('prorroga', index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              ×
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -331,7 +410,10 @@ export default function CertificadoCreateClient({
               </div>
 
               <div>
-                <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">Ampliaciones</h3>
+                <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">
+                  Ampliaciones
+                  {!display && renderAddRemoveButtons('Ampliacion')}
+                </h3>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-gray-200">
@@ -339,6 +421,7 @@ export default function CertificadoCreateClient({
                       <TableHead className="text-left py-2 text-gray-600 bg-white">N° Resolución</TableHead>
                       <TableHead className="text-left py-2 text-gray-600 bg-white">N° Expediente</TableHead>
                       <TableHead className="text-right py-2 text-gray-600 bg-white">Monto</TableHead>
+                      {!display && <TableHead className="w-[50px]" />}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -372,6 +455,18 @@ export default function CertificadoCreateClient({
                             onChange={(val) => handleDataChange(`Ampliacion.${index}.Monto`, val)}
                           />
                         </TableCell>
+                        {!display && (
+                          <TableCell className="w-[50px]">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveItem('Ampliacion', index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              ×
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -415,7 +510,10 @@ export default function CertificadoCreateClient({
 
             {/* Guarantees */}
             <div>
-              <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">Garantías</h3>
+              <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">
+                Garantías
+                {!display && renderAddRemoveButtons('garantias')}
+              </h3>
               <Table>
                 <TableHeader>
                   <TableRow className="border-b border-gray-200">
@@ -448,6 +546,18 @@ export default function CertificadoCreateClient({
                           onChange={(val) => handleDataChange(`garantias.${index}.nombrePoliza`, val)}
                         />
                       </TableCell>
+                      {!display && (
+                        <TableCell className="w-[50px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem('garantias', index)}
+                            className="h-8 w-8 p-0"
+                          >
+                            ×
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -456,28 +566,58 @@ export default function CertificadoCreateClient({
 
             {/* Additional Information */}
             <div>
-              <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">Información Adicional</h3>
+              <h3 className="text-[14px] font-bold bg-input/20 rounded-lg p-2 pl-4 flex items-center justify-between gap-2">
+                Información Adicional
+              </h3>
               <div className="grid grid-cols-2 gap-8 px-4">
                 <div>
-                  <h4 className="text-gray-600 text-sm mb-1">AUTORES</h4>
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-gray-600 text-sm mb-1">AUTORES</h4>
+                    {!display && renderAddRemoveButtons('autores')}
+                  </div>
                   {(editedData.autores || []).map((autor: string, index: number) => (
-                    <EditableInput
-                      editable={!display}
-                      key={index}
-                      value={autor}
-                      onChange={(val) => handleDataChange(`autores.${index}`, val)}
-                    />
+                    <div key={index} className="flex items-center gap-2">
+                      <EditableInput
+                        editable={!display}
+                        value={autor}
+                        onChange={(val) => handleDataChange(`autores.${index}`, val)}
+                      />
+                      {!display && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveItem('autores', index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
                 <div>
-                  <h4 className="text-gray-600 text-sm mb-1">LINKS</h4>
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-gray-600 text-sm mb-1">LINKS</h4>
+                    {!display && renderAddRemoveButtons('links')}
+                  </div>
                   {(editedData.links || []).map((link: string, index: number) => (
-                    <EditableInput
-                      editable={!display}
-                      key={index}
-                      value={link}
-                      onChange={(val) => handleDataChange(`links.${index}`, val)}
-                    />
+                    <div key={index} className="flex items-center gap-2">
+                      <EditableInput
+                        editable={!display}
+                        value={link}
+                        onChange={(val) => handleDataChange(`links.${index}`, val)}
+                      />
+                      {!display && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveItem('links', index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -509,15 +649,15 @@ export default function CertificadoCreateClient({
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Items Medidos</Label>
+                <Label>Avance del Período</Label>
                 <p className="text-muted-foreground">
-                  {totalItems} items
+                  {currentTotals.avancePeriodo.toFixed(2)}%
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Progreso Promedio</Label>
+                <Label>Avance Acumulado</Label>
                 <p className="text-muted-foreground">
-                  {promedioAcumulado}%
+                  {currentTotals.avanceAcumulado.toFixed(2)}%
                 </p>
               </div>
             </div>
@@ -556,21 +696,26 @@ export default function CertificadoCreateClient({
                   <Line
                     type="monotone"
                     dataKey="value1"
-                    stroke="#3b82f6"
+                    stroke="#000"
+                    dot={{ fill: '#000', strokeWidth: 4 }}
                     name="Línea 1"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="value2"
-                    stroke="#22c55e"
+                    stroke="#555"
+                    strokeDasharray="5 5"
+                    dot={{ fill: '#555', strokeWidth: 4, strokeDasharray: "" }}
                     name="Línea 2"
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="value3"
-                    stroke="#a855f7"
+                    stroke="#888"
+                    strokeDasharray="3 3"
+                    dot={{ fill: '#888', strokeWidth: 4, strokeDasharray: "" }}
                     name="Línea 3"
                     strokeWidth={2}
                   />

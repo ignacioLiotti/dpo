@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { useObra } from "@/app/providers/ObraProvider";
 import CertificadoCreateClient from "./CertificadoCreateClient";
-import type { Presupuesto, Medicion } from "@/types";
+import type { Presupuesto, Medicion, Certificado } from "@/types";
 
 interface CertificadoCreateWrapperProps {
   obraId: string;
@@ -17,7 +17,7 @@ export default function CertificadoCreateWrapper({
   medicionId,
 }: CertificadoCreateWrapperProps) {
   const { state } = useObra();
-  const { obra, presupuestos, mediciones } = state;
+  const { obra, presupuestos, mediciones, certificados } = state;
 
   if (!obra || !presupuestos || !mediciones) {
     return <div>Loading...</div>;
@@ -25,6 +25,11 @@ export default function CertificadoCreateWrapper({
 
   const presupuesto = presupuestos.find((p: Presupuesto) => p.id.toString() === presupuestoId);
   const medicion = mediciones.find((m: Medicion) => m.id.toString() === medicionId);
+
+  // Get the latest certificado for this obra
+  const latestCertificado = certificados
+    .filter((c: Certificado) => c.obra_id === Number(obraId))
+    .sort((a: Certificado, b: Certificado) => b.id - a.id)[0];
 
   if (!presupuesto) {
     redirect(`/obras/${obraId}?error=invalid-presupuesto`);
@@ -57,6 +62,7 @@ export default function CertificadoCreateWrapper({
         selectedMedicion={medicion}
         fechaInicio={obra.fechaInicio}
         fechaFin={obra.fechaFin}
+        certificado={latestCertificado}
         // @ts-ignore
         obraData={obra.data ? JSON.parse(obra.data) : {}}
       />

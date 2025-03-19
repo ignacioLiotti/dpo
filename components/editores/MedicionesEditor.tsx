@@ -404,7 +404,7 @@ export function MedicionesEditor({
   return (
     <div className='flex items-start justify-center gap-8 relative'>
       <div className='flex flex-col gap-2 mb-16'>
-        <form onSubmit={handleSubmit} className="max-w-[1000px] min-w-[1000px] p-6 bg-white rounded-xl shadow-lg relative border">
+        <form onSubmit={handleSubmit} className="max-w-[1000px] flex-1 min-w-[50vw] p-6 bg-white rounded-xl shadow-lg relative border">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">

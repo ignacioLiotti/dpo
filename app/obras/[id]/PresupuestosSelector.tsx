@@ -176,7 +176,7 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
   }
 
   return (
-    <div className="flex gap-4 h-full items-start mt-24">
+    <div className="flex gap-4 h-full items-start mt-24 w-full">
       <div className="flex flex-col gap-5">
         {sortedPresupuestos.map((presupuesto) => (
           <div
@@ -226,9 +226,9 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
         ))}
       </div>
 
-      <div className="bg-containerBackground rounded-lg w-full h-full min-h-[500px] min-w-[1220px] flex-1 relative shadow-md flex justify-end">
+      <div className="bg-containerBackground rounded-lg w-full h-full min-h-[500px] min-w-[clamp(80%,80vw,60vw)] flex-1 relative shadow-md flex justify-end">
         {selectedPresupuesto ? (
-          <div className='flex flex-col gap-2 mb-16 absolute -top-20 left-14 h-full'>
+          <div className='flex flex-col gap-2 mb-16 absolute -top-20 right-[clamp(2vw,10vw,10vw)] h-full"'>
             {selectedMedicion ? (
               <div className='flex flex-col gap-2 floating-scroll'>
                 <MedicionesEditor
@@ -254,7 +254,7 @@ function PresupuestosSelector({ obraId }: PresupuestosSelectorProps) {
             <p>No hay presupuestos creados para esta obra</p>
           </div>
         )}
-        <div className='flex flex-col gap-2 mb-16 h-full'>
+        <div className='flex flex-col gap-2 mb-16 h-full items-center min-w-[10vw]'>
           {selectedPresupuesto && (
             <div className="flex flex-col gap-4 p-4">
               {mediciones.map((medicion) => (

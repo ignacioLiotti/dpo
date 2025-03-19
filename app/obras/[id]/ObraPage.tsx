@@ -400,7 +400,7 @@ export default function ObraPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="mt-8">
+                  <div className="mt-8" >
 
                     <ExpandingButton width={390}>
                       <div className="flex gap-2 px-4">
@@ -473,14 +473,17 @@ export default function ObraPage() {
                             <div className="text-md font-medium">Certificación ({format(new Date(), 'MMM-yy', { locale: es })})</div>
                           </div>
                           <div className="text-2xl font-bold text-start">
-                            {certificados && certificados.length > 0
-                              ? `$${certificados[certificados.length - 1].data?.presupuestoData?.total?.toLocaleString('es-AR') || '0,00'}`
+                            {certificados && certificados.length > 0 && certificados[0].data?.totals
+                              ? `$${(certificados[0].data?.totals?.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100).toLocaleString('es-AR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              }) || '0,00'}`
                               : '$0,00'}
                           </div>
                           <div className="flex items-center">
                             <div className="bg-yellow-400 px-2 py-1 text-sm">
-                              {certificados && certificados.length > 0
-                                ? `$${(certificados[certificados.length - 1].data?.presupuestoData?.total || 0).toLocaleString('es-AR')}`
+                              {certificados && certificados.length > 0 && certificados[0].data?.totals
+                                ? `$${(certificados[0].data?.totals?.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100 / parseInt(obra.plazo) / 30).toFixed(2) || 0}`
                                 : '$0,00'}
                             </div>
                             <div className="ml-2 text-sm text-muted-foreground">
@@ -533,13 +536,19 @@ export default function ObraPage() {
                           </div>
                           <div className="text-2xl font-bold text-start">
                             {certificados && certificados.length > 1
-                              ? `$${certificados[certificados.length - 2]?.data?.presupuestoData?.total?.toLocaleString('es-AR') || '0,00'}`
+                              ? `$${(certificados[1]?.data?.totals.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100).toLocaleString('es-AR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              }) || '0,00'}`
                               : '$0,00'}
                           </div>
                           <div className="flex items-center">
                             <div className="bg-yellow-400 px-2 py-1 text-sm">
                               {certificados && certificados.length > 1
-                                ? `$${(certificados[certificados.length - 2]?.data?.presupuestoData?.total || 0).toLocaleString('es-AR')}`
+                                ? `$${(certificados[1]?.data?.totals.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100 / parseInt(obra.plazo) / 30).toFixed(2).toLocaleString('es-AR', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2
+                                }) || '0,00'}`
                                 : '$0,00'}
                             </div>
                             <div className="ml-2 text-sm text-muted-foreground">
@@ -854,7 +863,7 @@ export default function ObraPage() {
                                 key={certificado.id}
                                 className={`
                                 flex items-center space-x-2 rounded-lg border p-4 transition-colors cursor-pointer
-                                ${selectedCertificadoId === certificado.id.toString() ? 'bg-muted border-primary' : 'hover:bg-muted/50'}
+                                ${selectedCertificadoId === certificado.id.toString() ? 'bg-containerHollowBackground border-primary' : 'hover:bg-muted/50'}
                               `}
                               >
                                 <RadioGroupItem

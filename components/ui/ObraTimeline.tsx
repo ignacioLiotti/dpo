@@ -24,7 +24,7 @@ interface GroupedEvents {
   [key: string]: TimelineEvent[];
 }
 
-export const ObraTimeline = ({ obras }: { obras: Obra[] }) => {
+export const ObraTimeline = ({ obras, maxHeight }: { obras: Obra[], maxHeight?: number }) => {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export const ObraTimeline = ({ obras }: { obras: Obra[] }) => {
           Cronograma de Obras
         </CardTitle>
       </CardHeader>
-      <CardContent className="overflow-y-auto h-full max-h-[300px] floating-scroll pt-0 px-4">
+      <CardContent className={`overflow-y-auto h-full ${maxHeight ? `max-h-[${maxHeight}px]` : 'max-h-[300px]'} floating-scroll pt-0 px-4`}>
         <div className="space-y-6">
           {Object.entries(groupedEvents).map(([month, events]) => (
             <div key={month} className="mb-6">
