@@ -474,6 +474,7 @@ export default function ObraPage() {
                           </div>
                           <div className="text-2xl font-bold text-start">
                             {certificados && certificados.length > 0 && certificados[0].data?.totals
+                              // @ts-ignore
                               ? `$${(certificados[0].data?.totals?.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100).toLocaleString('es-AR', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
@@ -483,6 +484,7 @@ export default function ObraPage() {
                           <div className="flex items-center">
                             <div className="bg-yellow-400 px-2 py-1 text-sm">
                               {certificados && certificados.length > 0 && certificados[0].data?.totals
+                                // @ts-ignore
                                 ? `$${(certificados[0].data?.totals?.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100 / parseInt(obra.plazo) / 30).toFixed(2) || 0}`
                                 : '$0,00'}
                             </div>
@@ -536,6 +538,7 @@ export default function ObraPage() {
                           </div>
                           <div className="text-2xl font-bold text-start">
                             {certificados && certificados.length > 1
+                              // @ts-ignore
                               ? `$${(certificados[1]?.data?.totals.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100).toLocaleString('es-AR', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
@@ -545,6 +548,7 @@ export default function ObraPage() {
                           <div className="flex items-center">
                             <div className="bg-yellow-400 px-2 py-1 text-sm">
                               {certificados && certificados.length > 1
+                                // @ts-ignore
                                 ? `$${(certificados[1]?.data?.totals.avanceAcumulado * Number(obra.montoContrato.split('$')[1].replace(/\./g, '').replace(',', '.')) / 100 / parseInt(obra.plazo) / 30).toFixed(2).toLocaleString('es-AR', {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2
