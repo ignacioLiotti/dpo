@@ -85,12 +85,21 @@ export default function RootLayout({
       "url": "/fin",
       "iconKey": "QrCodeIcon",
       "items": []
+    },
+    {
+      "title": "Vista Administrativa",
+      "url": "/admin",
+      "iconKey": "QrCodeIcon",
+      "items": []
     }
   ]
 
   return (
     <Providers>
-      <html lang="en">
+      <html
+        lang="en"
+      //  className="light"
+      >
         <head>
           {/* rest of your scripts go under */}
         </head>
