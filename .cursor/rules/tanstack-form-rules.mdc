@@ -1,0 +1,251 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+​TanStack Form is a powerful, type-safe, headless form management library designed for modern web applications. It offers a flexible, framework-agnostic approach to form handling, making it suitable for various front-end frameworks, including React, Vue, Angular, Solid, and Lit. With first-class TypeScript support, granular reactivity, and a modular architecture, TanStack Form streamlines form management and enhances developer productivity.​
+
+🔧 Installation
+To integrate TanStack Form into your project, install the React adapter:
+
+bash
+Copiar
+Editar
+npm install @tanstack/react-form
+🧠 Core Concepts
+1. Form Options
+Define default values and other configurations using formOptions:​
+tanstack.com
++1
+tanstack.com
++1
+
+tsx
+Copiar
+Editar
+import { formOptions } from '@tanstack/react-form';
+
+const formOpts = formOptions({
+  defaultValues: {
+    firstName: '',
+    lastName: '',
+  },
+});
+2. Form Instance
+Create a form instance using the useForm hook:​
+tanstack.com
++1
+blog.openreplay.com
++1
+
+tsx
+Copiar
+Editar
+import { useForm } from '@tanstack/react-form';
+
+const form = useForm({
+  ...formOpts,
+  onSubmit: async ({ value }) => {
+    console.log(value);
+  },
+});
+3. Fields
+Define individual fields within your form:​
+
+tsx
+Copiar
+Editar
+<form.Field name="firstName">
+  {(field) => (
+    <div>
+      <input
+        value={field.state.value}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+      {field.state.meta.errors.map((error) => (
+        <p key={error}>{error}</p>
+      ))}
+    </div>
+  )}
+</form.Field>
+4. Validation
+Implement validation using schema libraries like Zod:​
+tanstack.com
++4
+tanstack.com
++4
+tanstack.com
++4
+
+tsx
+Copiar
+Editar
+import { z } from 'zod';
+
+const schema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+});
+
+const form = useForm({
+  defaultValues: {
+    firstName: '',
+    lastName: '',
+  },
+  validators: {
+    onChange: schema,
+  },
+  onSubmit: async ({ value }) => {
+    console.log(value);
+  },
+});
+5. Submission Handling
+Handle form submission with built-in methods:​
+
+tsx
+Copiar
+Editar
+<form
+  onSubmit={(e) => {
+    e.preventDefault();
+    form.handleSubmit();
+  }}
+>
+  {/* form fields */}
+  <button type="submit">Submit</button>
+</form>
+🧩 Advanced Features
+Array Fields: Manage dynamic lists of fields.
+
+Async Validation: Perform validations that require asynchronous operations.
+
+Field-Level Subscriptions: Optimize performance by subscribing to specific field changes.
+
+Integration with UI Libraries: Seamlessly integrate with libraries like Material UI, Chakra UI, etc.
+
+Server-Side Rendering (SSR): Support for frameworks like Next.js and Remix.​
+tanstack.com
++6
+tanstack.com
++6
+tanstack.com
++6
+
+📁 File Structure for a Basic Form
+Assuming a React project, your file structure might look like this:​
+
+css
+Copiar
+Editar
+src/
+├── components/
+│   └── Form.tsx
+├── App.tsx
+└── index.tsx
+Form.tsx
+tsx
+Copiar
+Editar
+import React from 'react';
+import { useForm } from '@tanstack/react-form';
+
+const Form = () => {
+  const form = useForm({
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+    },
+    onSubmit: async ({ value }) => {
+      console.log(value);
+    },
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
+    >
+      <form.Field name="firstName">
+        {(field) => (
+          <div>
+            <label>First Name</label>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            {field.state.meta.errors.map((error) => (
+              <p key={error}>{error}</p>
+            ))}
+          </div>
+        )}
+      </form.Field>
+
+      <form.Field name="lastName">
+        {(field) => (
+          <div>
+            <label>Last Name</label>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            {field.state.meta.errors.map((error) => (
+              <p key={error}>{error}</p>
+            ))}
+          </div>
+        )}
+      </form.Field>
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+};
+
+export default Form;
+App.tsx
+tsx
+Copiar
+Editar
+import React from 'react';
+import Form from './components/Form';
+
+const App = () => (
+  <div>
+    <h1>My Form</h1>
+    <Form />
+  </div>
+);
+
+export default App;
+index.tsx
+tsx
+Copiar
+Editar
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+
+ReactDOM.render(<App />, document.getElementById('root'));
+📚 Additional Resources
+Official Documentation: TanStack Form Docs
+
+Code Examples: CodeSandbox Examples
+
+Video Tutorial: TanStack Form Tutorial​
+tanstack.com
+Medium
++6
+CodeSandbox
++6
+tanstack.com
++6
+YouTube
+
+TanStack Form provides a comprehensive solution for form management in modern web applications. Its flexibility, performance, and type safety make it a valuable tool for developers aiming to build robust and user-friendly forms.​
+GitHub
++2
+tanstack.com
++2
+blog.openreplay.com
++2

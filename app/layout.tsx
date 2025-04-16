@@ -11,6 +11,9 @@ import Providers from "./providers";
 import ReactQueryDevtool from "./ReactQueryDevtool";
 import { OnboardingProvider } from "@/components/Onboarding/OnboardingProvider";
 
+// Import server client
+import { createClient } from "@/lib/supabase/server";
+
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
@@ -31,12 +34,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+// Make the layout component async
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch user data
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
+  // (Keep the existing mapped data)
   const mapped = [
     {
       "title": "Obras",
@@ -87,6 +95,23 @@ export default function RootLayout({
       "items": []
     },
     {
+      "title": "Auth",
+      "url": "#",
+      "iconKey": "UserCog",
+      "items": [
+        {
+          "title": "Sign In",
+          "url": "/sign-in",
+          "iconKey": "LogIn"
+        },
+        {
+          "title": "Sign Up",
+          "url": "/sign-up",
+          "iconKey": "UserPlus"
+        }
+      ]
+    },
+    {
       "title": "Vista Administrativa",
       "url": "/admin",
       "iconKey": "QrCodeIcon",
@@ -109,7 +134,8 @@ export default function RootLayout({
           <ReactScanWrapper>
             <OnboardingProvider>
               <SidebarProvider>
-                <AppSidebar mappedData={mapped as any} />
+                {/* Pass user data to AppSidebar */}
+                <AppSidebar mappedData={mapped as any} user={user} />
                 <SidebarInset className="flex flex-col p-4 pt-0 lg:pr-10">
                   <header className="flex h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
                     <div className="flex items-center gap-2">

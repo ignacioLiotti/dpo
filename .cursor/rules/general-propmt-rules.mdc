@@ -1,0 +1,137 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+## Estructura de Backend Multi-Tenant con Supabase
+
+### Objetivo
+Permitir que múltiples tenants (clientes) compartan la misma base de datos en Supabase, con diferencias internas de estructura o nomenclatura, pero entregando siempre una interfaz uniforme al frontend.
+
+### Estructura General
+
+```
+/app
+  /api
+    /obras
+      route.ts         ← Adaptador multi-tenant
+/lib
+  supabase.ts          ← Cliente de Supabase
+  tenantAdapter.ts     ← Adaptadores por tenant
+```
+
+### 1. Identificación del Tenant
+
+Usamos Supabase Auth para identificar el tenant a través del `user.id` o mediante un mapeo a una tabla `tenants`.
+
+```ts
+const { data: { user } } = await supabase.auth.getUser()
+const tenantId = user?.id
+```
+
+### 2. Row Level Security (RLS)
+
+Ejemplo de política para filtrar datos por tenant:
+
+```sql
+CREATE POLICY "Only tenant access"
+ON obras
+FOR SELECT
+USING (tenant_id = auth.uid());
+```
+
+### 3. Adaptador Multi-Tenant
+
+Archivo: `/app/api/obras/route.ts`
+
+```ts
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { getTenantObrasAdaptadas } from '@/lib/tenantAdapter'
+
+export async function GET() {
+  const supabase = createServerClient({ cookies })
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const obrasAdaptadas = await getTenantObrasAdaptadas(supabase, user.id)
+  return Response.json(obrasAdaptadas)
+}
+```
+
+### 4. Adaptadores de Tenant
+
+Archivo: `/lib/tenantAdapter.ts`
+
+```ts
+export async function getTenantObrasAdaptadas(supabase, tenantId: string) {
+  const { data: obrasRaw } = await supabase
+    .from('obras')
+    .select('*')
+    .eq('tenant_id', tenantId)
+
+  if (!obrasRaw) return []
+
+  return await Promise.all(
+    obrasRaw.map(async (obra) => {
+      let presupuestos: any[] = []
+
+      if (tenantId === 'tenantA') {
+        const { data } = await supabase
+          .from('presupuestos')
+          .select('id, total')
+          .eq('obra_id', obra.id)
+        presupuestos = data ?? []
+      } else if (tenantId === 'tenantB') {
+        const { data } = await supabase
+          .from('finance_entries')
+          .select('entry_id, amount')
+          .eq('project_id', obra.id)
+          .eq('type', 'budget')
+        presupuestos = (data ?? []).map(p => ({
+          id: p.entry_id,
+          total: p.amount,
+        }))
+      }
+
+      return {
+        id: obra.id,
+        name: obra.name ?? obra.nombre,
+        status: obra.status ?? obra.estado ?? 'activo',
+        budgets: presupuestos,
+      }
+    })
+  )
+}
+```
+
+### 5. Buenas prácticas
+
+#### Qué hacer
+- Normalizar los datos antes de enviarlos al frontend
+- Usar adaptadores por tenant para encapsular la lógica de compatibilidad
+- Usar RLS para proteger los datos a nivel de base
+- Manejar errores por tenant inexistente o sin configuración
+
+#### Qué no hacer
+- No mezcles lógicas de múltiples tenants en una misma función
+- No exponer columnas o estructuras internas distintas al frontend
+- No resolver las diferencias de tenants en el frontend (es responsabilidad del backend)
+
+### 6. Resultado esperado por el Frontend
+
+```json
+[
+  {
+    "id": "123",
+    "name": "Obra Central",
+    "status": "activo",
+    "budgets": [
+      { "id": "a1", "total": 50000 },
+      { "id": "a2", "total": 75000 }
+    ]
+  }
+]
+```
