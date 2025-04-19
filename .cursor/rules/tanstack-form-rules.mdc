@@ -3,249 +3,1638 @@ description:
 globs: 
 alwaysApply: true
 ---
-​TanStack Form is a powerful, type-safe, headless form management library designed for modern web applications. It offers a flexible, framework-agnostic approach to form handling, making it suitable for various front-end frameworks, including React, Vue, Angular, Solid, and Lit. With first-class TypeScript support, granular reactivity, and a modular architecture, TanStack Form streamlines form management and enhances developer productivity.​
+TanStack Form is unlike most form libraries you've used before. It's designed for large-scale production usage, with a focus on type safety, performance and composition for an unmatched developer experience.
 
-🔧 Installation
-To integrate TanStack Form into your project, install the React adapter:
+As a result, we've developed a philosophy around the library's usage that values scalability and long-term developer experience over short and sharable code snippets.
 
-bash
-Copiar
-Editar
-npm install @tanstack/react-form
-🧠 Core Concepts
-1. Form Options
-Define default values and other configurations using formOptions:​
-tanstack.com
-+1
-tanstack.com
-+1
+Here's an example of a form following many of our best practices, which will allow you to rapidly develop even high-complexity forms after a short onboarding experience:
 
 tsx
-Copiar
-Editar
-import { formOptions } from '@tanstack/react-form';
 
-const formOpts = formOptions({
-  defaultValues: {
-    firstName: '',
-    lastName: '',
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
+// Form components that pre-bind events from the form hook; check our "Form Composition" guide for more
+import { TextField, NumberField, SubmitButton } from '~our-app/ui-library'
+// We also support Valibot, ArkType, and any other standard schema library
+import { z } from 'zod'
+
+const { fieldContext, formContext } = createFormHookContexts()
+
+// Allow us to bind components to the form to keep type safety but reduce production boilerplate
+// Define this once to have a generator of consistent form instances throughout your app
+const { useAppForm } = createFormHook({
+  fieldComponents: {
+    TextField,
+    NumberField,
   },
-});
-2. Form Instance
-Create a form instance using the useForm hook:​
-tanstack.com
-+1
-blog.openreplay.com
-+1
-
-tsx
-Copiar
-Editar
-import { useForm } from '@tanstack/react-form';
-
-const form = useForm({
-  ...formOpts,
-  onSubmit: async ({ value }) => {
-    console.log(value);
+  formComponents: {
+    SubmitButton,
   },
-});
-3. Fields
-Define individual fields within your form:​
+  fieldContext,
+  formContext,
+})
 
-tsx
-Copiar
-Editar
-<form.Field name="firstName">
-  {(field) => (
-    <div>
-      <input
-        value={field.state.value}
-        onChange={(e) => field.handleChange(e.target.value)}
-      />
-      {field.state.meta.errors.map((error) => (
-        <p key={error}>{error}</p>
-      ))}
-    </div>
-  )}
-</form.Field>
-4. Validation
-Implement validation using schema libraries like Zod:​
-tanstack.com
-+4
-tanstack.com
-+4
-tanstack.com
-+4
-
-tsx
-Copiar
-Editar
-import { z } from 'zod';
-
-const schema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-});
-
-const form = useForm({
-  defaultValues: {
-    firstName: '',
-    lastName: '',
-  },
-  validators: {
-    onChange: schema,
-  },
-  onSubmit: async ({ value }) => {
-    console.log(value);
-  },
-});
-5. Submission Handling
-Handle form submission with built-in methods:​
-
-tsx
-Copiar
-Editar
-<form
-  onSubmit={(e) => {
-    e.preventDefault();
-    form.handleSubmit();
-  }}
->
-  {/* form fields */}
-  <button type="submit">Submit</button>
-</form>
-🧩 Advanced Features
-Array Fields: Manage dynamic lists of fields.
-
-Async Validation: Perform validations that require asynchronous operations.
-
-Field-Level Subscriptions: Optimize performance by subscribing to specific field changes.
-
-Integration with UI Libraries: Seamlessly integrate with libraries like Material UI, Chakra UI, etc.
-
-Server-Side Rendering (SSR): Support for frameworks like Next.js and Remix.​
-tanstack.com
-+6
-tanstack.com
-+6
-tanstack.com
-+6
-
-📁 File Structure for a Basic Form
-Assuming a React project, your file structure might look like this:​
-
-css
-Copiar
-Editar
-src/
-├── components/
-│   └── Form.tsx
-├── App.tsx
-└── index.tsx
-Form.tsx
-tsx
-Copiar
-Editar
-import React from 'react';
-import { useForm } from '@tanstack/react-form';
-
-const Form = () => {
-  const form = useForm({
+const PeoplePage = () => {
+  const form = useAppForm({
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      username: '',
+      age: 0,
     },
-    onSubmit: async ({ value }) => {
-      console.log(value);
+    validators: {
+      // Pass a schema or function to validate
+      onChange: z.object({
+        username: z.string(),
+        age: z.number().min(13),
+      }),
     },
-  });
+    onSubmit: ({ value }) => {
+      // Do something with form data
+      alert(JSON.stringify(value, null, 2))
+    },
+  })
 
   return (
     <form
       onSubmit={(e) => {
-        e.preventDefault();
-        form.handleSubmit();
+        e.preventDefault()
+        form.handleSubmit()
       }}
     >
-      <form.Field name="firstName">
-        {(field) => (
-          <div>
-            <label>First Name</label>
-            <input
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
-            {field.state.meta.errors.map((error) => (
-              <p key={error}>{error}</p>
-            ))}
-          </div>
-        )}
-      </form.Field>
-
-      <form.Field name="lastName">
-        {(field) => (
-          <div>
-            <label>Last Name</label>
-            <input
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
-            {field.state.meta.errors.map((error) => (
-              <p key={error}>{error}</p>
-            ))}
-          </div>
-        )}
-      </form.Field>
-
-      <button type="submit">Submit</button>
+      <h1>Personal Information</h1>
+      {/* Components are bound to `form` and `field` to ensure extreme type safety */}
+      {/* Use `form.AppField` to render a component bound to a single field */}
+      <form.AppField
+        name="username"
+        children={(field) => <field.TextField label="Full Name" />}
+      />
+      {/* The "name" property will throw a TypeScript error if typo'd  */}
+      <form.AppField
+        name="age"
+        children={(field) => <field.NumberField label="Age" />}
+      />
+      {/* Components in `form.AppForm` have access to the form context */}
+      <form.AppForm>
+        <form.SubmitButton />
+      </form.AppForm>
     </form>
-  );
-};
+  )
+}
 
-export default Form;
-App.tsx
+const rootElement = document.getElementById('root')!
+ReactDOM.createRoot(rootElement).render(<PeoplePage />)
+While we generally suggest using createFormHook for reduced boilerplate in the long-run, we also support one-off components and other behaviors using useForm and form.Field:
+
 tsx
-Copiar
-Editar
-import React from 'react';
-import Form from './components/Form';
 
-const App = () => (
-  <div>
-    <h1>My Form</h1>
-    <Form />
-  </div>
-);
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { useForm } from '@tanstack/react-form'
 
-export default App;
-index.tsx
+const PeoplePage = () => {
+  const form = useForm({
+    defaultValues: {
+      username: '',
+      age: 0,
+    },
+    onSubmit: ({ value }) => {
+      // Do something with form data
+      alert(JSON.stringify(value, null, 2))
+    },
+  })
+
+  return (
+    <form.Field
+      name="age"
+      validators={{
+        // We can choose between form-wide and field-specific validators
+        onChange: ({ value }) =>
+          value > 13 ? undefined : 'Must be 13 or older',
+      }}
+      children={(field) => (
+        <>
+          <input
+            name={field.name}
+            value={field.state.value}
+            onBlur={field.handleBlur}
+            type="number"
+            onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+          />
+          {field.state.meta.errors.length ? (
+            <em>{field.state.meta.errors.join(',')}</em>
+          ) : null}
+        </>
+      )}
+    />
+  )
+}
+
+const rootElement = document.getElementById('root')!
+ReactDOM.createRoot(rootElement).render(<PeoplePage />)
+All properties from useForm can be used in useAppForm and all properties from form.Field can be used in form.AppField.
+
+Basic Concepts and Terminology
+This page introduces the basic concepts and terminology used in the @tanstack/react-form library. Familiarizing yourself with these concepts will help you better understand and work with the library.
+
+Form Options
+You can create options for your form so that it can be shared between multiple forms by using the formOptions function.
+
+Example:
+
 tsx
-Copiar
-Editar
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
 
-ReactDOM.render(<App />, document.getElementById('root'));
-📚 Additional Resources
-Official Documentation: TanStack Form Docs
+interface User {
+  firstName: string
+  lastName: string
+  hobbies: Array<string>
+}
+const defaultUser: User = { firstName: '', lastName: '', hobbies: [] }
 
-Code Examples: CodeSandbox Examples
+const formOpts = formOptions({
+  defaultValues: defaultUser,
+})
+Form Instance
+A Form Instance is an object that represents an individual form and provides methods and properties for working with the form. You create a form instance using the useForm hook provided by the form options. The hook accepts an object with an onSubmit function, which is called when the form is submitted.
 
-Video Tutorial: TanStack Form Tutorial​
-tanstack.com
-Medium
-+6
-CodeSandbox
-+6
-tanstack.com
-+6
-YouTube
+tsx
 
-TanStack Form provides a comprehensive solution for form management in modern web applications. Its flexibility, performance, and type safety make it a valuable tool for developers aiming to build robust and user-friendly forms.​
-GitHub
-+2
-tanstack.com
-+2
-blog.openreplay.com
-+2
+const form = useForm({
+  ...formOpts,
+  onSubmit: async ({ value }) => {
+    // Do something with form data
+    console.log(value)
+  },
+})
+You may also create a form instance without using formOptions by using the standalone useForm API:
+
+tsx
+
+interface User {
+  firstName: string
+  lastName: string
+  hobbies: Array<string>
+}
+const defaultUser: User = { firstName: '', lastName: '', hobbies: [] }
+
+const form = useForm({
+  defaultValues: defaultUser,
+  onSubmit: async ({ value }) => {
+    // Do something with form data
+    console.log(value)
+  },
+})
+Field
+A Field represents a single form input element, such as a text input or a checkbox. Fields are created using the form.Field component provided by the form instance. The component accepts a name prop, which should match a key in the form's default values. It also accepts a children prop, which is a render prop function that takes a field object as its argument.
+
+Example:
+
+tsx
+
+<form.Field
+  name="firstName"
+  children={(field) => (
+    <>
+      <input
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+      <FieldInfo field={field} />
+    </>
+  )}
+/>
+Field State
+Each field has its own state, which includes its current value, validation status, error messages, and other metadata. You can access a field's state using the field.state property.
+
+Example:
+
+tsx
+
+const {
+  value,
+  meta: { errors, isValidating },
+} = field.state
+There are three field states that can be useful to see how the user interacts with a field: A field is "touched" when the user clicks/tabs into it, "pristine" until the user changes value in it, and "dirty" after the value has been changed. You can check these states via the isTouched, isPristine and isDirty flags, as seen below.
+
+tsx
+
+const { isTouched, isPristine, isDirty } = field.state.meta
+Field states
+
+Important note for users coming from React Hook Form: the isDirty flag in TanStack/form is different from the flag with the same name in RHF. In RHF, isDirty = true, when the form's values are different from the original values. If the user changes the values in a form, and then changes them again to end up with values that match the form's default values, isDirty will be false in RHF, but true in TanStack/form. The default values are exposed both on the form's and the field's level in TanStack/form (form.options.defaultValues, field.options.defaultValue), so you can write your own isDefaultValue() helper if you need to emulate RHF's behavior.`
+
+Field API
+The Field API is an object passed to the render prop function when creating a field. It provides methods for working with the field's state.
+
+Example:
+
+tsx
+
+<input
+  value={field.state.value}
+  onBlur={field.handleBlur}
+  onChange={(e) => field.handleChange(e.target.value)}
+/>
+Validation
+@tanstack/react-form provides both synchronous and asynchronous validation out of the box. Validation functions can be passed to the form.Field component using the validators prop.
+
+Example:
+
+tsx
+
+<form.Field
+  name="firstName"
+  validators={{
+    onChange: ({ value }) =>
+      !value
+        ? 'A first name is required'
+        : value.length < 3
+          ? 'First name must be at least 3 characters'
+          : undefined,
+    onChangeAsync: async ({ value }) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return value.includes('error') && 'No "error" allowed in first name'
+    },
+  }}
+  children={(field) => (
+    <>
+      <input
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+      <FieldInfo field={field} />
+    </>
+  )}
+/>
+Validation with Standard Schema Libraries
+In addition to hand-rolled validation options, we also support the Standard Schema specification.
+
+You can define a schema using any of the libraries implementing the specification and pass it to a form or field validator.
+
+Supported libraries include:
+
+Zod
+Valibot
+ArkType
+tsx
+
+import { z } from 'zod'
+
+const userSchema = z.object({
+  age: z.number().gte(13, 'You must be 13 to make an account'),
+})
+
+function App() {
+  const form = useForm({
+    defaultValues: {
+      age: 0,
+    },
+    validators: {
+      onChange: userSchema,
+    },
+  })
+  return (
+    <div>
+      <form.Field
+        name="age"
+        children={(field) => {
+          return <>{/* ... */}</>
+        }}
+      />
+    </div>
+  )
+}
+Reactivity
+@tanstack/react-form offers various ways to subscribe to form and field state changes, most notably the useStore(form.store) hook and the form.Subscribe component. These methods allow you to optimize your form's rendering performance by only updating components when necessary.
+
+Example:
+
+tsx
+
+const firstName = useStore(form.store, (state) => state.values.firstName)
+//...
+<form.Subscribe
+  selector={(state) => [state.canSubmit, state.isSubmitting]}
+  children={([canSubmit, isSubmitting]) => (
+    <button type="submit" disabled={!canSubmit}>
+      {isSubmitting ? '...' : 'Submit'}
+    </button>
+  )}
+/>
+It is important to remember that while the useStore hook's selector prop is optional, it is strongly recommended to provide one, as omitting it will result in unnecessary re-renders.
+
+tsx
+
+// Correct use
+const firstName = useStore(form.store, (state) => state.values.firstName)
+const errors = useStore(form.store, (state) => state.errorMap)
+// Incorrect use
+const store = useStore(form.store)
+Note: The usage of the useField hook to achieve reactivity is discouraged since it is designed to be used thoughtfully within the form.Field component. You might want to use useStore(form.store) instead.
+
+Listeners
+@tanstack/react-form allows you to react to specific triggers and "listen" to them to dispatch side effects.
+
+Example:
+
+tsx
+
+<form.Field
+  name="country"
+  listeners={{
+    onChange: ({ value }) => {
+      console.log(`Country changed to: ${value}, resetting province`)
+      form.setFieldValue('province', '')
+    },
+  }}
+/>
+More information can be found at Listeners
+
+Array Fields
+Array fields allow you to manage a list of values within a form, such as a list of hobbies. You can create an array field using the form.Field component with the mode="array" prop.
+
+When working with array fields, you can use the fields pushValue, removeValue, swapValues and moveValue methods to add, remove, and swap values in the array.
+
+Example:
+
+tsx
+
+<form.Field
+  name="hobbies"
+  mode="array"
+  children={(hobbiesField) => (
+    <div>
+      Hobbies
+      <div>
+        {!hobbiesField.state.value.length
+          ? 'No hobbies found.'
+          : hobbiesField.state.value.map((_, i) => (
+              <div key={i}>
+                <form.Field
+                  name={`hobbies[${i}].name`}
+                  children={(field) => {
+                    return (
+                      <div>
+                        <label htmlFor={field.name}>Name:</label>
+                        <input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => hobbiesField.removeValue(i)}
+                        >
+                          X
+                        </button>
+                        <FieldInfo field={field} />
+                      </div>
+                    )
+                  }}
+                />
+                <form.Field
+                  name={`hobbies[${i}].description`}
+                  children={(field) => {
+                    return (
+                      <div>
+                        <label htmlFor={field.name}>Description:</label>
+                        <input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                        <FieldInfo field={field} />
+                      </div>
+                    )
+                  }}
+                />
+              </div>
+            ))}
+      </div>
+      <button
+        type="button"
+        onClick={() =>
+          hobbiesField.pushValue({
+            name: '',
+            description: '',
+            yearsOfExperience: 0,
+          })
+        }
+      >
+        Add hobby
+      </button>
+    </div>
+  )}
+/>
+Reset Buttons
+When using <button type="reset"> in conjunction with TanStack Form's form.reset(), you need to prevent the default HTML reset behavior to avoid unexpected resets of form elements (especially <select> elements) to their initial HTML values. Use event.preventDefault() inside the button's onClick handler to prevent the native form reset.
+
+Example:
+
+tsx
+
+<button
+  type="reset"
+  onClick={(event) => {
+    event.preventDefault()
+    form.reset()
+  }}
+>
+  Reset
+</button>
+Alternatively, you can use <button type="button"> to prevent the native HTML reset.
+
+tsx
+
+<button
+  type="button"
+  onClick={() => {
+    form.reset()
+  }}
+>
+  Reset
+</button>
+These are the basic concepts and terminology used in the @tanstack/react-form library. Understanding these concepts will help you work more effectively with the library and create complex forms with ease.
+
+
+Form and Field Validation
+At the core of TanStack Form's functionalities is the concept of validation. TanStack Form makes validation highly customizable:
+
+You can control when to perform the validation (on change, on input, on blur, on submit...)
+Validation rules can be defined at the field level or at the form level
+Validation can be synchronous or asynchronous (for example, as a result of an API call)
+When is validation performed?
+It's up to you! The <Field /> component accepts some callbacks as props such as onChange or onBlur. Those callbacks are passed the current value of the field, as well as the fieldAPI object, so that you can perform the validation. If you find a validation error, simply return the error message as string and it will be available in field.state.meta.errors.
+
+Here is an example:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChange: ({ value }) =>
+      value < 13 ? 'You must be 13 to make an account' : undefined,
+  }}
+>
+  {(field) => (
+    <>
+      <label htmlFor={field.name}>Age:</label>
+      <input
+        id={field.name}
+        name={field.name}
+        value={field.state.value}
+        type="number"
+        onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+      />
+      {field.state.meta.errors ? (
+        <em role="alert">{field.state.meta.errors.join(', ')}</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+In the example above, the validation is done at each keystroke (onChange). If, instead, we wanted the validation to be done when the field is blurred, we would change the code above like so:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onBlur: ({ value }) =>
+      value < 13 ? 'You must be 13 to make an account' : undefined,
+  }}
+>
+  {(field) => (
+    <>
+      <label htmlFor={field.name}>Age:</label>
+      <input
+        id={field.name}
+        name={field.name}
+        value={field.state.value}
+        type="number"
+        // Listen to the onBlur event on the field
+        onBlur={field.handleBlur}
+        // We always need to implement onChange, so that TanStack Form receives the changes
+        onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+      />
+      {field.state.meta.errors ? (
+        <em role="alert">{field.state.meta.errors.join(', ')}</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+So you can control when the validation is done by implementing the desired callback. You can even perform different pieces of validation at different times:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChange: ({ value }) =>
+      value < 13 ? 'You must be 13 to make an account' : undefined,
+    onBlur: ({ value }) => (value < 0 ? 'Invalid value' : undefined),
+  }}
+>
+  {(field) => (
+    <>
+      <label htmlFor={field.name}>Age:</label>
+      <input
+        id={field.name}
+        name={field.name}
+        value={field.state.value}
+        type="number"
+        // Listen to the onBlur event on the field
+        onBlur={field.handleBlur}
+        // We always need to implement onChange, so that TanStack Form receives the changes
+        onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+      />
+      {field.state.meta.errors ? (
+        <em role="alert">{field.state.meta.errors.join(', ')}</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+In the example above, we are validating different things on the same field at different times (at each keystroke and when blurring the field). Since field.state.meta.errors is an array, all the relevant errors at a given time are displayed. You can also use field.state.meta.errorMap to get errors based on when the validation was done (onChange, onBlur etc...). More info about displaying errors below.
+
+Displaying Errors
+Once you have your validation in place, you can map the errors from an array to be displayed in your UI:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChange: ({ value }) =>
+      value < 13 ? 'You must be 13 to make an account' : undefined,
+  }}
+>
+  {(field) => {
+    return (
+      <>
+        {/* ... */}
+        {field.state.meta.errors.length ? (
+          <em>{field.state.meta.errors.join(',')}</em>
+        ) : null}
+      </>
+    )
+  }}
+</form.Field>
+Or use the errorMap property to access the specific error you're looking for:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChange: ({ value }) =>
+      value < 13 ? 'You must be 13 to make an account' : undefined,
+  }}
+>
+  {(field) => (
+    <>
+      {/* ... */}
+      {field.state.meta.errorMap['onChange'] ? (
+        <em>{field.state.meta.errorMap['onChange']}</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+It's worth mentioning that our errors array and the errorMap matches the types returned by the validators. This means that:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChange: ({ value }) => (value < 13 ? { isOldEnough: false } : undefined),
+  }}
+>
+  {(field) => (
+    <>
+      {/* ... */}
+      {/* errorMap.onChange is type `{isOldEnough: false} | undefined` */}
+      {/* meta.errors is type `Array<{isOldEnough: false} | undefined>` */}
+      {!field.state.meta.errorMap['onChange']?.isOldEnough ? (
+        <em>The user is not old enough</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+Validation at field level vs at form level
+As shown above, each <Field> accepts its own validation rules via the onChange, onBlur etc... callbacks. It is also possible to define validation rules at the form level (as opposed to field by field) by passing similar callbacks to the useForm() hook.
+
+Example:
+
+tsx
+
+export default function App() {
+  const form = useForm({
+    defaultValues: {
+      age: 0,
+    },
+    onSubmit: async ({ value }) => {
+      console.log(value)
+    },
+    validators: {
+      // Add validators to the form the same way you would add them to a field
+      onChange({ value }) {
+        if (value.age < 13) {
+          return 'Must be 13 or older to sign'
+        }
+        return undefined
+      },
+    },
+  })
+
+  // Subscribe to the form's error map so that updates to it will render
+  // alternately, you can use `form.Subscribe`
+  const formErrorMap = useStore(form.store, (state) => state.errorMap)
+
+  return (
+    <div>
+      {/* ... */}
+      {formErrorMap.onChange ? (
+        <div>
+          <em>There was an error on the form: {formErrorMap.onChange}</em>
+        </div>
+      ) : null}
+      {/* ... */}
+    </div>
+  )
+}
+Setting field-level errors from the form's validators
+You can set errors on the fields from the form's validators. One common use case for this is validating all the fields on submit by calling a single API endpoint in the form's onSubmitAsync validator.
+
+tsx
+
+export default function App() {
+  const form = useForm({
+    defaultValues: {
+      age: 0,
+    },
+    validators: {
+      onSubmitAsync: async ({ value }) => {
+        // Verify the age on the server
+        const isOlderThan13 = await verifyAgeOnServer(value.age)
+        if (!isOlderThan13) {
+          return {
+            form: 'Invalid data', // The `form` key is optional
+            fields: {
+              age: 'Must be 13 or older to sign',
+            },
+          }
+        }
+
+        return null
+      },
+    },
+  })
+
+  return (
+    <div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          void form.handleSubmit()
+        }}
+      >
+        <form.Field name="age">
+          {(field) => (
+            <>
+              <label htmlFor={field.name}>Age:</label>
+              <input
+                id={field.name}
+                name={field.name}
+                value={field.state.value}
+                type="number"
+                onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+              />
+              {field.state.meta.errors ? (
+                <em role="alert">{field.state.meta.errors.join(', ')}</em>
+              ) : null}
+            </>
+          )}
+        </form.Field>
+        <form.Subscribe
+          selector={(state) => [state.errorMap]}
+          children={([errorMap]) =>
+            errorMap.onSubmit ? (
+              <div>
+                <em>There was an error on the form: {errorMap.onSubmit}</em>
+              </div>
+            ) : null
+          }
+        />
+        {/*...*/}
+      </form>
+    </div>
+  )
+}
+Something worth mentioning is that if you have a form validation function that returns an error, that error may be overwritten by the field-specific validation.
+
+This means that:
+
+jsx
+
+const form = useForm({
+  defaultValues: {
+    age: 0,
+  },
+  validators: {
+    onChange: ({ value }) => {
+      return {
+        fields: {
+          age: value.age < 12 ? 'Too young!' : undefined,
+        },
+      }
+    },
+  },
+})
+
+// ...
+
+return (
+  <form.Field
+    name="age"
+    validators={{
+      onChange: ({ value }) => (value % 2 === 0 ? 'Must be odd!' : undefined),
+    }}
+  />
+)
+Will only show 'Must be odd! even if the 'Too young!' error is returned by the form-level validation.
+
+Asynchronous Functional Validation
+While we suspect most validations will be synchronous, there are many instances where a network call or some other async operation would be useful to validate against.
+
+To do this, we have dedicated onChangeAsync, onBlurAsync, and other methods that can be used to validate against:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChangeAsync: async ({ value }) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return value < 13 ? 'You must be 13 to make an account' : undefined
+    },
+  }}
+>
+  {(field) => (
+    <>
+      <label htmlFor={field.name}>Age:</label>
+      <input
+        id={field.name}
+        name={field.name}
+        value={field.state.value}
+        type="number"
+        onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+      />
+      {field.state.meta.errors ? (
+        <em role="alert">{field.state.meta.errors.join(', ')}</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+Synchronous and Asynchronous validations can coexist. For example, it is possible to define both onBlur and onBlurAsync on the same field:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onBlur: ({ value }) => (value < 13 ? 'You must be at least 13' : undefined),
+    onBlurAsync: async ({ value }) => {
+      const currentAge = await fetchCurrentAgeOnProfile()
+      return value < currentAge ? 'You can only increase the age' : undefined
+    },
+  }}
+>
+  {(field) => (
+    <>
+      <label htmlFor={field.name}>Age:</label>
+      <input
+        id={field.name}
+        name={field.name}
+        value={field.state.value}
+        type="number"
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+      />
+      {field.state.meta.errors ? (
+        <em role="alert">{field.state.meta.errors.join(', ')}</em>
+      ) : null}
+    </>
+  )}
+</form.Field>
+The synchronous validation method (onBlur) is run first and the asynchronous method (onBlurAsync) is only run if the synchronous one (onBlur) succeeds. To change this behaviour, set the asyncAlways option to true, and the async method will be run regardless of the result of the sync method.
+
+Built-in Debouncing
+While async calls are the way to go when validating against the database, running a network request on every keystroke is a good way to DDOS your database.
+
+Instead, we enable an easy method for debouncing your async calls by adding a single property:
+
+tsx
+
+<form.Field
+  name="age"
+  asyncDebounceMs={500}
+  validators={{
+    onChangeAsync: async ({ value }) => {
+      // ...
+    },
+  }}
+  children={(field) => {
+    return <>{/* ... */}</>
+  }}
+/>
+This will debounce every async call with a 500ms delay. You can even override this property on a per-validation property:
+
+tsx
+
+<form.Field
+  name="age"
+  asyncDebounceMs={500}
+  validators={{
+    onChangeAsyncDebounceMs: 1500,
+    onChangeAsync: async ({ value }) => {
+      // ...
+    },
+    onBlurAsync: async ({ value }) => {
+      // ...
+    },
+  }}
+  children={(field) => {
+    return <>{/* ... */}</>
+  }}
+/>
+This will run onChangeAsync every 1500ms while onBlurAsync will run every 500ms.
+
+Validation through Schema Libraries
+While functions provide more flexibility and customization over your validation, they can be a bit verbose. To help solve this, there are libraries that provide schema-based validation to make shorthand and type-strict validation substantially easier. You can also define a single schema for your entire form and pass it to the form level, errors will be automatically propagated to the fields.
+
+Standard Schema Libraries
+TanStack Form natively supports all libraries following the Standard Schema specification, most notably:
+
+Zod
+Valibot
+ArkType
+Effect/Schema
+Note: make sure to use the latest version of the schema libraries as older versions might not support Standard Schema yet.
+
+To use schemas from these libraries you can pass them to the validators props as you would do with a custom function:
+
+tsx
+
+const userSchema = z.object({
+  age: z.number().gte(13, 'You must be 13 to make an account'),
+})
+
+function App() {
+  const form = useForm({
+    defaultValues: {
+      age: 0,
+    },
+    validators: {
+      onChange: userSchema,
+    },
+  })
+  return (
+    <div>
+      <form.Field
+        name="age"
+        children={(field) => {
+          return <>{/* ... */}</>
+        }}
+      />
+    </div>
+  )
+}
+Async validations on form and field level are supported as well:
+
+tsx
+
+<form.Field
+  name="age"
+  validators={{
+    onChange: z.number().gte(13, 'You must be 13 to make an account'),
+    onChangeAsyncDebounceMs: 500,
+    onChangeAsync: z.number().refine(
+      async (value) => {
+        const currentAge = await fetchCurrentAgeOnProfile()
+        return value >= currentAge
+      },
+      {
+        message: 'You can only increase the age',
+      },
+    ),
+  }}
+  children={(field) => {
+    return <>{/* ... */}</>
+  }}
+/>
+If you need even more control over your Standard Schema validation, you can combine a Standard Schema with a callback function like so:
+
+tsx
+
+<form.Field
+  name="age"
+  asyncDebounceMs={500}
+  validators={{
+    onChangeAsync: async ({ value, fieldApi }) => {
+      const errors = fieldApi.parseValueWithSchema(
+        z.number().gte(13, 'You must be 13 to make an account'),
+      )
+      if (errors) return errors
+      // continue with your validation
+    },
+  }}
+  children={(field) => {
+    return <>{/* ... */}</>
+  }}
+/>
+Preventing invalid forms from being submitted
+The onChange, onBlur etc... callbacks are also run when the form is submitted and the submission is blocked if the form is invalid.
+
+The form state object has a canSubmit flag that is false when any field is invalid and the form has been touched (canSubmit is true until the form has been touched, even if some fields are "technically" invalid based on their onChange/onBlur props).
+
+You can subscribe to it via form.Subscribe and use the value in order to, for example, disable the submit button when the form is invalid (in practice, disabled buttons are not accessible, use aria-disabled instead).
+
+tsx
+
+const form = useForm(/* ... */)
+
+return (
+  /* ... */
+
+  // Dynamic submit button
+  <form.Subscribe
+    selector={(state) => [state.canSubmit, state.isSubmitting]}
+    children={([canSubmit, isSubmitting]) => (
+      <button type="submit" disabled={!canSubmit}>
+        {isSubmitting ? '...' : 'Submit'}
+      </button>
+    )}
+  />
+)
+
+Async Initial Values
+Let's say that you want to fetch some data from an API and use it as the initial value of a form.
+
+While this problem sounds simple on the surface, there are hidden complexities you might not have thought of thus far.
+
+For example, you might want to show a loading spinner while the data is being fetched, or you might want to handle errors gracefully. Likewise, you could also find yourself looking for a way to cache the data so that you don't have to fetch it every time the form is rendered.
+
+While we could implement many of these features from scratch, it would end up looking a lot like another project we maintain: TanStack Query.
+
+As such, this guide shows you how you can mix-n-match TanStack Form with TanStack Query to achieve the desired behavior.
+
+Basic Usage
+tsx
+
+import { useForm } from '@tanstack/react-form'
+import { useQuery } from '@tanstack/react-query'
+
+export default function App() {
+  const {data, isLoading} = useQuery({
+    queryKey: ['data'],
+    queryFn: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return {firstName: 'FirstName', lastName: "LastName"}
+    }
+  })
+
+  const form = useForm({
+    defaultValues: {
+      firstName: data?.firstName ?? '',
+      lastName: data?.lastName ?? '',
+    },
+    onSubmit: async ({ value }) => {
+      // Do something with form data
+      console.log(value)
+    },
+  })
+
+  if (isLoading) return <p>Loading..</p>
+
+  return (
+    // ...
+  )
+}
+This will show a loading spinner until the data is fetched, and then it will render the form with the fetched data as the initial values.
+
+Arrays
+TanStack Form supports arrays as values in a form, including sub-object values inside of an array.
+
+Basic Usage
+To use an array, you can use field.state.value on an array value:
+
+jsx
+
+function App() {
+  const form = useForm({
+    defaultValues: {
+      people: [],
+    },
+  })
+
+  return (
+    <form.Field name="people" mode="array">
+      {(field) => (
+        <div>
+          {field.state.value.map((_, i) => {
+            // ...
+          })}
+        </div>
+      )}
+    </form.Field>
+  )
+}
+This will generate the mapped JSX every time you run pushValue on field:
+
+jsx
+
+<button onClick={() => field.pushValue({ name: '', age: 0 })} type="button">
+  Add person
+</button>
+Finally, you can use a subfield like so:
+
+jsx
+
+<form.Field key={i} name={`people[${i}].name`}>
+  {(subField) => (
+    <input
+      value={subField.state.value}
+      onChange={(e) => subField.handleChange(e.target.value)}
+    />
+  )}
+</form.Field>
+Full Example
+jsx
+
+function App() {
+  const form = useForm({
+    defaultValues: {
+      people: [],
+    },
+    onSubmit({ value }) {
+      alert(JSON.stringify(value))
+    },
+  })
+
+  return (
+    <div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          form.handleSubmit()
+        }}
+      >
+        <form.Field name="people" mode="array">
+          {(field) => {
+            return (
+              <div>
+                {field.state.value.map((_, i) => {
+                  return (
+                    <form.Field key={i} name={`people[${i}].name`}>
+                      {(subField) => {
+                        return (
+                          <div>
+                            <label>
+                              <div>Name for person {i}</div>
+                              <input
+                                value={subField.state.value}
+                                onChange={(e) =>
+                                  subField.handleChange(e.target.value)
+                                }
+                              />
+                            </label>
+                          </div>
+                        )
+                      }}
+                    </form.Field>
+                  )
+                })}
+                <button
+                  onClick={() => field.pushValue({ name: '', age: 0 })}
+                  type="button"
+                >
+                  Add person
+                </button>
+              </div>
+            )
+          }}
+        </form.Field>
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+          children={([canSubmit, isSubmitting]) => (
+            <button type="submit" disabled={!canSubmit}>
+              {isSubmitting ? '...' : 'Submit'}
+            </button>
+          )}
+        />
+      </form>
+    </div>
+  )
+}
+
+
+Link Two Form Fields Together
+You may find yourself needing to link two fields together; when one is validated as another field's value has changed. One such usage is when you have both a password and confirm_password field, where you want to confirm_password to error out when password's value does not match; regardless of which field triggered the value change.
+
+Imagine the following userflow:
+
+User updates confirm password field.
+User updates the non-confirm password field.
+In this example, the form will still have errors present, as the "confirm password" field validation has not been re-ran to mark as accepted.
+
+To solve this, we need to make sure that the "confirm password" validation is re-run when the password field is updated. To do this, you can add a onChangeListenTo property to the confirm_password field.
+
+tsx
+
+function App() {
+  const form = useForm({
+    defaultValues: {
+      password: '',
+      confirm_password: '',
+    },
+    // ...
+  })
+
+  return (
+    <div>
+      <form.Field name="password">
+        {(field) => (
+          <label>
+            <div>Password</div>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+          </label>
+        )}
+      </form.Field>
+      <form.Field
+        name="confirm_password"
+        validators={{
+          onChangeListenTo: ['password'],
+          onChange: ({ value, fieldApi }) => {
+            if (value !== fieldApi.form.getFieldValue('password')) {
+              return 'Passwords do not match'
+            }
+            return undefined
+          },
+        }}
+      >
+        {(field) => (
+          <div>
+            <label>
+              <div>Confirm Password</div>
+              <input
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+            </label>
+            {field.state.meta.errors.map((err) => (
+              <div key={err}>{err}</div>
+            ))}
+          </div>
+        )}
+      </form.Field>
+    </div>
+  )
+}
+This similarly works with onBlurListenTo property, which will re-run the validation when the field is blurred.
+
+Reactivity
+Tanstack Form doesn't cause re-renders when interacting with the form. So you might find yourself trying to use a form or field state value without success.
+
+If you would like to access reactive values, you will need to subscribe to them using one of two methods: useStore or the form.Subscribe component.
+
+Some uses for these subscriptions are rendering up-to-date field values, determining what to render based on a condition, or using field values inside the logic of your component.
+
+For situations where you want to "react" to triggers, check out the listener API.
+
+useStore
+The useStore hook is perfect when you need to access form values within the logic of your component. useStore takes two parameters. First, the form store. Second a selector to fine tune the piece of the form you wish to subscribe to.
+
+tsx
+
+const firstName = useStore(form.store, (state) => state.values.firstName)
+const errors = useStore(form.store, (state) => state.errorMap)
+You can access any piece of the form state in the selector.
+
+Note, that useStore will cause a whole component re-render whenever the value subscribed to changes.
+
+While it IS possible to omit the selector, resist the urge as omitting it would result in many unnecessary re-renders whenever any of the form state changes.
+
+form.Subscribe
+The form.Subscribe component is best suited when you need to react to something within the UI of your component. For example, showing or hiding ui based on the value of a form field.
+
+tsx
+
+<form.Subscribe
+  selector={(state) => state.values.firstName}
+  children={(firstName) => (
+    <form.Field>
+      {(field) => (
+        <input
+          name="lastName"
+          value={field.state.lastName}
+          onChange={field.handleChange}
+        />
+      )}
+    </form.Field>
+  )}
+/>
+The form.Subscribe component doesn't trigger component-level re-renders. Anytime the value subscribed to changes, only the form.Subscribe component re-renders.
+
+The choice between whether to use useStore or form.Subscribe mainly boils down to that if it's rendered in the ui, reach for form.Subscribe for its optimizations perks, and if you need the reactivity within the logic, then useStore is the choice to make.
+
+Side effects for event triggers
+For situations where you want to "affect" or "react" to triggers, there's the listener API. For example, if you, as the developer, want to reset a form field as a result of another field changing, you would use the listener API.
+
+Imagine the following user flow:
+
+User selects a country from a drop-down.
+User then selects a province from another drop-down.
+User changes the selected country to a different one.
+In this example, when the user changes the country, the selected province needs to be reset as it's no longer valid. With the listener API, we can subscribe to the onChange event and dispatch a reset to the field "province" when the listener is fired.
+
+Events that can be "listened" to are:
+
+onChange
+onBlur
+onMount
+onSubmit
+tsx
+
+function App() {
+  const form = useForm({
+    defaultValues: {
+      country: '',
+      province: '',
+    },
+    // ...
+  })
+
+  return (
+    <div>
+      <form.Field
+        name="country"
+        listeners={{
+          onChange: ({ value }) => {
+            console.log(`Country changed to: ${value}, resetting province`)
+            form.setFieldValue('province', '')
+          },
+        }}
+      >
+        {(field) => (
+          <label>
+            <div>Country</div>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+          </label>
+        )}
+      </form.Field>
+
+      <form.Field name="province">
+        {(field) => (
+          <label>
+            <div>Province</div>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+          </label>
+        )}
+      </form.Field>
+    </div>
+  )
+}
+Built-in Debouncing
+If you are making an API request inside a listener, you may want to debounce the calls as it can lead to performance issues. We enable an easy method for debouncing your listeners by adding a onChangeDebounceMs or onBlurDebounceMs.
+
+tsx
+
+<form.Field
+  name="country"
+  listeners={{
+    onChangeDebounceMs: 500, // 500ms debounce
+    onChange: ({ value }) => {
+      console.log(`Country changed to: ${value} without a change within 500ms, resetting province`)
+      form.setFieldValue('province', '')
+    },
+  }}
+>
+  {(field) => (
+    /* ... */
+  )}
+</form.Field>
+
+Submission handling
+In a situation where you want to have multiple form submission types, for example, a form that has a button that navigates to a sub-form and another button that handles a standard submission, you can make use of the onSubmitMeta prop and the handleSubmit function overloads.
+
+Basic Usage
+First you must define the default state of the form.onSubmitMeta prop:
+
+tsx
+
+const form = useForm({
+  defaultValues: {
+    firstName: 'Rick',
+  },
+  // {} is the default value passed to `onSubmit`'s `meta` property
+  onSubmitMeta: {} as { lastName: string },
+  onSubmit: async ({ value, meta }) => {
+    // Do something with the values passed via handleSubmit
+    console.log(`${value.firstName} - ${meta}`)
+  },
+})
+Note: the default state of onSubmitMeta is never, so if the prop is not provided and you try to access it in handleSubmit, or onSubmit it will error.
+
+Then when you call onSubmit you can provide it the predefined meta like so:
+
+tsx
+
+<form
+  onSubmit={(e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    form.handleSubmit({
+      lastName: 'Astley',
+    })
+  }}
+></form>
+
+Usage of TanStack Form with UI Libraries
+TanStack Form is a headless library, offering you complete flexibility to style it as you see fit. It's compatible with a wide range of UI libraries, including Tailwind, Material UI, Mantine, or even plain CSS.
+
+This guide focuses on Material UI and Mantine, but the concepts are applicable to any UI library of your choice.
+
+Prerequisites
+Before integrating TanStack Form with a UI library, ensure the necessary dependencies are installed in your project:
+
+For Material UI, follow the installation instructions on their official site.
+For Mantine, refer to their documentation.
+Note: While you can mix and match libraries, it's generally advisable to stick with one to maintain consistency and minimize bloat.
+
+Example with Mantine
+Here's an example demonstrating the integration of TanStack Form with Mantine components:
+
+tsx
+
+import { TextInput, Checkbox } from '@mantine/core'
+import { useForm } from '@tanstack/react-form'
+
+export default function App() {
+  const { Field, handleSubmit, state } = useForm({
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      isChecked: false,
+    },
+    onSubmit: async ({ value }) => {
+      // Handle form submission
+      console.log(value)
+    },
+  })
+
+  return (
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleSubmit()
+        }}
+      >
+        <Field
+          name="firstName"
+          children={({ state, handleChange, handleBlur }) => (
+            <TextInput
+              defaultValue={state.value}
+              onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
+              placeholder="Enter your name"
+            />
+          )}
+        />
+        <Field
+          name="isChecked"
+          children={({ state, handleChange, handleBlur }) => (
+            <Checkbox
+              onChange={(e) => handleChange(e.target.checked)}
+              onBlur={handleBlur}
+              checked={state.value}
+            />
+          )}
+        />
+      </form>
+      <div>
+        <pre>{JSON.stringify(state.values, null, 2)}</pre>
+      </div>
+    </>
+  )
+}
+Initially, we utilize the useForm hook from TanStack and destructure the necessary properties. This step is optional; alternatively, you could use const form = useForm() if preferred. TypeScript's type inference ensures a smooth experience regardless of the approach.
+The Field component, derived from useForm, accepts several properties, such as validators. For this demonstration, we focus on two primary properties: name and children.
+The name property identifies each Field, for instance, firstName in our example.
+The children property leverages the concept of render props, allowing us to integrate components without unnecessary abstractions.
+TanStack's design relies heavily on render props, providing access to children within the Field component. This approach is entirely type-safe. When integrating with Mantine components, such as TextInput, we selectively destructure properties like state.value, handleChange, and handleBlur. This selective approach is due to the slight differences in types between TextInput and the field we get in the children.
+By following these steps, you can seamlessly integrate Mantine components with TanStack Form.
+This methodology is equally applicable to other components, such as Checkbox, ensuring consistent integration across different UI elements.
+Usage with Material UI
+The process for integrating Material UI components is similar. Here's an example using TextField and Checkbox from Material UI:
+
+tsx
+
+        <Field
+            name="lastName"
+            children={({ state, handleChange, handleBlur }) => {
+              return (
+                <TextField
+                  id="filled-basic"
+                  label="Filled"
+                  variant="filled"
+                  defaultValue={state.value}
+                  onChange={(e) => handleChange(e.target.value)}
+                  onBlur={handleBlur}
+                  placeholder="Enter your last name"
+                />
+              );
+            }}
+          />
+
+           <Field
+            name="isMuiCheckBox"
+            children={({ state, handleChange, handleBlur }) => {
+              return (
+                <MuiCheckbox
+                  onChange={(e) => handleChange(e.target.checked)}
+                  onBlur={handleBlur}
+                  checked={state.value}
+                />
+              );
+            }}
+          />
+The integration approach is the same as with Mantine.
+The primary difference lies in the specific Material UI component properties and styling options.
+
+Using TanStack Form in a Next.js App Router
+Before reading this section, it's suggested you understand how React Server Components and React Server Actions work. Check out this blog series for more information
+
+This section focuses on integrating TanStack Form with Next.js, particularly using the App Router and Server Actions.
+
+Next.js Prerequisites
+Start a new Next.js project, following the steps in the Next.js Documentation. Ensure you select yes for Would you like to use App Router? during the setup to access all new features provided by Next.js.
+Install @tanstack/react-form
+Install any form validator of your choice. [Optional]
+App Router integration
+Let's start by creating a formOption that we'll use to share the form's shape across the client and server.
+
+typescript
+
+// shared-code.ts
+// Notice the import path is different from the client
+import { formOptions } from '@tanstack/react-form/nextjs'
+
+// You can pass other form options here
+export const formOpts = formOptions({
+  defaultValues: {
+    firstName: '',
+    age: 0,
+  },
+})
+Next, we can create a React Server Action that will handle the form submission on the server.
+
+typescript
+
+// action.ts
+'use server'
+
+// Notice the import path is different from the client
+import {
+  ServerValidateError,
+  createServerValidate,
+} from '@tanstack/react-form/nextjs'
+import { formOpts } from './shared-code'
+
+// Create the server action that will infer the types of the form from `formOpts`
+const serverValidate = createServerValidate({
+  ...formOpts,
+  onServerValidate: ({ value }) => {
+    if (value.age < 12) {
+      return 'Server validation: You must be at least 12 to sign up'
+    }
+  },
+})
+
+export default async function someAction(prev: unknown, formData: FormData) {
+  try {
+    const validatedData = await serverValidate(formData)
+    console.log('validatedData', validatedData)
+    // Persist the form data to the database
+    // await sql`
+    //   INSERT INTO users (name, email, password)
+    //   VALUES (${validatedData.name}, ${validatedData.email}, ${validatedData.password})
+    // `
+  } catch (e) {
+    if (e instanceof ServerValidateError) {
+      return e.formState
+    }
+
+    // Some other error occurred while validating your form
+    throw e
+  }
+
+  // Your form has successfully validated!
+}
+Finally, we'll use someAction in our client-side form component.
+
+tsx
+
+// client-component.tsx
+'use client'
+
+import { useActionState } from 'react'
+import { initialFormState } from '@tanstack/react-form/nextjs'
+// Notice the import is from `react-form`, not `react-form/nextjs`
+import {
+  mergeForm,
+  useForm,
+  useStore,
+  useTransform,
+} from '@tanstack/react-form'
+import someAction from './action'
+import { formOpts } from './shared-code'
+
+export const ClientComp = () => {
+  const [state, action] = useActionState(someAction, initialFormState)
+
+  const form = useForm({
+    ...formOpts,
+    transform: useTransform((baseForm) => mergeForm(baseForm, state!), [state]),
+  })
+
+  const formErrors = useStore(form.store, (formState) => formState.errors)
+
+  return (
+    <form action={action as never} onSubmit={() => form.handleSubmit()}>
+      {formErrors.map((error) => (
+        <p key={error as string}>{error}</p>
+      ))}
+
+      <form.Field
+        name="age"
+        validators={{
+          onChange: ({ value }) =>
+            value < 8 ? 'Client validation: You must be at least 8' : undefined,
+        }}
+      >
+        {(field) => {
+          return (
+            <div>
+              <input
+                name="age"
+                type="number"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+              />
+              {field.state.meta.errors.map((error) => (
+                <p key={error as string}>{error}</p>
+              ))}
+            </div>
+          )
+        }}
+      </form.Field>
+      <form.Subscribe
+        selector={(formState) => [formState.canSubmit, formState.isSubmitting]}
+      >
+        {([canSubmit, isSubmitting]) => (
+          <button type="submit" disabled={!canSubmit}>
+            {isSubmitting ? '...' : 'Submit'}
+          </button>
+        )}
+      </form.Subscribe>
+    </form>
+  )
+}
+Here, we're using React's useActionState hook and TanStack Form's useTransform hook to merge state returned from the server action with the form state.
+
+If you get the following error in your Next.js application:
+
+typescript
+
+x You're importing a component that needs `useState`. This React hook only works in a client component. To fix, mark the file (or its parent) with the `"use client"` directive.
+This is because you're not importing server-side code from @tanstack/react-form/nextjs. Ensure you're importing the correct module based on the environment.
+
+This is a limitation of Next.js. Other meta-frameworks will likely not have this same problem.
+

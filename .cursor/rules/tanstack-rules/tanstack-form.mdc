@@ -1,0 +1,277 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+ # TanStack Form Guide
+
+TanStack Form is a powerful form library designed for large-scale production usage, with a focus on type safety, performance, and composition for an unmatched developer experience.
+
+## Quick Start
+
+```tsx
+import { useForm } from '@tanstack/react-form'
+
+function MyForm() {
+  const form = useForm({
+    defaultValues: {
+      firstName: '',
+      age: 0,
+    },
+    onSubmit: async ({ value }) => {
+      // Handle form submission
+      console.log(value)
+    },
+  })
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault()
+      form.handleSubmit()
+    }}>
+      <form.Field
+        name="firstName"
+        validators={{
+          onChange: ({ value }) => 
+            !value ? 'First name is required' : undefined
+        }}
+      >
+        {(field) => (
+          <div>
+            <label>First Name</label>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            {field.state.meta.errors && (
+              <span>{field.state.meta.errors.join(', ')}</span>
+            )}
+          </div>
+        )}
+      </form.Field>
+      
+      <button type="submit">Submit</button>
+    </form>
+  )
+}
+```
+
+## Core Concepts
+
+For detailed explanations of core concepts and basic usage, refer to:
+[Basic Concepts and Terminology](mdc:tanstack-rules/tanstack-form-basics.mdc)
+
+Topics covered:
+- Form Options and Instance
+- Field Components and State
+- Basic Validation
+- Array Fields
+- Reset Functionality
+- Reactivity and Performance
+
+## Advanced Topics
+
+For advanced usage and patterns, refer to:
+[Advanced Topics](mdc:tanstack-rules/tanstack-form-advanced-topics.mdc)
+
+Topics covered:
+- Async Initial Values
+- Complex Array Handling
+- Field Linking
+- Advanced Reactivity
+- Side Effects and Event Triggers
+
+## Validation
+
+For comprehensive validation strategies, refer to:
+[Validation Guide](mdc:tanstack-rules/tanstack-form-validation.mdc)
+
+Topics covered:
+- Sync and Async Validation
+- Form-level vs Field-level Validation
+- Schema Validation (Zod, Valibot, etc.)
+- Error Display Strategies
+- Validation Timing Control
+
+## Best Practices
+
+1. **Type Safety**
+   - Always define proper types for your form values
+   - Use schema validation when possible
+   - Leverage TypeScript's type inference
+
+2. **Performance**
+   - Use field-level validation for immediate feedback
+   - Implement debouncing for expensive validations
+   - Leverage the reactivity system properly
+
+3. **Error Handling**
+   - Display errors clearly and accessibly
+   - Use appropriate validation timing
+   - Implement both client and server validation
+
+4. **Code Organization**
+   - Split complex forms into smaller components
+   - Reuse validation logic when possible
+   - Keep form state close to where it's needed
+
+## Common Patterns
+
+### Form with Schema Validation
+
+```tsx
+import { z } from 'zod'
+
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+})
+
+function LoginForm() {
+  const form = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    validators: {
+      onChange: schema,
+    },
+    onSubmit: async ({ value }) => {
+      // Handle submission
+    },
+  })
+
+  // ... rest of the form implementation
+}
+```
+
+### Array Fields
+
+```tsx
+function TodoList() {
+  const form = useForm({
+    defaultValues: {
+      todos: [],
+    },
+  })
+
+  return (
+    <form.Field
+      name="todos"
+      mode="array"
+    >
+      {(field) => (
+        <div>
+          {field.state.value.map((_, index) => (
+            <form.Field
+              key={index}
+              name={`todos[${index}].text`}
+            >
+              {(todoField) => (
+                <input
+                  value={todoField.state.value}
+                  onChange={(e) => todoField.handleChange(e.target.value)}
+                />
+              )}
+            </form.Field>
+          ))}
+          <button
+            type="button"
+            onClick={() => field.pushValue({ text: '' })}
+          >
+            Add Todo
+          </button>
+        </div>
+      )}
+    </form.Field>
+  )
+}
+```
+
+### Linked Fields
+
+```tsx
+function PasswordForm() {
+  const form = useForm({
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  })
+
+  return (
+    <form>
+      <form.Field name="password">
+        {(field) => (
+          <input
+            type="password"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+          />
+        )}
+      </form.Field>
+      
+      <form.Field
+        name="confirmPassword"
+        validators={{
+          onChangeListenTo: ['password'],
+          onChange: ({ value, fieldApi }) =>
+            value !== fieldApi.form.getFieldValue('password')
+              ? 'Passwords must match'
+              : undefined,
+        }}
+      >
+        {(field) => (
+          <input
+            type="password"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+          />
+        )}
+      </form.Field>
+    </form>
+  )
+}
+```
+
+## Additional Resources
+
+For more specific topics and examples, refer to:
+### [Basic Concepts and Terminology](mdc:tanstack-rules/tanstack-form-basics.mdc)
+- Form Options and Creation
+- Form Instance Management
+- Field Components and Usage
+- Field State and API
+- Validation Basics
+- Reactivity Fundamentals
+- Array Fields Management
+- Reset Button Handling
+
+### [Advanced Topics](mdc:tanstack-rules/tanstack-form-advanced-topics.mdc)
+- Async Initial Values with React Query
+- Complex Array Field Operations
+- Linking Form Fields Together
+- Advanced Reactivity Patterns
+- Side Effects and Event Triggers
+- Debouncing Strategies
+- Performance Optimization
+
+### [Validation Deep Dive](mdc:tanstack-rules/tanstack-form-validation.mdc)
+- Synchronous and Asynchronous Validation
+- Form-level vs Field-level Validation
+- Multiple Validation Types
+- Error Display Strategies
+- Validation Timing Control
+- Schema Validation (Zod, Valibot)
+- Built-in Debouncing
+- Preventing Invalid Submits
+
+### [Custom Errors and Next.js Integration](mdc:tanstack-rules/tanstack-form-custom-errors-and-next-js.mdc)
+- Custom Error Types
+- Error Handling Patterns
+- Next.js Specific Integration
+- Server-Side Validation
+- API Route Integration 
+
+
+

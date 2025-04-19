@@ -1,0 +1,245 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# TanStack Form Guide
+
+## Async Initial Values
+
+Let's say you want to fetch some data from an API and use it as the initial value of a form.
+
+While this problem sounds simple on the surface, there are hidden complexities you might not have thought of thus far. For example, you might want to show a loading spinner while the data is being fetched, handle errors gracefully, or cache data to avoid unnecessary fetches.
+
+Instead of implementing these features from scratch, you can leverage TanStack Query alongside TanStack Form.
+
+### Basic Usage
+
+```tsx
+import { useForm } from '@tanstack/react-form';
+import { useQuery } from '@tanstack/react-query';
+
+export default function App() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['data'],
+    queryFn: async () => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { firstName: 'FirstName', lastName: "LastName" };
+    }
+  });
+
+  const form = useForm({
+    defaultValues: {
+      firstName: data?.firstName ?? '',
+      lastName: data?.lastName ?? '',
+    },
+    onSubmit: async ({ value }) => {
+      console.log(value);
+    },
+  });
+
+  if (isLoading) return <p>Loading...</p>;
+
+  return (
+    // Your form JSX here
+  );
+}
+```
+
+This setup displays a loading spinner until data is fetched, and then renders the form with fetched data as initial values.
+
+## Arrays
+
+TanStack Form supports arrays as form values, including nested objects within arrays.
+
+### Basic Usage
+
+Use `field.state.value` for array values:
+
+```jsx
+function App() {
+  const form = useForm({
+    defaultValues: { people: [] },
+  });
+
+  return (
+    <form.Field name="people" mode="array">
+      {(field) => (
+        <div>
+          {field.state.value.map((_, i) => {
+            // JSX elements here
+          })}
+          <button onClick={() => field.pushValue({ name: '', age: 0 })} type="button">
+            Add person
+          </button>
+        </div>
+      )}
+    </form.Field>
+  );
+}
+```
+
+Use subfields as follows:
+
+```jsx
+<form.Field key={i} name={`people[${i}].name`}>
+  {(subField) => (
+    <input
+      value={subField.state.value}
+      onChange={(e) => subField.handleChange(e.target.value)}
+    />
+  )}
+</form.Field>
+```
+
+### Full Example
+
+```jsx
+function App() {
+  const form = useForm({
+    defaultValues: { people: [] },
+    onSubmit({ value }) { alert(JSON.stringify(value)); },
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <form.Field name="people" mode="array">
+        {(field) => (
+          <div>
+            {field.state.value.map((_, i) => (
+              <form.Field key={i} name={`people[${i}].name`}>
+                {(subField) => (
+                  <label>
+                    <div>Name for person {i}</div>
+                    <input
+                      value={subField.state.value}
+                      onChange={(e) => subField.handleChange(e.target.value)}
+                    />
+                  </label>
+                )}
+              </form.Field>
+            ))}
+            <button
+              onClick={() => field.pushValue({ name: '', age: 0 })}
+              type="button"
+            >
+              Add person
+            </button>
+          </div>
+        )}
+      </form.Field>
+      <form.Subscribe
+        selector={(state) => [state.canSubmit, state.isSubmitting]}
+        children={([canSubmit, isSubmitting]) => (
+          <button type="submit" disabled={!canSubmit}>
+            {isSubmitting ? '...' : 'Submit'}
+          </button>
+        )}
+      />
+    </form>
+  );
+}
+```
+
+## Link Two Form Fields Together
+
+Use `onChangeListenTo` for cross-field validation (e.g., password confirmation):
+
+```tsx
+<form.Field
+  name="confirm_password"
+  validators={{
+    onChangeListenTo: ['password'],
+    onChange: ({ value, fieldApi }) =>
+      value !== fieldApi.form.getFieldValue('password') ? 'Passwords do not match' : undefined,
+  }}
+>
+  {(field) => (
+    <label>
+      Confirm Password
+      <input
+        value={field.state.value}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+      {field.state.meta.errors.map(err => <div key={err}>{err}</div>)}
+    </label>
+  )}
+</form.Field>
+```
+
+## Reactivity
+
+TanStack Form avoids unnecessary re-renders by requiring subscriptions for reactive updates.
+
+### useStore
+
+Use `useStore` to subscribe to form values:
+
+```tsx
+const firstName = useStore(form.store, state => state.values.firstName);
+const errors = useStore(form.store, state => state.errorMap);
+```
+
+### form.Subscribe
+
+Use `form.Subscribe` for UI-bound subscriptions:
+
+```tsx
+<form.Subscribe
+  selector={(state) => state.values.firstName}
+  children={(firstName) => (
+    <form.Field>
+      {(field) => (
+        <input
+          name="lastName"
+          value={field.state.lastName}
+          onChange={field.handleChange}
+        />
+      )}
+    </form.Field>
+  )}
+/>
+```
+
+## Side Effects for Event Triggers
+
+Use listeners to perform side-effects based on form events:
+
+```tsx
+<form.Field
+  name="country"
+  listeners={{
+    onChange: ({ value }) => {
+      console.log(`Country changed to: ${value}, resetting province`);
+      form.setFieldValue('province', '');
+    },
+    onChangeDebounceMs: 500,
+  }}
+>
+  {(field) => (
+    <label>
+      Country
+      <input
+        value={field.state.value}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+    </label>
+  )}
+</form.Field>
+```
+
+Events include:
+
+- `onChange`
+- `onBlur`
+- `onMount`
+- `onSubmit`
+
+Use debouncing (`onChangeDebounceMs`) to optimize performance.
+

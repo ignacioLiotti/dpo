@@ -1,0 +1,311 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Basic Concepts and Terminology
+
+This page introduces the basic concepts and terminology used in the `@tanstack/react-form` library. Familiarizing yourself with these concepts will help you better understand and work with the library.
+
+---
+
+## Form Options
+
+You can create options for your form so that it can be shared between multiple forms by using the `formOptions` function.
+
+```tsx
+interface User {
+  firstName: string
+  lastName: string
+  hobbies: Array<string>
+}
+const defaultUser: User = { firstName: '', lastName: '', hobbies: [] }
+
+const formOpts = formOptions({
+  defaultValues: defaultUser,
+})
+```
+
+---
+
+## Form Instance
+
+A Form Instance is an object that represents an individual form and provides methods and properties for working with the form.
+
+```tsx
+const form = useForm({
+  ...formOpts,
+  onSubmit: async ({ value }) => {
+    console.log(value)
+  },
+})
+```
+
+Alternatively, without `formOptions`:
+
+```tsx
+const form = useForm({
+  defaultValues: defaultUser,
+  onSubmit: async ({ value }) => {
+    console.log(value)
+  },
+})
+```
+
+---
+
+## Field
+
+A Field represents a single form input element.
+
+```tsx
+<form.Field
+  name="firstName"
+  children={(field) => (
+    <>
+      <input
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+      <FieldInfo field={field} />
+    </>
+  )}
+/>
+```
+
+---
+
+## Field State
+
+```tsx
+const {
+  value,
+  meta: { errors, isValidating },
+} = field.state
+```
+
+```tsx
+const { isTouched, isPristine, isDirty } = field.state.meta
+```
+
+> **Note**: `isDirty` in TanStack Form behaves differently than in React Hook Form.
+
+---
+
+## Field API
+
+```tsx
+<input
+  value={field.state.value}
+  onBlur={field.handleBlur}
+  onChange={(e) => field.handleChange(e.target.value)}
+/>
+```
+
+---
+
+## Validation
+
+Both sync and async validation are supported via the `validators` prop:
+
+```tsx
+<form.Field
+  name="firstName"
+  validators={{
+    onChange: ({ value }) =>
+      !value
+        ? 'A first name is required'
+        : value.length < 3
+          ? 'First name must be at least 3 characters'
+          : undefined,
+    onChangeAsync: async ({ value }) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return value.includes('error') && 'No "error" allowed in first name'
+    },
+  }}
+  children={(field) => (
+    <>
+      <input
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+      />
+      <FieldInfo field={field} />
+    </>
+  )}
+/>
+```
+
+---
+
+## Validation with Standard Schema Libraries
+
+```tsx
+import { z } from 'zod'
+
+const userSchema = z.object({
+  age: z.number().gte(13, 'You must be 13 to make an account'),
+})
+
+function App() {
+  const form = useForm({
+    defaultValues: { age: 0 },
+    validators: { onChange: userSchema },
+  })
+
+  return (
+    <div>
+      <form.Field
+        name="age"
+        children={(field) => {
+          return <>{/* ... */}</>
+        }}
+      />
+    </div>
+  )
+}
+```
+
+---
+
+## Reactivity
+
+Subscribe to form/field state using `useStore` or `<form.Subscribe>`:
+
+```tsx
+const firstName = useStore(form.store, (state) => state.values.firstName)
+```
+
+```tsx
+<form.Subscribe
+  selector={(state) => [state.canSubmit, state.isSubmitting]}
+  children={([canSubmit, isSubmitting]) => (
+    <button type="submit" disabled={!canSubmit}>
+      {isSubmitting ? '...' : 'Submit'}
+    </button>
+  )}
+/>
+```
+
+> ⚠️ Avoid using `useStore(form.store)` without a selector to prevent unnecessary re-renders.
+
+---
+
+## Listeners
+
+```tsx
+<form.Field
+  name="country"
+  listeners={{
+    onChange: ({ value }) => {
+      console.log(`Country changed to: ${value}, resetting province`)
+      form.setFieldValue('province', '')
+    },
+  }}
+/>
+```
+
+---
+
+## Array Fields
+
+```tsx
+<form.Field
+  name="hobbies"
+  mode="array"
+  children={(hobbiesField) => (
+    <div>
+      Hobbies
+      <div>
+        {!hobbiesField.state.value.length
+          ? 'No hobbies found.'
+          : hobbiesField.state.value.map((_, i) => (
+              <div key={i}>
+                <form.Field
+                  name={`hobbies[${i}].name`}
+                  children={(field) => (
+                    <div>
+                      <label htmlFor={field.name}>Name:</label>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                      <button type="button" onClick={() => hobbiesField.removeValue(i)}>X</button>
+                      <FieldInfo field={field} />
+                    </div>
+                  )}
+                />
+                <form.Field
+                  name={`hobbies[${i}].description`}
+                  children={(field) => (
+                    <div>
+                      <label htmlFor={field.name}>Description:</label>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                      <FieldInfo field={field} />
+                    </div>
+                  )}
+                />
+              </div>
+            ))}
+      </div>
+      <button
+        type="button"
+        onClick={() =>
+          hobbiesField.pushValue({
+            name: '',
+            description: '',
+            yearsOfExperience: 0,
+          })
+        }
+      >
+        Add hobby
+      </button>
+    </div>
+  )}
+/>
+```
+
+---
+
+## Reset Buttons
+
+To avoid HTML reset behavior:
+
+```tsx
+<button
+  type="reset"
+  onClick={(event) => {
+    event.preventDefault()
+    form.reset()
+  }}
+>
+  Reset
+</button>
+```
+
+Or use `type="button"`:
+
+```tsx
+<button
+  type="button"
+  onClick={() => {
+    form.reset()
+  }}
+>
+  Reset
+</button>
+```
+
+---
+
+Understanding these concepts will help you work more effectively with the `@tanstack/react-form` library and build complex, scalable forms with ease.

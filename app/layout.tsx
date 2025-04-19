@@ -83,6 +83,35 @@ export default async function RootLayout({
       ]
     },
     {
+      "title": "Custom Obras",
+      "url": "/custom-obras",
+      "iconKey": "LayoutListIcon",
+      "items": [
+        {
+          "title": "Main",
+          "url": "/custom-obras",
+          "iconKey": "House"
+        },
+        {
+          "title": "Create",
+          "url": "/custom-obras/create",
+          "iconKey": "FilePlus"
+        },
+        {
+          "title": "Obra de Ejemplo",
+          "url": "/custom-obras/1284",
+          "iconKey": "HardHatIcon",
+          "items": [
+            {
+              "title": "Main",
+              "url": "/custom-obras/1284",
+              "iconKey": "House"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "title": "Items de Construcción",
       "url": "/",
       "iconKey": "LayoutListIcon",

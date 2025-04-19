@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+when using a toast use shadcn toast component and useToast hook
+for modular ui components use shadcn
+for 
