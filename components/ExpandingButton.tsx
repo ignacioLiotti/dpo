@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { ClipboardPenLineIcon, FileBadgeIcon, FileChartPieIcon } from 'lucide-react';
 
 interface CreateFABProps {

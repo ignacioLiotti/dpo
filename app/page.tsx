@@ -8,7 +8,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ o
     <div className="flex flex-1 flex-col gap-4 p-4 bg-white">
       <Card className="min-h-[100vh] flex-1 rounded-xl md:min-h-min p-0">
         <Suspense fallback={<div className="p-4">Loading...</div>}>
-          <CustomTable />
+          {/* <CustomTable /> */}
         </Suspense>
       </Card>
       {/* <div className="grid auto-rows-min gap-4 md:grid-cols-3">

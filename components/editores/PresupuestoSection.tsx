@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Package, Plus, Check, Trash2, Minus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils"
 import { Button } from "@/components/ui/button"
 import {
   Table,

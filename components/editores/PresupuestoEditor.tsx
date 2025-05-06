@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { PresupuestoSection } from '@/components/editores/PresupuestoSection'
 import { SearchDialog } from '@/components/SearchDialog'
 import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn } from '@/utils/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSearchParams } from 'next/navigation'
 import { useObra } from '@/app/providers/ObraProvider'

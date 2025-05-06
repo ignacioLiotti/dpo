@@ -1,13 +1,13 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export const createClient = async () => {
+export async function createClient() {
 	const cookieStore = await cookies();
 
+	// Create a server client Supabase client with cookies
 	return createServerClient(
 		process.env.NEXT_PUBLIC_SUPABASE_URL!,
 		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-
 		{
 			cookies: {
 				getAll() {
@@ -15,11 +15,13 @@ export const createClient = async () => {
 				},
 				setAll(cookiesToSet) {
 					try {
-						cookiesToSet.forEach(({ name, value, options }) => {
-							cookieStore.set(name, value, options);
-						});
-					} catch (error) {
-						// The `set` method was called from a Server Component.
+						// Try/catch blocks cookies().set() calls from
+						// being run in a Server Component, which would error
+						cookiesToSet.forEach(({ name, value, options }) =>
+							cookieStore.set(name, value, options)
+						);
+					} catch {
+						// The `setAll` method was called from a Server Component.
 						// This can be ignored if you have middleware refreshing
 						// user sessions.
 					}
@@ -27,4 +29,4 @@ export const createClient = async () => {
 			},
 		}
 	);
-};
+}

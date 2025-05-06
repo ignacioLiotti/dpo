@@ -7,7 +7,7 @@ import { Plus, Package, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { Calendar } from '@/components/ui/calendar'
 import { motion, useInView } from 'framer-motion'
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils"
 import {
   Table,
   TableBody,

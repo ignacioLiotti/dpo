@@ -7,12 +7,9 @@ import { Separator } from "@radix-ui/react-dropdown-menu";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import ReactScanWrapper from "./reactScanWrapper";
 import { Toaster } from "@/components/ui/toaster";
-import Providers from "./providers";
-import ReactQueryDevtool from "./ReactQueryDevtool";
-import { OnboardingProvider } from "@/components/Onboarding/OnboardingProvider";
 
 // Import server client
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -149,42 +146,38 @@ export default async function RootLayout({
   ]
 
   return (
-    <Providers>
-      <html
-        lang="en"
-      //  className="light"
+    <html
+      lang="en"
+    //  className="light"
+    >
+      <head>
+        {/* rest of your scripts go under */}
+      </head>
+      <body
+        className={` ${geistSans.className} antialiased bg-containerBackground`}
       >
-        <head>
-          {/* rest of your scripts go under */}
-        </head>
-        <body
-          className={` ${geistSans.className} antialiased bg-containerBackground`}
-        >
-          <ReactScanWrapper>
-            <OnboardingProvider>
-              <SidebarProvider>
-                {/* Pass user data to AppSidebar */}
-                <AppSidebar mappedData={mapped as any} user={user} />
-                <SidebarInset className="flex flex-col p-4 pt-0 lg:pr-10">
-                  <header className="flex h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                    <div className="flex items-center gap-2">
-                      <SidebarTrigger className="-ml-1" />
-                      <Separator className="mr-2 h-4" />
-                      <Breadcrumbs />
-                    </div>
-                  </header>
-                  {/* <div className="flex flex-1 flex-col w-full h-full mb-4 bg-white rounded-3xl shadow-[0_0_0px_5px_#bcc5e81c,_0_0_0px_2px_#dfe0e4_] px-8"> */}
-                  {children}
-                  {/* </div> */}
-                </SidebarInset>
-                {/* <ReactQueryDevtool /> */}
-              </SidebarProvider>
-            </OnboardingProvider>
-          </ReactScanWrapper>
-          <Toaster />
-        </body>
-      </html>
-    </Providers>
+        <ReactScanWrapper>
+          <SidebarProvider>
+            {/* Pass user data to AppSidebar */}
+            <AppSidebar mappedData={mapped as any} user={user} />
+            <SidebarInset className="flex flex-col p-4 pt-0 lg:pr-10">
+              <header className="flex h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <Separator className="mr-2 h-4" />
+                  <Breadcrumbs />
+                </div>
+              </header>
+              {/* <div className="flex flex-1 flex-col w-full h-full mb-4 bg-white rounded-3xl shadow-[0_0_0px_5px_#bcc5e81c,_0_0_0px_2px_#dfe0e4_] px-8"> */}
+              {children}
+              {/* </div> */}
+            </SidebarInset>
+            {/* <ReactQueryDevtool /> */}
+          </SidebarProvider>
+        </ReactScanWrapper>
+        <Toaster />
+      </body>
+    </html>
   );
 }
 

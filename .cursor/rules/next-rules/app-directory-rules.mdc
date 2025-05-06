@@ -1,0 +1,206 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+## Next.js Data Fetching & State Management Guide (App Router)
+
+This guide outlines a strategy focused on leveraging Next.js App Router features, prioritizing Server Components, and minimizing client-side JavaScript for optimal performance and developer experience.
+
+**Core Philosophy:** Fetch data on the server whenever possible. Keep client components small and focused on interactivity.
+
+**1. Prioritize React Server Components (RSCs) for Data Fetching:**
+
+*   **Default:** Assume components are Server Components unless they explicitly need client-side interactivity (`useState`, `useEffect`, browser APIs).
+*   **Direct Fetching:** Fetch data directly within async Server Components. You can use `fetch` (which is automatically memoized), database clients (like Prisma, Drizzle, or Supabase client), or any server-side library.
+*   **Benefits:** Data is fetched alongside rendering on the server, reducing client-server waterfalls. No need for `useEffect` for initial data fetching. Data fetching code doesn't ship to the client bundle.
+*   **Example (`app/products/page.tsx`):**
+
+```typescript
+import { db } from '@/lib/db'; // Your database client
+import { ProductCard } from '@/components/product-card';
+import type { Product } from '@/types/product'; // Define your types
+
+// No 'use client' - this is a Server Component
+async function ProductsPage() {
+  // Fetch data directly
+  const products: Product[] = await db.product.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!products || products.length === 0) {
+    return <p>No products found.</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
+export default ProductsPage;
+```
+
+**2. Use Server Actions for Mutations and Complex Queries:**
+
+*   **Purpose:** Handle data mutations (Create, Update, Delete) or complex queries initiated by client-side interactions (form submissions, button clicks).
+*   **Implementation:** Use `next-safe-action` as specified in your instructions for type safety, validation, and consistent response handling.
+*   **Structure:** Define actions in separate files (e.g., `actions/update-product.ts`). Use Zod for input schema validation. Return a consistent `ActionResponse` type.
+*   **Benefits:** Keeps mutation logic on the server, secure, type-safe, integrates seamlessly with forms and client components via hooks like `useAction` from `next-safe-action/hooks`.
+*   **Example (`actions/add-to-cart.ts`):**
+
+```typescript
+'use server';
+
+import { z } from 'zod';
+import { createSafeActionClient } from 'next-safe-action';
+import type { ActionResponse } from '@/app/actions/actions'; // Assuming this path
+import { getUser } from '@/lib/auth'; // Example auth function
+import { db } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+
+// Define input schema
+const schema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.number().min(1),
+});
+
+// Create authenticated action client (adapt based on your safe-action setup)
+const authAction = createSafeActionClient({
+  // Middleware to get user, replace with your actual implementation
+  async middleware() {
+    const user = await getUser();
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+    return { userId: user.id };
+  }
+});
+
+
+export const addToCartAction = authAction
+  .schema(schema)
+  .action(async ({ parsedInput, ctx }): Promise<ActionResponse<{ cartItemCount: number }>> => {
+    try {
+      // Action logic using ctx.userId and parsedInput
+      const existingItem = await db.cartItem.findFirst({
+        where: { userId: ctx.userId, productId: parsedInput.productId },
+      });
+
+      let updatedItem;
+      if (existingItem) {
+        updatedItem = await db.cartItem.update({
+          where: { id: existingItem.id },
+          data: { quantity: existingItem.quantity + parsedInput.quantity },
+        });
+      } else {
+         updatedItem = await db.cartItem.create({
+          data: {
+            userId: ctx.userId,
+            productId: parsedInput.productId,
+            quantity: parsedInput.quantity,
+          },
+        });
+      }
+
+      const totalItems = await db.cartItem.count({ where: { userId: ctx.userId } });
+
+      // Revalidate relevant paths/layouts if needed
+      revalidatePath('/cart');
+      revalidatePath('/'); // Example: revalidate layout showing cart count
+
+      return { success: true, data: { cartItemCount: totalItems } };
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      // Use specific AppError types if defined, otherwise a generic error
+      return { success: false, error: { code: 'CART_UPDATE_FAILED', message: 'Failed to update cart' } };
+    }
+  });
+```
+
+*   **Usage in Client Component (`components/add-to-cart-button.tsx`):**
+
+```typescript
+'use client';
+
+import { useAction } from 'next-safe-action/hooks';
+import { useState } from 'react';
+import { Button } from '@midday/ui/button'; // Assuming Shadcn UI Button
+import { addToCartAction } from '@/actions/add-to-cart';
+import { toast } from 'sonner'; // Example toast library
+
+interface AddToCartButtonProps {
+  productId: string;
+}
+
+export function AddToCartButton({ productId }: AddToCartButtonProps) {
+  const [quantity, setQuantity] = useState(1); // Example quantity state
+  const { execute, status } = useAction(addToCartAction, {
+    onSuccess: (data) => {
+      toast.success(`Item added! Cart now has ${data.cartItemCount} items.`);
+      // Optionally update local UI state if needed, though revalidation often handles it
+    },
+    onError: (error) => {
+      console.error("Action Error:", error);
+      toast.error(error.serverError?.message || error.validationErrors || 'Failed to add item.');
+    },
+  });
+
+  const isLoading = status === 'executing';
+
+  function handleAddToCart() {
+    execute({ productId, quantity });
+  }
+
+  return (
+    <Button onClick={handleAddToCart} disabled={isLoading}>
+      {isLoading ? 'Adding...' : 'Add to Cart'}
+    </Button>
+    // Add input for quantity if needed
+  );
+}
+```
+
+**3. Client-Side Fetching (Use Sparingly):**
+
+*   **When:** Only when data fetching *must* be triggered by client-side events and cannot be handled by Server Actions (e.g., fetching data based on browser API results, complex client-side state not suitable for URL, or real-time updates via polling/websockets where Server Actions aren't a fit).
+*   **How:** Use `useEffect` in a Client Component (`'use client'`). Consider libraries like SWR or TanStack Query (React Query) for caching, revalidation, and simplifying state management *if complexity warrants it*, but prefer simpler `useEffect` + `useState` for basic cases.
+*   **Minimize:** Actively look for ways to achieve the goal with RSCs or Server Actions first. Fetching in `useEffect` often leads to client-side waterfalls.
+
+**4. State Management:**
+
+*   **Server-Fetched Data:** Avoid storing server-fetched data in global client-side state (Context, Zustand, Redux). Pass data down as props from Server Components. RSCs handle the fetching and pass the results.
+*   **URL State (`nuqs`):** For state that should be reflected in the URL (filters, search queries, tabs, sorting), use `useQueryState` from `nuqs`. This makes state shareable and bookmarkable.
+*   **Local Component State:** Use `useState` for transient UI state within Client Components (e.g., toggle states, input values not yet submitted).
+*   **Shared Client State (Context/Zustand):** Use client-side state management (like Zustand wrapped in Context, as seen in `UserProvider`/`VaultProvider`) *only* for global *client-side* state that isn't directly tied to server data fetching (e.g., UI theme, authentication status *after initial load*, user preferences loaded once).
+
+**5. Handling Loading & Error States:**
+
+*   **Server Components:** Wrap async Server Components or `page.tsx` content in `<Suspense fallback={<LoadingSpinner />}>`. Next.js streams the UI, showing the fallback while data loads.
+*   **Server Actions:** Check the `status` and `result` from `useAction` hook to display loading indicators and handle success/error states (e.g., showing toasts, updating UI). Use the `ActionResponse` structure (`success`, `data`, `error`) consistently.
+*   **Error Boundaries:** Wrap sections of your UI (especially around Suspense boundaries or action-triggering components) with React Error Boundaries to catch rendering errors gracefully.
+
+**6. Large Datasets (Pagination/Infinite Loading):**
+
+*   **Initial Load:** Fetch the first page of data in a Server Component.
+*   **Load More:** Pass a Server Action (`loadMoreAction`) as a prop to a Client Component list/table.
+*   **Trigger:** In the Client Component, use `useInView` or a "Load More" button to trigger the `loadMoreAction` with the next offset/cursor.
+*   **State:** The Client Component manages the combined list (`useState`) by appending new data received from the action.
+*   **Example Structure:** Similar to `apps/dashboard/src/components/tables/customers/table.tsx`.
+
+**Summary & Key Takeaways:**
+
+*   **RSC First:** Build with Server Components by default.
+*   **Fetch in RSC:** Perform initial data reads directly in RSCs.
+*   **Mutate with Actions:** Use `next-safe-action` for writes and client-triggered reads.
+*   **Minimize `'use client'`:** Only use it for interactivity. Keep client components small.
+*   **Props over Global State:** Pass server data down via props.
+*   **URL for Sharable State:** Use `nuqs` for filters, search, etc.
+*   **Suspense for Loading:** Use `<Suspense>` for RSC loading states.
+*   **Actions for Interaction Feedback:** Use `useAction` status/result for loading/errors from mutations.
+
+By following this approach consistently, you'll build performant, maintainable Next.js applications that effectively utilize the App Router's capabilities.

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client' // Use browser client
+import { createClient } from '@/utils/supabase/client' // Use browser client
 import { Button, type ButtonProps } from "@/components/ui/button" // Import ButtonProps
 import { useToast } from "@/components/ui/use-toast"
 

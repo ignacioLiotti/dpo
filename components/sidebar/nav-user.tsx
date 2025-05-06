@@ -71,8 +71,6 @@ export function NavUser({
   const userEmail = user.email || "No email provided"
   const initials = getInitials(userName)
 
-  console.log('user', user)
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>

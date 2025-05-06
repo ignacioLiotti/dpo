@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { useBreadcrumbs } from '@/utils/hooks/useBreadcrumbs';
 import {
   Breadcrumb,
   BreadcrumbItem,

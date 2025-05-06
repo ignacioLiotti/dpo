@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils"
 import { useObra } from '@/app/providers/ObraProvider'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
