@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from "react"
+import React, { useMemo, useCallback } from "react"
 import {
   addHours,
   areIntervalsOverlapping,
@@ -17,21 +17,79 @@ import {
   startOfDay,
   startOfWeek,
 } from "date-fns"
+import { useDroppable } from "@dnd-kit/core"
 
-import {
-  DraggableEvent,
-  DroppableCell,
-  EventItem,
-  isMultiDayEvent,
-  useCurrentTimeIndicator,
-  WeekCellsHeight,
-  type CalendarEvent,
-} from "@/components/event-calendar"
 import {
   EndHour,
   StartHour,
+  WeekCellsHeight,
 } from "@/components/event-calendar/constants"
 import { cn } from "@/utils/utils"
+import { CalendarEvent } from "@/components/event-calendar/types"
+import { isMultiDayEvent } from "@/components/event-calendar/utils"
+import { useCurrentTimeIndicator } from "@/components/event-calendar/use-current-time-indicator"
+import { useCalendarDnd } from "./calendar-dnd-context"
+import { StaticCalendarCell } from "./static-calendar-cell"
+import { DroppableCell } from "@/components/event-calendar/droppable-cell"
+import { DraggableEvent } from "@/components/event-calendar/draggable-event"
+import { EventItem } from "@/components/event-calendar/event-item"
+
+interface DayHourQuarterCellProps {
+  day: Date;
+  hourValue: number;
+  quarter: number;
+  onEventCreate: (startTime: Date) => void;
+  isColumnActiveForDrag: boolean;
+}
+
+const DayHourQuarterCell = React.memo<DayHourQuarterCellProps>(({
+  day,
+  hourValue,
+  quarter,
+  onEventCreate,
+  isColumnActiveForDrag,
+}) => {
+  const quarterHourTime = hourValue + quarter * 0.25
+
+  const handleClick = useCallback(() => {
+    const startTime = new Date(day);
+    startTime.setHours(hourValue);
+    startTime.setMinutes(quarter * 15);
+    onEventCreate(startTime);
+  }, [day, hourValue, quarter, onEventCreate]);
+
+  const cellId = `week-cell-${day.toISOString()}-${quarterHourTime}`
+  const cellClassName = cn(
+    "absolute h-[calc(var(--week-cells-height)/4)] w-full",
+    quarter === 0 && "top-0",
+    quarter === 1 && "top-[calc(var(--week-cells-height)/4)]",
+    quarter === 2 && "top-[calc(var(--week-cells-height)/4*2)]",
+    quarter === 3 && "top-[calc(var(--week-cells-height)/4*3)]"
+  )
+
+  if (isColumnActiveForDrag) {
+    return (
+      <DroppableCell
+        id={cellId}
+        date={day}
+        time={quarterHourTime}
+        className={cellClassName}
+        onClick={handleClick}
+      />
+    )
+  } else {
+    return (
+      <StaticCalendarCell
+        date={day}
+        time={quarterHourTime}
+        className={cellClassName}
+        onClick={handleClick}
+        title={`Create event at ${day.toLocaleDateString()} ${hourValue}:${quarter * 15}`}
+      />
+    )
+  }
+});
+DayHourQuarterCell.displayName = "DayHourQuarterCell";
 
 interface WeekViewProps {
   currentDate: Date
@@ -218,6 +276,14 @@ export function WeekView({
     "week"
   )
 
+  // Helper to get a consistent column key
+  const getColumnKey = (d: Date): string => {
+    return startOfDay(d).toISOString().slice(0, 10) // YYYY-MM-DD
+  }
+
+  // Consume DND context here for calculating prop to pass to DayHourQuarterCell
+  const { currentDraggableColumnKey, activeEvent } = useCalendarDnd()
+
   return (
     <div data-slot="week-view" className="flex h-full flex-col">
       <div className="bg-background/80 border-border/70 sticky top-0 z-30 grid grid-cols-8 border-b backdrop-blur-md">
@@ -319,90 +385,99 @@ export function WeekView({
           ))}
         </div>
 
-        {days.map((day, dayIndex) => (
-          <div
-            key={day.toString()}
-            className="border-border/70 relative grid auto-cols-fr border-r last:border-r-0"
-            data-today={isToday(day) || undefined}
-          >
-            {/* Positioned events */}
-            {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
-              <div
-                key={positionedEvent.event.id}
-                className="absolute z-10 px-0.5"
-                style={{
-                  top: `${positionedEvent.top}px`,
-                  height: `${positionedEvent.height}px`,
-                  left: `${positionedEvent.left * 100}%`,
-                  width: `${positionedEvent.width * 100}%`,
-                  zIndex: positionedEvent.zIndex,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="size-full">
-                  <DraggableEvent
-                    event={positionedEvent.event}
-                    view="week"
-                    onClick={(e) => handleEventClick(positionedEvent.event, e)}
-                    showTime
-                    height={positionedEvent.height}
-                  />
-                </div>
-              </div>
-            ))}
+        {days.map((day, dayIndex) => {
+          const dayColumnKey = getColumnKey(day)
+          const { setNodeRef: columnSetNodeRef, isOver: isOverColumn } = useDroppable({
+            id: `column-sentinel-${dayColumnKey}`,
+            data: {
+              type: "column-sentinel",
+              date: day, // The whole day object for the sentinel
+              // For sentinels, time might be less relevant or a default like StartHour
+              time: StartHour,
+              columnKey: dayColumnKey,
+            },
+          })
 
-            {/* Current time indicator - only show for today's column */}
-            {currentTimeVisible && isToday(day) && (
-              <div
-                className="pointer-events-none absolute right-0 left-0 z-20"
-                style={{ top: `${currentTimePosition}%` }}
-              >
-                <div className="relative flex items-center">
-                  <div className="bg-primary absolute -left-1 h-2 w-2 rounded-full"></div>
-                  <div className="bg-primary h-[2px] w-full"></div>
-                </div>
-              </div>
-            )}
-            {hours.map((hour) => {
-              const hourValue = getHours(hour)
-              return (
+          return (
+            <div
+              ref={columnSetNodeRef} // Apply the ref to the column div
+              key={day.toString()}
+              className={cn(
+                "border-border/70 relative grid auto-cols-fr border-r last:border-r-0",
+                isOverColumn && "bg-slate-500/5" // Optional: subtle visual feedback for sentinel hover
+              )}
+              data-today={isToday(day) || undefined}
+            >
+              {/* Positioned events */}
+              {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
                 <div
-                  key={hour.toString()}
-                  className="border-border/70 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+                  key={positionedEvent.event.id}
+                  className="absolute z-10 px-0.5"
+                  style={{
+                    top: `${positionedEvent.top}px`,
+                    height: `${positionedEvent.height}px`,
+                    left: `${positionedEvent.left * 100}%`,
+                    width: `${positionedEvent.width * 100}%`,
+                    zIndex: positionedEvent.zIndex,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Quarter-hour intervals */}
-                  {[0, 1, 2, 3].map((quarter) => {
-                    const quarterHourTime = hourValue + quarter * 0.25
-                    return (
-                      <DroppableCell
-                        key={`${hour.toString()}-${quarter}`}
-                        id={`week-cell-${day.toISOString()}-${quarterHourTime}`}
-                        date={day}
-                        time={quarterHourTime}
-                        className={cn(
-                          "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                          quarter === 0 && "top-0",
-                          quarter === 1 &&
-                          "top-[calc(var(--week-cells-height)/4)]",
-                          quarter === 2 &&
-                          "top-[calc(var(--week-cells-height)/4*2)]",
-                          quarter === 3 &&
-                          "top-[calc(var(--week-cells-height)/4*3)]"
-                        )}
-                        onClick={() => {
-                          const startTime = new Date(day)
-                          startTime.setHours(hourValue)
-                          startTime.setMinutes(quarter * 15)
-                          onEventCreate(startTime)
-                        }}
-                      />
-                    )
-                  })}
+                  <div className="size-full">
+                    <DraggableEvent
+                      event={positionedEvent.event}
+                      view="week"
+                      onClick={(e) => handleEventClick(positionedEvent.event, e)}
+                      showTime
+                      height={positionedEvent.height}
+                    />
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        ))}
+              ))}
+
+              {/* Current time indicator - only show for today's column */}
+              {currentTimeVisible && isToday(day) && (
+                <div
+                  className="pointer-events-none absolute right-0 left-0 z-20"
+                  style={{ top: `${currentTimePosition}%` }}
+                >
+                  <div className="relative flex items-center">
+                    <div className="bg-primary absolute -left-1 h-2 w-2 rounded-full"></div>
+                    <div className="bg-primary h-[2px] w-full"></div>
+                  </div>
+                </div>
+              )}
+              {hours.map((hour) => {
+                const hourValue = getHours(hour)
+                return (
+                  <div
+                    key={hour.toString()}
+                    className="border-border/70 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+                  >
+                    {/* Quarter-hour intervals */}
+                    {[0, 1, 2, 3].map((quarter) => {
+                      // Calculate isColumnActiveForDrag here in the parent
+                      const cellDayColumnKey = getColumnKey(day)
+                      const isCellInActiveDragColumn =
+                        activeEvent !== null &&
+                        currentDraggableColumnKey === cellDayColumnKey;
+
+                      return (
+                        <DayHourQuarterCell
+                          key={`${hour.toString()}-${quarter}`}
+                          day={day}
+                          hourValue={hourValue}
+                          quarter={quarter}
+                          onEventCreate={onEventCreate}
+                          isColumnActiveForDrag={isCellInActiveDragColumn} // Pass as prop
+                        />
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

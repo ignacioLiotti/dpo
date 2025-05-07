@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { differenceInDays } from "date-fns"
+import { differenceInDays, startOfDay } from "date-fns"
 import { useCalendarDnd } from "./calendar-dnd-context"
 import { EventItem } from "./event-item"
 import { CalendarEvent } from "./types"
@@ -46,6 +46,12 @@ export function DraggableEvent({
   const isMultiDayEvent =
     isMultiDay || event.allDay || differenceInDays(eventEnd, eventStart) >= 1
 
+  // Helper to get a consistent column key
+  const getColumnKey = (d: Date): string => {
+    return startOfDay(d).toISOString().slice(0, 10) // YYYY-MM-DD
+  }
+  const initialColumnKey = getColumnKey(eventStart)
+
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `${event.id}-${view}`,
@@ -58,6 +64,7 @@ export function DraggableEvent({
         dragHandlePosition,
         isFirstDay,
         isLastDay,
+        initialColumnKey,
       },
     })
 

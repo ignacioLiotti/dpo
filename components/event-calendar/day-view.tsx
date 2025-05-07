@@ -12,6 +12,7 @@ import {
   isSameDay,
   startOfDay,
 } from "date-fns"
+import { useDroppable } from "@dnd-kit/core"
 
 import {
   DraggableEvent,
@@ -27,6 +28,8 @@ import {
   StartHour,
 } from "@/components/event-calendar/constants"
 import { cn } from "@/utils/utils"
+import { useCalendarDnd } from "./calendar-dnd-context"
+import { StaticCalendarCell } from "./static-calendar-cell"
 
 interface DayViewProps {
   currentDate: Date
@@ -188,6 +191,25 @@ export function DayView({
     "day"
   )
 
+  const { currentDraggableColumnKey, activeEvent } = useCalendarDnd()
+
+  // Helper to get a consistent column key for the current day view
+  const getDayViewColumnKey = (d: Date): string => {
+    return startOfDay(d).toISOString().slice(0, 10)
+  }
+  const dayViewColumnKey = getDayViewColumnKey(currentDate)
+
+  // Sentinel droppable for the entire DayView slot area
+  const { setNodeRef: dayViewSentinelSetNodeRef, isOver: isOverDayViewSentinel } = useDroppable({
+    id: `column-sentinel-${dayViewColumnKey}`,
+    data: {
+      type: "column-sentinel",
+      date: currentDate,
+      time: StartHour, // Default time for the sentinel
+      columnKey: dayViewColumnKey,
+    },
+  })
+
   return (
     <div data-slot="day-view" className="contents">
       {showAllDaySection && (
@@ -240,84 +262,112 @@ export function DayView({
           ))}
         </div>
 
-        <div className="relative">
-          {/* Positioned events */}
-          {positionedEvents.map((positionedEvent) => (
-            <div
-              key={positionedEvent.event.id}
-              className="absolute z-10 px-0.5"
-              style={{
-                top: `${positionedEvent.top}px`,
-                height: `${positionedEvent.height}px`,
-                left: `${positionedEvent.left * 100}%`,
-                width: `${positionedEvent.width * 100}%`,
-                zIndex: positionedEvent.zIndex,
-              }}
-            >
-              <div className="size-full">
-                <DraggableEvent
-                  event={positionedEvent.event}
-                  view="day"
-                  onClick={(e) => handleEventClick(positionedEvent.event, e)}
-                  showTime
-                  height={positionedEvent.height}
-                />
-              </div>
-            </div>
-          ))}
-
-          {/* Current time indicator */}
-          {currentTimeVisible && (
-            <div
-              className="pointer-events-none absolute right-0 left-0 z-20"
-              style={{ top: `${currentTimePosition}%` }}
-            >
-              <div className="relative flex items-center">
-                <div className="bg-primary absolute -left-1 h-2 w-2 rounded-full"></div>
-                <div className="bg-primary h-[2px] w-full"></div>
-              </div>
-            </div>
+        <div
+          ref={dayViewSentinelSetNodeRef}
+          className={cn(
+            "relative",
+            isOverDayViewSentinel && activeEvent && "bg-sky-500/10"
           )}
-
-          {/* Time grid */}
-          {hours.map((hour) => {
-            const hourValue = getHours(hour)
-            return (
+        >
+          <div className="relative">
+            {/* Positioned events */}
+            {positionedEvents.map((positionedEvent) => (
               <div
-                key={hour.toString()}
-                className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
+                key={positionedEvent.event.id}
+                className="absolute z-10 px-0.5"
+                style={{
+                  top: `${positionedEvent.top}px`,
+                  height: `${positionedEvent.height}px`,
+                  left: `${positionedEvent.left * 100}%`,
+                  width: `${positionedEvent.width * 100}%`,
+                  zIndex: positionedEvent.zIndex,
+                }}
               >
-                {/* Quarter-hour intervals */}
-                {[0, 1, 2, 3].map((quarter) => {
-                  const quarterHourTime = hourValue + quarter * 0.25
-                  return (
-                    <DroppableCell
-                      key={`${hour.toString()}-${quarter}`}
-                      id={`day-cell-${currentDate.toISOString()}-${quarterHourTime}`}
-                      date={currentDate}
-                      time={quarterHourTime}
-                      className={cn(
-                        "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                        quarter === 0 && "top-0",
-                        quarter === 1 &&
-                        "top-[calc(var(--week-cells-height)/4)]",
-                        quarter === 2 &&
-                        "top-[calc(var(--week-cells-height)/4*2)]",
-                        quarter === 3 &&
-                        "top-[calc(var(--week-cells-height)/4*3)]"
-                      )}
-                      onClick={() => {
-                        const startTime = new Date(currentDate)
-                        startTime.setHours(hourValue)
-                        startTime.setMinutes(quarter * 15)
-                        onEventCreate(startTime)
-                      }}
-                    />
-                  )
-                })}
+                <div className="size-full">
+                  <DraggableEvent
+                    event={positionedEvent.event}
+                    view="day"
+                    onClick={(e) => handleEventClick(positionedEvent.event, e)}
+                    showTime
+                    height={positionedEvent.height}
+                  />
+                </div>
               </div>
-            )
-          })}
+            ))}
+
+            {/* Current time indicator */}
+            {currentTimeVisible && (
+              <div
+                className="pointer-events-none absolute right-0 left-0 z-20"
+                style={{ top: `${currentTimePosition}%` }}
+              >
+                <div className="relative flex items-center">
+                  <div className="bg-primary absolute -left-1 h-2 w-2 rounded-full"></div>
+                  <div className="bg-primary h-[2px] w-full"></div>
+                </div>
+              </div>
+            )}
+
+            {/* Time grid */}
+            {hours.map((hour) => {
+              const hourValue = getHours(hour)
+              return (
+                <div
+                  key={hour.toString()}
+                  className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
+                >
+                  {/* Quarter-hour intervals */}
+                  {[0, 1, 2, 3].map((quarter) => {
+                    const quarterHourTime = hourValue + quarter * 0.25
+                    const cellId = `day-cell-${currentDate.toISOString()}-${quarterHourTime}`
+                    const cellClassName = cn(
+                      "absolute h-[calc(var(--week-cells-height)/4)] w-full",
+                      quarter === 0 && "top-0",
+                      quarter === 1 &&
+                      "top-[calc(var(--week-cells-height)/4)]",
+                      quarter === 2 &&
+                      "top-[calc(var(--week-cells-height)/4*2)]",
+                      quarter === 3 &&
+                      "top-[calc(var(--week-cells-height)/4*3)]"
+                    )
+
+                    const isColumnActiveForDrag = activeEvent && currentDraggableColumnKey === dayViewColumnKey
+
+                    const handleCellClick = () => {
+                      const startTime = new Date(currentDate)
+                      startTime.setHours(hourValue)
+                      startTime.setMinutes(quarter * 15)
+                      onEventCreate(startTime)
+                    }
+
+                    if (isColumnActiveForDrag) {
+                      return (
+                        <DroppableCell
+                          key={`${hour.toString()}-${quarter}`}
+                          id={cellId}
+                          date={currentDate}
+                          time={quarterHourTime}
+                          className={cellClassName}
+                          onClick={handleCellClick}
+                        />
+                      )
+                    } else {
+                      return (
+                        <StaticCalendarCell
+                          key={`${hour.toString()}-${quarter}`}
+                          date={currentDate}
+                          time={quarterHourTime}
+                          className={cellClassName}
+                          onClick={handleCellClick}
+                          title={`Create event at ${currentDate.toLocaleDateString()} ${hourValue}:${quarter * 15}`}
+                        />
+                      )
+                    }
+                  })}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

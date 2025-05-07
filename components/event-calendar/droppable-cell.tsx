@@ -1,6 +1,7 @@
 "use client"
 
 import { useDroppable } from "@dnd-kit/core"
+import { startOfDay } from "date-fns"
 
 import { cn } from "@/utils/utils"
 import { useCalendarDnd } from "./calendar-dnd-context"
@@ -22,12 +23,31 @@ export function DroppableCell({
   className,
   onClick,
 }: DroppableCellProps) {
+  const { activeEvent, currentDraggableColumnKey, activeView } = useCalendarDnd()
+
+  // Helper to get a consistent column key
+  const getColumnKey = (d: Date): string => {
+    return startOfDay(d).toISOString().slice(0, 10) // YYYY-MM-DD
+  }
+
+  const myColumnKey = getColumnKey(date)
+  const isCellInActiveColumn = currentDraggableColumnKey === myColumnKey
+
+  // Cells are disabled if they are not in the active draggable column (for week/day views)
+  // For month view, or if no column key is set, cells are always enabled (current behavior)
+  const isDisabled =
+    (activeView === "week" || activeView === "day") &&
+    currentDraggableColumnKey !== null &&
+    !isCellInActiveColumn;
 
   const { setNodeRef, isOver } = useDroppable({
     id,
+    disabled: isDisabled,
     data: {
       date,
       time,
+      type: "cell", // Identify this droppable as a 'cell'
+      columnKey: myColumnKey,
     },
   })
 
@@ -39,17 +59,23 @@ export function DroppableCell({
         .padStart(2, "0")}`
       : null
 
+  // console.log(
+  //   `DroppableCell: ${id}, myKey: ${myColumnKey}, activeKey: ${currentDraggableColumnKey}, disabled: ${isDisabled}, isOver: ${isOver}`
+  // )
+
   return (
     <div
       ref={setNodeRef}
       onClick={onClick}
       className={cn(
-        "data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1 hover:bg-blue-300/50",
+        "flex h-full flex-col overflow-hidden px-0.5 py-1 transition-colors sm:px-1 bg-blue-200",
         className,
-        isOver && "bg-blue-300 dark:bg-blue-700 ring-2 ring-blue-500"
+        isDisabled && "bg-red-200 dark:bg-slate-800 opacity-50",
+        // !isDisabled && isCellInActiveColumn && "bg-blue-100 dark:bg-blue-900/30",
+        // isOver && activeEvent && !isDisabled && "bg-blue-300 dark:bg-blue-700 ring-2 ring-blue-500"
       )}
       title={formattedTime ? `${formattedTime}` : undefined}
-      data-dragging={isOver ? true : undefined}
+      data-dragging={isOver && activeEvent && !isDisabled ? true : undefined}
     >
       {children}
     </div>

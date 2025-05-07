@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  useEffect,
 } from "react"
 import {
   DndContext,
@@ -21,11 +22,17 @@ import {
   type DragStartEvent,
   type UniqueIdentifier,
 } from "@dnd-kit/core"
-import { addMinutes, differenceInMinutes } from "date-fns"
+import { addMinutes, differenceInMinutes, startOfDay } from "date-fns"
 
 
 import { CalendarEvent } from "./types"
 import { EventItem } from "./event-item"
+
+// Helper to get a consistent column key
+const getColumnKey = (date: Date): string => {
+  return startOfDay(date).toISOString().slice(0, 10) // YYYY-MM-DD
+}
+
 // Define the context type
 type CalendarDndContextType = {
   activeEvent: CalendarEvent | null
@@ -43,6 +50,7 @@ type CalendarDndContextType = {
       isLastDay?: boolean
     }
   } | null
+  currentDraggableColumnKey: string | null // New: Key for the currently active column for dragging
 }
 
 // Create the context
@@ -55,6 +63,7 @@ const CalendarDndContext = createContext<CalendarDndContextType>({
   isMultiDay: false,
   multiDayWidth: null,
   dragHandlePosition: null,
+  currentDraggableColumnKey: null, // New
 })
 
 // Hook to use the context
@@ -87,6 +96,15 @@ export function CalendarDndProvider({
       isLastDay?: boolean
     }
   } | null>(null)
+  const [currentDraggableColumnKey, setCurrentDraggableColumnKey] =
+    useState<string | null>(null) // New state for active column
+
+  // Effect to log column key changes for debugging
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[DND Context] currentDraggableColumnKey updated:", currentDraggableColumnKey);
+    }
+  }, [currentDraggableColumnKey]);
 
   // Store original event dimensions
   const eventDimensions = useRef<{ height: number }>({ height: 0 })
@@ -133,6 +151,7 @@ export function CalendarDndProvider({
       isMultiDay: eventIsMultiDay,
       multiDayWidth: eventMultiDayWidth,
       dragHandlePosition: eventDragHandlePosition,
+      initialColumnKey,
     } = active.data.current as {
       event: CalendarEvent
       view: "month" | "week" | "day"
@@ -147,15 +166,26 @@ export function CalendarDndProvider({
           isLastDay?: boolean
         }
       }
+      initialColumnKey?: string
     }
 
     setActiveEvent(calendarEvent)
     setActiveId(active.id)
     setActiveView(view)
-    setCurrentTime(new Date(calendarEvent.start))
+    const initialEventDate = new Date(calendarEvent.start)
+    setCurrentTime(initialEventDate)
     setIsMultiDay(eventIsMultiDay || false)
     setMultiDayWidth(eventMultiDayWidth || null)
     setDragHandlePosition(eventDragHandlePosition || null)
+
+    // New: Set initial draggable column key
+    if (view === "week" || view === "day") {
+      setCurrentDraggableColumnKey(
+        active.data.current.initialColumnKey || getColumnKey(initialEventDate)
+      )
+    } else {
+      setCurrentDraggableColumnKey(null) // Or handle month view differently if desired
+    }
 
     // Store event height if provided
     if (height) {
@@ -168,11 +198,27 @@ export function CalendarDndProvider({
     const { over } = event
 
     if (over && activeEvent && over.data.current) {
-      const { date, time } = over.data.current as { date: Date; time?: number }
+      const overData = over.data.current as {
+        date: Date
+        time?: number
+        type?: "column-sentinel" | "cell"
+        columnKey?: string
+      }
+      const { date, time, type, columnKey: overColumnKey } = overData
+
+      // New: Update active column if dragging over a sentinel in a different column
+      if (
+        (activeView === "week" || activeView === "day") &&
+        type === "column-sentinel" &&
+        overColumnKey &&
+        overColumnKey !== currentDraggableColumnKey
+      ) {
+        setCurrentDraggableColumnKey(overColumnKey)
+      }
 
       // Update time for week/day views
-      if (time !== undefined && activeView !== "month") {
-        const newTime = new Date(date)
+      if (time !== undefined && (activeView === "week" || activeView === "day")) {
+        const newTime = new Date(date) // Use the date from the droppable (cell or sentinel)
 
         // Calculate hours and minutes with 15-minute precision
         const hours = Math.floor(time)
@@ -187,14 +233,12 @@ export function CalendarDndProvider({
 
         newTime.setHours(hours, minutes, 0, 0)
 
-        // Only update if time has changed
+        // Only update if time or date has changed
         if (
           !currentTime ||
           newTime.getHours() !== currentTime.getHours() ||
           newTime.getMinutes() !== currentTime.getMinutes() ||
-          newTime.getDate() !== currentTime.getDate() ||
-          newTime.getMonth() !== currentTime.getMonth() ||
-          newTime.getFullYear() !== currentTime.getFullYear()
+          !startOfDay(newTime).getTime() === !startOfDay(currentTime).getTime() // Compare day parts
         ) {
           setCurrentTime(newTime)
         }
@@ -237,6 +281,7 @@ export function CalendarDndProvider({
       setIsMultiDay(false)
       setMultiDayWidth(null)
       setDragHandlePosition(null)
+      setCurrentDraggableColumnKey(null) // New: Reset active column
       return
     }
 
@@ -321,6 +366,7 @@ export function CalendarDndProvider({
       setIsMultiDay(false)
       setMultiDayWidth(null)
       setDragHandlePosition(null)
+      setCurrentDraggableColumnKey(null) // New: Reset active column
     }
   }
 
@@ -342,6 +388,7 @@ export function CalendarDndProvider({
           isMultiDay,
           multiDayWidth,
           dragHandlePosition,
+          currentDraggableColumnKey, // New: Pass down current column key
         }}
       >
         {children}
