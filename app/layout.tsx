@@ -1,15 +1,10 @@
-// layout.tsx
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/sidebar/app-sidebar";
-import { Separator } from "@radix-ui/react-dropdown-menu";
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import ReactScanWrapper from "./reactScanWrapper";
-import { Toaster } from "@/components/ui/toaster";
-
-// Import server client
-import { createClient } from "@/utils/supabase/server";
+import { Navbar } from "@/components/layout/navbar";
+import { createClient } from "@/supabase/server";
+import { SidebarInset, SidebarProvider } from "@/components/layout/sidebar/sidebar";
+import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
+import { Toaster } from "sonner";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -26,22 +21,14 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  display: "swap",
-  subsets: ["latin"],
-});
-
-// Make the layout component async
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch user data
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  // (Keep the existing mapped data)
   const mapped = [
     {
       "title": "Obras",
@@ -146,38 +133,38 @@ export default async function RootLayout({
   ]
 
   return (
-    <html
-      lang="en"
-    //  className="light"
-    >
-      <head>
-        {/* rest of your scripts go under */}
-      </head>
-      <body
-        className={` ${geistSans.className} antialiased bg-containerBackground`}
-      >
-        <ReactScanWrapper>
-          <SidebarProvider>
-            {/* Pass user data to AppSidebar */}
-            <AppSidebar mappedData={mapped as any} user={user} />
-            <SidebarInset className="flex flex-col p-4 pt-0 lg:pr-10">
-              <header className="flex h-14 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                <div className="flex items-center gap-2">
-                  <SidebarTrigger className="-ml-1" />
-                  <Separator className="mr-2 h-4" />
-                  <Breadcrumbs />
-                </div>
-              </header>
-              {/* <div className="flex flex-1 flex-col w-full h-full mb-4 bg-white rounded-3xl shadow-[0_0_0px_5px_#bcc5e81c,_0_0_0px_2px_#dfe0e4_] px-8"> */}
-              {children}
-              {/* </div> */}
-            </SidebarInset>
-            {/* <ReactQueryDevtool /> */}
-          </SidebarProvider>
-        </ReactScanWrapper>
+    <html lang="en" className={geistSans.className} suppressHydrationWarning>
+      <body className="bg-containerHollowBackground text-foreground">
         <Toaster />
+        <SidebarProvider>
+          <AppSidebar mappedData={mapped as any} user={session?.user || null} />
+          <SidebarInset className="flex flex-col pl-0 w-full pr-4 pb-4 pt-1">
+            <main className="min-h-full flex flex-col items-cente max-h-[80vh]">
+              <div className="flex-1 w-full h-full flex flex-col items-center">
+                <Navbar session={session} />
+
+                <div className="flex-1 w-full h-full flex flex-col items-center bg-white rounded-3xl overflow-y-auto max-h-[95vh] outline outline-outline outline-1 shadow mt-[1px]" >
+                  {children}
+                  <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-4 bg-white max-h-[10vh]">
+                    <p>
+                      Powered by{" "}
+                      <a
+                        href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
+                        target="_blank"
+                        className="font-bold hover:underline"
+                        rel="noreferrer"
+                      >
+                        Supabase
+                      </a>
+                    </p>
+                  </footer>
+                </div>
+
+              </div>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
       </body>
     </html>
   );
 }
-

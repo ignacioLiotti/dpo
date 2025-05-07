@@ -1,88 +1,98 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 
-// Define public paths that don't require authentication
-const publicPaths = ["/sign-in", "/sign-up"]; // Add any other public paths here
+export async function middleware(req: NextRequest) {
+	// Create a Supabase client configured to use cookies
+	const res = NextResponse.next();
 
-export async function middleware(request: NextRequest) {
-	// This `try/catch` block is only here for the interactive tutorial.
-	// Feel free to remove once you have Supabase connected.
-	try {
-		// Create an unmodified response
-		let response = NextResponse.next({
-			request: {
-				headers: request.headers,
-			},
-		});
-
-		const supabase = createServerClient(
-			process.env.NEXT_PUBLIC_SUPABASE_URL!,
-			process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-			{
-				cookies: {
-					getAll() {
-						return request.cookies.getAll();
-					},
-					setAll(cookiesToSet) {
-						cookiesToSet.forEach(({ name, value, options }) =>
-							request.cookies.set(name, value)
-						);
-						response = NextResponse.next({
-							request: {
-								headers: request.headers,
-							},
-						});
-						cookiesToSet.forEach(({ name, value, options }) =>
-							response.cookies.set(name, value, options)
-						);
-					},
+	// Create a new supabase server client with the cookies
+	const supabase = createServerClient(
+		process.env.NEXT_PUBLIC_SUPABASE_URL!,
+		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+		{
+			cookies: {
+				get: (name) => {
+					return req.cookies.get(name)?.value;
 				},
-			}
-		);
-
-		// IMPORTANT: Avoid writing any logic between createServerClient and
-		// supabase.auth.getUser(). A simple mistake could make it very hard to debug
-		// issues with users being randomly logged out.
-
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		// Check if the user is not authenticated and the current path is not public
-		if (!user && !publicPaths.includes(request.nextUrl.pathname)) {
-			// No user signed in and not accessing a public path, redirect to sign-in.
-			const url = request.nextUrl.clone();
-			url.pathname = "/sign-in";
-			return NextResponse.redirect(url);
-		}
-
-		// IMPORTANT: You *must* return the Supabase response object as it is.
-		// Adjustments for specific scenarios must involve modifying this response
-		// object, ensuring cookies are preserved.
-		return response;
-	} catch (e) {
-		// If you are here, a Supabase client could not be created!
-		// This is likely because you have not set up environment variables.
-		// Check out http://pris.ly/d/server-component-environment-variables for more info.
-		return NextResponse.next({
-			request: {
-				headers: request.headers,
+				set: (name, value, options) => {
+					res.cookies.set({
+						name,
+						value,
+						...options,
+					});
+				},
+				remove: (name, options) => {
+					res.cookies.set({
+						name,
+						value: "",
+						...options,
+					});
+				},
 			},
-		});
+		}
+	);
+
+	// Refresh session if expired - required for Server Components
+	// https://supabase.com/docs/guides/auth/auth-helpers/nextjs#managing-session-with-middleware
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
+
+	// Define protected paths and their required roles
+	const protectedPaths = [{ path: "/super-user", requiredRole: "super_user" }];
+
+	// Get the pathname from the URL
+	const { pathname } = req.nextUrl;
+
+	// Check if the current path is protected
+	const matchedPath = protectedPaths.find((route) =>
+		pathname.startsWith(route.path)
+	);
+
+	// If path is not protected or no session (will handle auth in the page), proceed
+	if (!matchedPath || !session) {
+		return res;
+	}
+
+	try {
+		// If we have a session, check if the user has the required role
+		const { data: profile } = await supabase
+			.from("profiles")
+			.select("role")
+			.eq("id", session.user.id)
+			.single();
+
+		const userRole = profile?.role || "user";
+		const requiredRole = matchedPath.requiredRole;
+
+		// Define role hierarchy (higher number = higher privilege)
+		const roleHierarchy: Record<string, number> = {
+			user: 1,
+			super_user: 2,
+			admin: 3,
+		};
+
+		// Check if user's role has sufficient privileges
+		if (roleHierarchy[userRole] >= roleHierarchy[requiredRole]) {
+			// User has required role, proceed
+			return res;
+		} else {
+			// User doesn't have the required role, redirect to unauthorized page
+			return NextResponse.redirect(new URL("/unauthorized", req.url));
+		}
+	} catch (error) {
+		console.error("Error in role-based middleware:", error);
+		// On error, redirect to error page
+		return NextResponse.redirect(new URL("/error", req.url));
 	}
 }
 
+// Specify which paths this middleware should run on
 export const config = {
 	matcher: [
-		/*
-		 * Match all request paths except for the ones starting with:
-		 * - _next/static (static files)
-		 * - _next/image (image optimization files)
-		 * - favicon.ico (favicon file)
-		 * - api (API routes, you might want to protect these differently)
-		 * - auth/callback (Supabase auth callback)
-		 * Feel free to modify this pattern to include more paths.
-		 */
-		"/((?!_next/static|_next/image|favicon.ico|api|auth/callback|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+		"/super-user/:path*",
+		// Add more paths as needed
 	],
 };

@@ -20,8 +20,9 @@
 		--accent-foreground: 222.2 47.4% 11.2%;
 		--destructive: 0 84.2% 60.2%;
 		--destructive-foreground: 210 40% 98%;
-		--border: 214.3 31.8% 91.4%;
+		--border: 214.3 25.8% 85.4%;
 		--input: 214.3 31.8% 91.4%;
+		--outline: 214.3 20.8% 80.4%;
 		--ring: 222.2 84% 4.9%;
 		--radius: 0.5rem;
 		--chart-1: 12 76% 61%;
@@ -106,4 +107,13 @@
 /* Fix for marker icon images */
 .leaflet-marker-icon {
 	filter: hue-rotate(180deg);
+}
+
+[data-sonner-toast][data-styled="true"] {
+	backdrop-filter: blur(3px) !important;
+	color: hsl(var(--foreground)) !important;
+	border-radius: 1rem !important;
+	padding: 1rem !important;
+	outline: 1px solid hsl(var(--outline) / 0.75) !important;
+	box-shadow: 0 5px 10px 0px rgba(0, 0, 0, 0.1) !important;
 }

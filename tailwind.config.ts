@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 const config = {
 	darkMode: ["class"],
@@ -19,11 +20,12 @@ const config = {
 		},
 		extend: {
 			colors: {
-				border: "hsl(var(--border))",
+				border: "hsl(var(--border)/0.75)",
+				outline: "hsl(var(--outline)/0.75)",
 				input: "hsl(var(--input))",
 				ring: "hsl(var(--ring))",
 				background: "hsl(var(--background))",
-				containerBackground: "#F4F5FA",
+				containerBackground: "#f6f6f8",
 				containerHollowBackground: "hsl(230deg 37.5% 93.86%)",
 				foreground: "hsl(var(--foreground))",
 				primary: {
@@ -76,7 +78,7 @@ const config = {
 			},
 		},
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [animate],
 } satisfies Config;
 
 export default config;

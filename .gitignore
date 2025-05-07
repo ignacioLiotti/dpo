@@ -36,17 +36,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# custom files
-*.txt
-*.csv
-*.xlsx
-*.xls
-*.doc
-*.docx
-*.sql
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-convertCSV.js
