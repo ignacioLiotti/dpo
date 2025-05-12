@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AnimatePresence, motion } from "framer-motion"
+import { InvoiceForm } from "./invoice-form"
+
 export default function Header() {
   return (
     <div className="flex flex-col gap-16 items-center justify-center h-full">
@@ -31,54 +33,14 @@ export default function Header() {
       <div className="flex flex-wrap gap-4 justify-center">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline">Open Right Sheet</Button>
+            <Button variant="outline">Open Invoice Form</Button>
           </SheetTrigger>
-          <SheetContent side="right" level={1}>
+          <SheetContent side="right" className="w-[800px] overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>First Right Sheet</SheetTitle>
+              <SheetTitle>Invoice Form</SheetTitle>
             </SheetHeader>
             <div className="py-4">
-              <p className="mb-4">This is the first right-sided sheet content</p>
-
-              <AnimatePresence>
-                <motion.div
-                  key={'secondSheetId'}
-                  initial={false}
-                  animate={{}}
-                  exit={{ x: "100%", opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                >
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline">Open Another Right Sheet</Button>
-                    </SheetTrigger>
-
-
-
-                    <SheetContent side="right" className=" overflow-y-auto" level={2}>
-                      <SheetHeader>
-                        <SheetTitle>Second Right Sheet</SheetTitle>
-                      </SheetHeader>
-                      <div className="py-4">
-                        This is the nested right sheet content
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button variant="outline">Open Another Right Sheet</Button>
-                          </SheetTrigger>
-                          <SheetContent side="right" className=" overflow-y-auto" level={2}>
-                            <SheetHeader>
-                              <SheetTitle>Third Right Sheet</SheetTitle>
-                            </SheetHeader>
-                            <div className="py-4">
-                              This is the nested right sheet content
-                            </div>
-                          </SheetContent>
-                        </Sheet>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                </motion.div>
-              </AnimatePresence>
+              <InvoiceForm />
             </div>
           </SheetContent>
         </Sheet>
