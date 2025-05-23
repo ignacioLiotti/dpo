@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders } from "../_shared/cors.js";
 // This edge function gets the current user's role
 Deno.serve(async (req) => {
 	// Handle CORS preflight requests

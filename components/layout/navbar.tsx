@@ -123,16 +123,18 @@ export function Navbar({ session }: { session: any }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full pb-1 backdrop-blur">
-      <div className="flex h-12 items-center justify-center w-full bg-containerHollowBackground">
-        <div className="flex items-center justify-start w-1/2 gap-4 pl-4 h-full rounded-none rounded-t-3xl">
+    <header className="sticky top-0 w-full pb-1 z-20">
+      <div className="flex h-12 items-center justify-center w-full">
+        <div className="flex items-center justify-start w-1/2 gap-4 h-full rounded-none rounded-t-3xl pl-4">
+
           <SidebarTrigger className="" />
           <Breadcrumbs />
+
 
         </div>
         <Input className="w-1/4" placeholder="Search" showSearchIcon showCommandIcon />
         <div className="flex items-center justify-end w-1/2 h-full">
-          <div className="flex items-center gap-4 bg-containerHollowBackground h-full rounded-none rounded-bl-3xl pl-2">
+          <div className="flex items-center gap-4 h-full rounded-none rounded-bl-3xl pl-2">
 
             <Button variant="ghost" className="rounded-full h-8 w-8">
               <BookOpenIcon className="h-4 w-4" />

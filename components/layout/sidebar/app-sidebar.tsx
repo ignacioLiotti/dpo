@@ -50,17 +50,18 @@ export async function AppSidebar({ mappedData, user }: AppSidebarProps) {
     return <Sidebar collapsible="icon" />;
   }
 
-  return (<Sidebar collapsible="icon" className=" !border-r-0 pt-1">
-    <SidebarHeader>
-      <TeamSwitcher teams={teams} />
-    </SidebarHeader>
-    <SidebarContent>
-      <NavMain items={mappedData} />
-      {/* <NavProjects projects={projects} /> */}
-    </SidebarContent>
-    <SidebarFooter>
-      {/* <UserProfileDropdown userName={user?.user_metadata?.name} userEmail={user?.email} userAvatarUrl={user?.user_metadata?.avatar_url} /> */}
-    </SidebarFooter>
-    <SidebarRail />
-  </Sidebar>);
+  return (
+    <Sidebar collapsible="icon" className=" !border-r-0 pt-1 z-20 flex justify-center items-center">
+      <SidebarHeader>
+        <TeamSwitcher teams={teams} />
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={mappedData} />
+        {/* <NavProjects projects={projects} /> */}
+      </SidebarContent>
+      <SidebarFooter>
+        {/* <UserProfileDropdown userName={user?.user_metadata?.name} userEmail={user?.email} userAvatarUrl={user?.user_metadata?.avatar_url} /> */}
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>);
 }

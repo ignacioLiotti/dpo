@@ -1,0 +1,14 @@
+[db.migrations]
+schema_paths = [
+  # Load base enums and types first
+  "./schemas/00_types.sql",
+  # Then load core tables
+  "./schemas/01_obras.sql",
+  # Then load related tables
+  "./schemas/02_redeterminaciones.sql",
+  "./schemas/03_adicionales.sql",
+  "./schemas/04_ampliaciones_plazo.sql",
+  # Finally load views and functions
+  "./schemas/05_views.sql",
+  "./schemas/06_functions.sql",
+] 

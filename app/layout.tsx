@@ -134,16 +134,34 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-containerHollowBackground text-foreground">
+      <head>
+        <script
+          crossOrigin="anonymous"
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+        />
+      </head>
+      <body className="text-foreground">
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false">
+          <filter id="noiseFilter">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="5.47"
+              numOctaves="2"
+              stitchTiles="stitch" />
+          </filter>
+        </svg>
+
+        <div className="noise-bg -z-10" />
+
         <Toaster />
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={false}>
           <AppSidebar mappedData={mapped as any} user={session?.user || null} />
           <SidebarInset className="flex flex-col pl-0 w-full pr-4 pb-4 pt-1">
             <main className="min-h-full flex flex-col items-cente max-h-[80vh]">
               <div className="flex-1 w-full h-full flex flex-col items-center">
                 <Navbar session={session} />
 
-                <div className="flex-1 w-full h-full flex flex-col items-center bg-white rounded-3xl overflow-y-auto max-h-[95vh] outline outline-outline outline-1 shadow mt-[1px]" >
+                <div className="flex-1 w-full h-full flex flex-col items-center bg-white rounded-3xl overflow-y-auto max-h-[95vh] outline outline-outline outline-1 shadow mt-[1px] z-10" >
                   {children}
                   <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-4 bg-white max-h-[10vh]">
                     <p>
