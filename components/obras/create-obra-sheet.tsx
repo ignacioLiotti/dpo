@@ -45,47 +45,11 @@ import { Separator } from '../ui/separator';
 interface CreateObraSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  // onObraCreated?: (newObra: Obra) => void; // Callback for optimistic updates/refresh
 }
-
-// --- New StyledSelectTrigger Component ---
-interface StyledSelectTriggerProps {
-  id?: string;
-  value: string | null | undefined;
-  placeholder: string;
-  onBlur?: () => void;
-  disabled?: boolean;
-  className?: string;
-}
-
-const StyledSelectTrigger: React.FC<StyledSelectTriggerProps> = ({
-  id,
-  value,
-  placeholder,
-  onBlur,
-  disabled,
-  className,
-}) => {
-  return (
-    <SelectTrigger
-      id={id}
-      onBlur={onBlur}
-      disabled={disabled}
-      className={cn(
-        'text-sm border-none font-mono h-min shadow-lite outline data-[placeholder]:outline-black/40 outline-black/80 outline-1 cursor-pointer py-1 px-3 w-full active:translate-y-[1px] active:shadow-clicked data-[state=open]:translate-y-[1px] data-[state=open]:shadow-clicked transition-all duration-100',
-        value ? 'text-primary' : ' hover:text-primary text-transparent',
-        className
-      )}
-    >
-      <SelectValue placeholder={placeholder} />
-    </SelectTrigger>
-  );
-};
-// --- End of StyledSelectTrigger Component ---
 
 export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
   // Initialize form first
-  const form = useForm<ObraBaseFormValues>({
+  const form = useForm({
     defaultValues: {
       obra_name: 'Obra de Prueba Automática',
       provincia: 'Provincia Ejemplo',
@@ -99,7 +63,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       fecha_inicio: new Date(),
       // Calculate fecha_fin based on fecha_inicio and duracion for consistency
       // fecha_fin will be set reactively or before submission
-      fecha_fin: null,
+      fecha_fin: null as Date | null,
       estado: Constants.public.Enums.obra_estado[0], // Default to first state (PLANIFICADA)
       reparticion_id: REPARTICIONES_ARRAY[0]?.id || 1,
       area_id: 1, // Setting to a valid area_id
@@ -111,15 +75,6 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       fecha_creacion: new Date(),
       fecha_inicio_prevista: new Date(new Date().setDate(new Date().getDate() + 7)), // 7 days from now
       duracion: 30, // Default duration
-      // Add other missing fields from ObraBaseFormValues with appropriate defaults
-      // Assuming some might be optional or derived, adjust as needed.
-      // For now, providing empty or null defaults for potentially optional string/number fields
-      // that were not explicitly mentioned in the original defaultValues.
-      // Ensure these align with your schema's optionality.
-      // Example for potentially missing fields (if any were not covered)
-      // some_other_string_field: '', 
-      // some_other_number_field: 0,
-      // some_other_date_field: null,
     },
     onSubmit: async ({ value }) => {
       console.log("value submit", value);
@@ -130,12 +85,9 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       }
       execute(finalValue as ObraBaseFormValues);
     },
-    validators: {
-      onSubmit: obraBaseSchema,
-    },
   });
 
-  const { execute, status, error: actionError } = useAction(createObraAction, {
+  const { execute, status } = useAction(createObraAction, {
     onSuccess: (actionResponseData) => {
       console.log("actionResponseData", actionResponseData);
       if (actionResponseData.data?.success && actionResponseData.data.data) {
@@ -143,7 +95,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
         form.reset();
         onClose();
       } else {
-        toast.error(actionResponseData.data?.error?.message || 'Error al crear la obra.');
+        toast.error('Error al crear la obra.');
       }
     },
     onError: (errorData) => {
@@ -168,18 +120,15 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
 
   const isLoading = status === 'executing';
 
-  // Handle sheet open change for resetting form if needed
-  React.useEffect(() => {
-    if (!isOpen) {
-      // Optional: Reset form when sheet closes if desired
-      form.reset();
-    }
-  }, [isOpen, form]);
-
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-2xl rounded-2xl w-full overflow-y-auto bg-white/60 backdrop-blur-sm p-2">
+      <SheetContent className="sm:max-w-4xl rounded-2xl w-full overflow-y-auto bg-white/60 backdrop-blur-sm p-2">
+      <SheetHeader>
+        {/* just for screen readers */}
+        <SheetTitle className='hidden h-0 w-0' aria-hidden="true">Crear Obra</SheetTitle>
+      </SheetHeader>
         <div className='flex flex-col gap-6 bg-white border w-full h-full py-4 px-8 rounded-xl' >
+          
           <form
             id="create-obra-form" // Give form an ID
             onSubmit={(e) => {
@@ -396,13 +345,17 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                           }}
                           disabled={isLoading}
                         >
-                          <StyledSelectTrigger
+                          <SelectTrigger
                             id={field.name}
-                            value={field.state.value?.toString()}
-                            placeholder="Seleccionar área"
                             onBlur={field.handleBlur}
                             disabled={isLoading}
-                          />
+                            className={cn(
+                              'text-sm border-none font-mono h-min shadow-lite outline data-[placeholder]:outline-black/40 outline-black/80 outline-1 cursor-pointer py-1 px-3 w-full active:translate-y-[1px] active:shadow-clicked data-[state=open]:translate-y-[1px] data-[state=open]:shadow-clicked transition-all duration-100',
+                              field.state.value ? 'text-primary' : ' hover:text-primary text-transparent'
+                            )}
+                          >
+                            <SelectValue placeholder="Seleccionar área" />
+                          </SelectTrigger>
                           <SelectContent>
                             {AREAS_ARRAY.map((opt) => (
                               <SelectItem key={opt.id} value={opt.id.toString()}>
@@ -420,16 +373,25 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                       <FieldWrapper label="Tipo de Obra:" className='' field={field as any} submitCount={form.state.submissionAttempts}>
                         <Select
                           value={field.state.value?.toString() ?? undefined}
-                          onValueChange={(value) => field.handleChange(parseInt(value, 10))}
+                          onValueChange={(value) => {
+                            const numValue = parseInt(value, 10);
+                            if (!isNaN(numValue)) {
+                              field.handleChange(numValue);
+                            }
+                          }}
                           disabled={isLoading}
                         >
-                          <StyledSelectTrigger
+                          <SelectTrigger
                             id={field.name}
-                            value={field.state.value?.toString()}
-                            placeholder="Seleccionar tipo"
                             onBlur={field.handleBlur}
                             disabled={isLoading}
-                          />
+                            className={cn(
+                              'text-sm border-none font-mono h-min shadow-lite outline data-[placeholder]:outline-black/40 outline-black/80 outline-1 cursor-pointer py-1 px-3 w-full active:translate-y-[1px] active:shadow-clicked data-[state=open]:translate-y-[1px] data-[state=open]:shadow-clicked transition-all duration-100',
+                              field.state.value ? 'text-primary' : ' hover:text-primary text-transparent'
+                            )}
+                          >
+                            <SelectValue placeholder="Seleccionar tipo" />
+                          </SelectTrigger>
                           <SelectContent>
                             {TIPOS_OBRA_ARRAY.map((opt) => (
                               <SelectItem key={opt.id} value={opt.id.toString()}>
@@ -447,16 +409,24 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                       <FieldWrapper label="Estado Inicial:" className=' min-w-max' field={field as any} submitCount={form.state.submissionAttempts}>
                         <Select
                           value={field.state.value ?? undefined}
-                          onValueChange={(value) => field.handleChange(value as ObraBaseFormValues['estado'])}
+                          onValueChange={(value) => {
+                            if (value) {
+                              field.handleChange(value);
+                            }
+                          }}
                           disabled={isLoading}
                         >
-                          <StyledSelectTrigger
+                          <SelectTrigger
                             id={field.name}
-                            value={field.state.value}
-                            placeholder="Seleccionar estado"
                             onBlur={field.handleBlur}
                             disabled={isLoading}
-                          />
+                            className={cn(
+                              'text-sm border-none font-mono h-min shadow-lite outline data-[placeholder]:outline-black/40 outline-black/80 outline-1 cursor-pointer py-1 px-3 w-full active:translate-y-[1px] active:shadow-clicked data-[state=open]:translate-y-[1px] data-[state=open]:shadow-clicked transition-all duration-100',
+                              field.state.value ? 'text-primary' : ' hover:text-primary text-transparent'
+                            )}
+                          >
+                            <SelectValue placeholder="Seleccionar estado" />
+                          </SelectTrigger>
                           <SelectContent>
                             {Constants.public.Enums.obra_estado.map((estadoValue) => (
                               <SelectItem key={estadoValue} value={estadoValue}>
@@ -474,16 +444,25 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                       <FieldWrapper label="Repartición:" className='' field={field as any} submitCount={form.state.submissionAttempts}>
                         <Select
                           value={field.state.value?.toString() ?? ''}
-                          onValueChange={(value) => field.handleChange(parseInt(value, 10))}
+                          onValueChange={(value) => {
+                            const numValue = parseInt(value, 10);
+                            if (!isNaN(numValue)) {
+                              field.handleChange(numValue);
+                            }
+                          }}
                           disabled={isLoading}
                         >
-                          <StyledSelectTrigger
+                          <SelectTrigger
                             id={field.name}
-                            value={field.state.value?.toString()}
-                            placeholder="Seleccionar repartición"
                             onBlur={field.handleBlur}
                             disabled={isLoading}
-                          />
+                            className={cn(
+                              'text-sm border-none font-mono h-min shadow-lite outline data-[placeholder]:outline-black/40 outline-black/80 outline-1 cursor-pointer py-1 px-3 w-full active:translate-y-[1px] active:shadow-clicked data-[state=open]:translate-y-[1px] data-[state=open]:shadow-clicked transition-all duration-100',
+                              field.state.value ? 'text-primary' : ' hover:text-primary text-transparent'
+                            )}
+                          >
+                            <SelectValue placeholder="Seleccionar repartición" />
+                          </SelectTrigger>
                           <SelectContent>
                             {REPARTICIONES_ARRAY.map((opt) => (
                               <SelectItem key={opt.id} value={opt.id.toString()}>
@@ -638,8 +617,6 @@ function FieldWrapper({ label, className, field, children, submitCount = 0 }: {
   // Support both errorMap and errors array
   const errorList = field.state.meta.errors ||
     (field.state.meta.errorMap && Object.values(field.state.meta.errorMap).flat()) || [];
-
-  console.log("errorList", errorList);
   return (
     <div className={cn("flex flex-col gap-2 ", className)}>
       <Label htmlFor={field.name} className={cn("text-xs font-mono text-primary/80 min-w-max", className)}>{label}</Label>

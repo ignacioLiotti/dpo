@@ -4,35 +4,15 @@ import { NavUser } from "@/components/layout/sidebar/nav-user";
 import { TeamSwitcher } from "@/components/layout/sidebar/team-switcher";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, } from "@/components/layout/sidebar/sidebar";
 import type { User } from '@supabase/supabase-js'
-import * as Icons from "lucide-react";
 import { UserProfileDropdown } from "@/components/layout/user-profile-dropdown";
 import { createClient } from "@/supabase/server";
-type IconKey = keyof typeof iconMap;
 
 interface InputNavItem {
   title: string;
   url: string;
-  iconKey: keyof typeof Icons;
+  iconKey: string;
   items?: InputNavItem[];
 }
-
-const processNavItems = (items: InputNavItem[]): NavItem[] => {
-  return items.map(item => {
-    const IconComponent = iconMap[item.iconKey as IconKey];
-
-    const newItem: NavItem = {
-      title: item.title,
-      url: item.url,
-      icon: IconComponent,
-      items: item.items ? processNavItems(item.items) : undefined,
-    };
-    return newItem;
-  });
-};
-
-const capitalizeFirstLetter = (string: string) => {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-};
 
 interface AppSidebarProps {
   mappedData: InputNavItem[];
@@ -56,7 +36,7 @@ export async function AppSidebar({ mappedData, user }: AppSidebarProps) {
         <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={mappedData} />
+        <NavMain items={mappedData as any} />
         {/* <NavProjects projects={projects} /> */}
       </SidebarContent>
       <SidebarFooter>

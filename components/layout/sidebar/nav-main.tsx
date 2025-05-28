@@ -4,12 +4,7 @@ import { ChevronRight, type LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
-import {
-  AudioWaveform, Bot, BrainCogIcon, Coins, Command, DatabaseZapIcon,
-  FilePlus, FlaskConicalIcon, FolderSearch2, Frame, HardHatIcon, House,
-  LayoutListIcon, LayoutTemplateIcon, LogIn, Map, PieChart, QrCodeIcon,
-  TriangleAlert, UserCog, UserPlus
-} from "lucide-react";
+import * as Icons from "lucide-react";
 
 import {
   Collapsible,
@@ -28,34 +23,55 @@ import {
 } from "@/components/layout/sidebar/sidebar";
 import React from "react";
 
+// Icon mapping for the navigation
+const iconMap = {
+  AudioWaveform: Icons.AudioWaveform,
+  Bot: Icons.Bot,
+  BrainCogIcon: Icons.BrainCog,
+  Coins: Icons.Coins,
+  Command: Icons.Command,
+  DatabaseZapIcon: Icons.DatabaseZap,
+  FilePlus: Icons.FilePlus,
+  FlaskConicalIcon: Icons.FlaskConical,
+  FolderSearch2: Icons.FolderSearch2,
+  Frame: Icons.Frame,
+  HardHatIcon: Icons.HardHat,
+  House: Icons.House,
+  LayoutListIcon: Icons.LayoutList,
+  LayoutTemplateIcon: Icons.LayoutTemplate,
+  LogIn: Icons.LogIn,
+  Map: Icons.Map,
+  PieChart: Icons.PieChart,
+  QrCodeIcon: Icons.QrCode,
+  TriangleAlert: Icons.TriangleAlert,
+  UserCog: Icons.UserCog,
+  UserPlus: Icons.UserPlus,
+};
+
+type IconKey = keyof typeof iconMap;
+
 type SubItem = {
   title: string;
   url: string;
   icon?: LucideIcon;
+  iconKey?: string;
 };
 
 export type NavItem = {
   title: string;
   url: string;
   icon?: LucideIcon;
+  iconKey?: string;
   isActive?: boolean;
   items?: SubItem[];
 };
 
-type InputNavItem = {
+interface InputNavItem {
   title: string;
   url: string;
-  iconKey: string;
+  iconKey: keyof typeof Icons;
   items?: InputNavItem[];
-};
-
-const iconMap = {
-  FilePlus, House, FolderSearch2, BrainCogIcon, LayoutTemplateIcon,
-  DatabaseZapIcon, HardHatIcon, Coins, FlaskConicalIcon, Bot,
-  LayoutListIcon, QrCodeIcon, UserCog, LogIn, UserPlus
-};
-
-type IconKey = keyof typeof iconMap;
+}
 
 const processNavItems = (items: InputNavItem[]): NavItem[] => {
   return items.map(item => {
@@ -71,15 +87,20 @@ const processNavItems = (items: InputNavItem[]): NavItem[] => {
   });
 };
 
-
 export function NavMain({
   items,
 }: {
-  items: NavItem[];
+  items: NavItem[] | InputNavItem[];
 }) {
   const pathname = usePathname();
 
-  const mappedData = processNavItems(items);
+  // Process items if they have iconKey instead of icon (coming from server)
+  const processedItems = React.useMemo(() => {
+    if (items.length > 0 && 'iconKey' in items[0]) {
+      return processNavItems(items as InputNavItem[]);
+    }
+    return items as NavItem[];
+  }, [items]);
 
   // Check if a subitem is active
   const isSubItemActive = (subItems?: SubItem[]) =>
@@ -89,7 +110,7 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
-        {mappedData.map((item) => {
+        {processedItems.map((item) => {
           const hasActiveSubItem = isSubItemActive(item.items);
 
           return item.items && item.items.length > 0 ? (
@@ -103,7 +124,7 @@ export function NavMain({
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${item.isActive || hasActiveSubItem ? "bg-white text-primary shadow" : ""
+                    className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${item.isActive || hasActiveSubItem ? "bg-white text-primary shadow outline outline-outline outline-1" : ""
                       }`}
                   >
                     {item.icon && <item.icon className="mr-3 h-5 w-5" />}
@@ -117,7 +138,7 @@ export function NavMain({
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           asChild
-                          className={`flex items-center px-4 py-1.5 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${subItem.url === pathname ? "bg-white text-primary shadow" : ""
+                          className={`flex items-center px-4 py-1.5 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${subItem.url === pathname ? "bg-white outline outline-outline outline-1 text-primary shadow" : ""
                             }`}
                         >
                           <Link href={subItem.url}>
@@ -135,6 +156,7 @@ export function NavMain({
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 asChild
+                tooltip={item.title}
                 className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary transition-colors ${item.url === pathname ? "bg-white text-primary shadow" : ""
                   }`}
               >
@@ -148,5 +170,5 @@ export function NavMain({
         })}
       </SidebarMenu>
     </SidebarGroup>
-  );
+    );
 }

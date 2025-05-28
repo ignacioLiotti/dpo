@@ -68,7 +68,6 @@ export function useBreadcrumbs() {
 			}
 
 			// Handle dynamic route segments (those in brackets)
-			console.log("segment", segment);
 			if (segment.startsWith("[") && segment.endsWith("]")) {
 				// Remove brackets and make it more readable
 				const dynamicSegment = segment.slice(1, -1);

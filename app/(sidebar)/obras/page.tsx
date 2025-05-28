@@ -1,4 +1,4 @@
-// pagina para ver todas las obras
+// Dashboard page for viewing all obras with analytics and insights
 
 // debe ser una visualizacion de tarjetas con las obras
 
@@ -18,20 +18,46 @@
 // - expediente (numero)
 
 import type { Obra } from '@/types/obra';
-import { ObrasPageClient } from '@/components/obras/obras-page-client'; // Import the new client component
+import { ObrasDashboard } from '@/components/obras/obras-page-client';
 import { getAllObrasAction } from '@/app/actions/obras/get-obra-action';
 import { Suspense } from 'react';
+
+// Loading component for the dashboard
+function DashboardSkeleton() {
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <div className="h-8 w-64 bg-muted animate-pulse rounded" />
+          <div className="h-4 w-96 bg-muted animate-pulse rounded" />
+        </div>
+        <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
+        ))}
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="h-64 bg-muted animate-pulse rounded-lg" />
+        <div className="h-64 bg-muted animate-pulse rounded-lg" />
+      </div>
+      
+      <div className="h-96 bg-muted animate-pulse rounded-lg" />
+    </div>
+  );
+}
 
 // This page remains a Server Component
 export default async function ObrasPage() {
   const obrasData: Obra[] | null = await getAllObrasAction();
-
-  // Pass the fetched data to the client component, handle null case
+  console.log('obrasData', obrasData);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-
-      <ObrasPageClient initialObras={obrasData || []} />
+    <Suspense fallback={<DashboardSkeleton />}>
+      <ObrasDashboard initialObras={obrasData || []} />
     </Suspense>
   );
 }

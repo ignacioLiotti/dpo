@@ -65,7 +65,7 @@ create table "obras" (
   "estado" obra_estado not null,
   "reparticion_id" integer not null references reparticiones(id),
   "area_id" integer not null references areas(id),
-  "tipo_obra_id" integer not null references tipos_obra(id),
+  "tipo_obra_id" integer not null references tipos_obra(id), 
   "presupuesto_oficial" decimal(15,2),
   "fecha_basico" timestamptz,
   "expediente" text check (char_length(expediente) <= 100),

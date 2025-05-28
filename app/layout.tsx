@@ -67,46 +67,18 @@ export default async function RootLayout({
       ]
     },
     {
-      "title": "Custom Obras",
-      "url": "/custom-obras",
-      "iconKey": "LayoutListIcon",
+      "title": "OCR Playground",
+      "url": "/playground",
+      "iconKey": "BrainCogIcon",
       "items": [
-        {
-          "title": "Main",
-          "url": "/custom-obras",
-          "iconKey": "House"
-        },
-        {
-          "title": "Create",
-          "url": "/custom-obras/create",
-          "iconKey": "FilePlus"
-        },
-        {
-          "title": "Obra de Ejemplo",
-          "url": "/custom-obras/1284",
-          "iconKey": "HardHatIcon",
-          "items": [
-            {
-              "title": "Main",
-              "url": "/custom-obras/1284",
-              "iconKey": "House"
-            }
-          ]
-        }
       ]
     },
-    {
-      "title": "Items de Construcción",
-      "url": "/",
-      "iconKey": "LayoutListIcon",
-      "items": []
-    },
-    {
-      "title": "Fin de la Presentación",
-      "url": "/fin",
-      "iconKey": "QrCodeIcon",
-      "items": []
-    },
+    // {
+    //   "title": "Items de Construcción",
+    //   "url": "/",
+    //   "iconKey": "LayoutListIcon",
+    //   "items": []
+    // },
     {
       "title": "Auth",
       "url": "#",
@@ -124,12 +96,6 @@ export default async function RootLayout({
         }
       ]
     },
-    {
-      "title": "Vista Administrativa",
-      "url": "/admin",
-      "iconKey": "QrCodeIcon",
-      "items": []
-    }
   ]
 
   return (
@@ -140,7 +106,7 @@ export default async function RootLayout({
           src="//unpkg.com/react-scan/dist/auto.global.js"
         />
       </head>
-      <body className="text-foreground">
+      <body className="text-foreground bg-background">
         <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false">
           <filter id="noiseFilter">
             <feTurbulence
