@@ -12,3 +12,6 @@ schema_paths = [
   "./schemas/05_views.sql",
   "./schemas/06_functions.sql",
 ] 
+
+[db]
+port = 54325

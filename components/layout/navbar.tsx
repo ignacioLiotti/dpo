@@ -167,7 +167,7 @@ export function Navbar({ session }: { session: any }) {
             ) : (
               !isLoadingUser && (
                 <Button asChild variant="outline">
-                  <Link href="/login">Login</Link>
+                  <Link href="/sign-in">Login</Link>
                 </Button>
               )
             )}

@@ -8,8 +8,8 @@ import { motion } from 'framer-motion';
 import NumberFlow from '@number-flow/react'
 import { Minus, Plus } from 'lucide-react'
 
-import { obraBaseSchema, type ObraBaseFormValues, AREAS_ARRAY, REPARTICIONES_ARRAY, TIPOS_OBRA_ARRAY } from '@/supabase/schemas/obras-schemas';
-import { createObraAction } from '@/app/actions/obras/create-obra-action';
+import { createObraSchema, type CreateObraFormValues, AREAS_ARRAY, REPARTICIONES_ARRAY, TIPOS_OBRA_ARRAY } from '@/lib/schemas/obra-schemas';
+import { createObraAction } from '@/lib/actions/obra-actions';
 import { Constants } from '@/supabase.types';
 
 import { Button } from '@/components/ui/button';
@@ -83,7 +83,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
         const startDate = new Date(value.fecha_inicio);
         finalValue.fecha_fin = new Date(startDate.setDate(startDate.getDate() + value.duracion));
       }
-      execute(finalValue as ObraBaseFormValues);
+      execute(finalValue as CreateObraFormValues);
     },
   });
 
@@ -122,13 +122,12 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-4xl rounded-2xl w-full overflow-y-auto bg-white/60 backdrop-blur-sm p-2">
-      <SheetHeader>
-        {/* just for screen readers */}
-        <SheetTitle className='hidden h-0 w-0' aria-hidden="true">Crear Obra</SheetTitle>
-      </SheetHeader>
-        <div className='flex flex-col gap-6 bg-white border w-full h-full py-4 px-8 rounded-xl' >
-          
+      <SheetContent className="sm:max-w-3xl rounded-2xl w-full overflow-y-auto floating-scroll bg-white/60 backdrop-blur-sm p-2">
+        <SheetHeader>
+          {/* just for screen readers */}
+          <SheetTitle className='hidden h-0 w-0' aria-hidden="true">Crear Obra</SheetTitle>
+        </SheetHeader>
+        <div className='flex flex-col gap-6 bg-white border w-full py-4 px-8 rounded-xl' >
           <form
             id="create-obra-form" // Give form an ID
             onSubmit={(e) => {
@@ -376,7 +375,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                           onValueChange={(value) => {
                             const numValue = parseInt(value, 10);
                             if (!isNaN(numValue)) {
-                              field.handleChange(numValue);
+                              field.handleChange(numValue as any);
                             }
                           }}
                           disabled={isLoading}
@@ -411,7 +410,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                           value={field.state.value ?? undefined}
                           onValueChange={(value) => {
                             if (value) {
-                              field.handleChange(value);
+                              field.handleChange(value as any);
                             }
                           }}
                           disabled={isLoading}
@@ -447,7 +446,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                           onValueChange={(value) => {
                             const numValue = parseInt(value, 10);
                             if (!isNaN(numValue)) {
-                              field.handleChange(numValue);
+                              field.handleChange(numValue as any);
                             }
                           }}
                           disabled={isLoading}
@@ -528,7 +527,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
               <Separator className='w-full' variant="dashed" />
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-6 items-end'>
+            <div className='flex justify-between items-start gap-x-10 gap-y-6 pt-6'>
 
               <form.Field
                 name="presupuesto"
@@ -556,7 +555,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                       name={field.name}
                       value={field.state.value ?? 0}
                       onBlur={field.handleBlur}
-                      onChange={(value) => field.handleChange(value === null ? null : Number(value))}
+                      onChange={(value) => field.handleChange(value === null ? 0 : Number(value))}
                       className='text-4xl w-full'
                       disabled={isLoading}
                       min={0}

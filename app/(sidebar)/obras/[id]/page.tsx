@@ -36,15 +36,23 @@ import type { Obra } from '@/types/obra';
 import { notFound } from 'next/navigation';
 import ObraEditForm from '@/components/obras/obra-edit-form';
 import { getObraActionByID } from '@/app/actions/obras/get-obra-action';
+import { getObraDocumentsWithFolders, getObraFolders } from '@/lib/actions/document-actions';
 import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OCRDemo } from '@/components/obras/ocr-demo';
+import { ObraFilesClientWrapper } from '@/components/obras/features/obra-files-server/client-wrapper';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ObraDetailsPageProps {
   params: { id: string };
+  searchParams?: {
+    search?: string;
+    category?: string;
+    folder?: string;
+  };
 }
 
 // Loading component
@@ -59,7 +67,7 @@ function ObraDetailSkeleton() {
           </div>
           <div className="h-10 w-32 bg-muted animate-pulse rounded" />
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -107,9 +115,9 @@ function ProcessorIntegrationDemo({ obra }: { obra: Obra }) {
             </ul>
           </div>
         </div>
-        
+
         <Separator />
-        
+
         <div className="space-y-2">
           <h4 className="font-medium text-blue-700">Current Obra Status</h4>
           <div className="flex items-center gap-2">
@@ -121,10 +129,10 @@ function ProcessorIntegrationDemo({ obra }: { obra: Obra }) {
             </Badge>
           </div>
         </div>
-        
+
         <div className="text-xs text-blue-600 bg-blue-100 p-3 rounded">
-          <strong>Demo Features:</strong> The edit form below includes document upload with automatic data extraction 
-          and intelligent state management with validation. Upload contracts, invoices, or permits to see the 
+          <strong>Demo Features:</strong> The edit form below includes document upload with automatic data extraction
+          and intelligent state management with validation. Upload contracts, invoices, or permits to see the
           processor pattern in action!
         </div>
       </CardContent>
@@ -132,72 +140,100 @@ function ProcessorIntegrationDemo({ obra }: { obra: Obra }) {
   );
 }
 
-export default async function ObraDetailsPage({ params }: ObraDetailsPageProps) {
-  const { id } = params;
-  console.log('Fetching obra with id:', id);
+export default async function ObraDetailsPage({ params, searchParams }: ObraDetailsPageProps) {
+  const { id } = await params;
 
   const obra = await getObraActionByID(id);
 
-  console.log('obra', obra);
-
   if (!obra) {
-    notFound(); // This will show the closest not-found page
+    notFound();
   }
 
+  // Fetch documents and folders for the docs tab
+  const [documentsResult, foldersResult] = await Promise.all([
+    getObraDocumentsWithFolders(obra.id),
+    getObraFolders(obra.id)
+  ]);
+
+  const documents = documentsResult.documents || [];
+  const folders = foldersResult.folders || [];
+
+  // Server-side filtering
+  let filteredDocuments = documents;
+
+  // Apply search filter
+  if (searchParams?.search) {
+    const searchLower = searchParams.search.toLowerCase();
+    filteredDocuments = filteredDocuments.filter(doc =>
+      doc.name.toLowerCase().includes(searchLower) ||
+      (doc.description && doc.description.toLowerCase().includes(searchLower))
+    );
+  }
+
+  // Apply category filter
+  if (searchParams?.category) {
+    filteredDocuments = filteredDocuments.filter(doc =>
+      doc.category === searchParams.category
+    );
+  }
+
+  // Get current folder
+  const currentFolder = searchParams?.folder
+    ? folders.find(f => f.id === searchParams.folder) || null
+    : null;
+
+  // Filter documents by folder
+  if (currentFolder) {
+    filteredDocuments = filteredDocuments.filter(doc =>
+      doc.folder_id === currentFolder.id
+    );
+  } else {
+    // When not in a folder, show documents that are not in any folder
+    filteredDocuments = filteredDocuments.filter(doc => !doc.folder_id);
+  }
+
+  // Calculate folder document counts for the folder grid
+  const folderCounts = folders.reduce((acc, folder) => {
+    acc[folder.id] = documents.filter(doc => doc.folder_id === folder.id).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
-    <div className="container mx-auto py-10">
+    <div className="w-full max-w-full h-full overflow-y-hidden">
       <Suspense fallback={<ObraDetailSkeleton />}>
-        <div className="space-y-6">
-          {/* Processor Integration Demo */}
-          <ProcessorIntegrationDemo obra={obra} />
-          
-          {/* Tabbed Interface */}
-          <Tabs defaultValue="edit" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="edit">Edit Obra</TabsTrigger>
-              <TabsTrigger value="ocr">OCR Demo</TabsTrigger>
-              <TabsTrigger value="docs">Documents</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="edit" className="space-y-6">
-              {/* Main Obra Edit Form */}
-              <ObraEditForm obra={obra} />
-            </TabsContent>
-            
-            <TabsContent value="ocr" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>OCR + AI Document Processing</CardTitle>
-                  <p className="text-muted-foreground">
-                    Test the document processing capabilities that power automatic form population
+        <Tabs defaultValue="edit" className="w-full h-full flex flex-col pt-10">
+          <TabsList className="grid w-[calc(100%+2px)] grid-cols-2 h-10 bg-white rounded-none absolute top-[-1px] left-[-1px] z-[1000] ">
+            <TabsTrigger value="edit">Edit Obra</TabsTrigger>
+            <TabsTrigger value="docs">Documents</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="edit" className="space-y-6 overflow-y-auto">
+            <ObraEditForm obra={obra} />
+          </TabsContent>
+
+          <TabsContent value="docs" className="h-full w-full mt-0 overflow-y-auto">
+            {documentsResult.error || foldersResult.error ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium mb-2">Error al cargar documentos</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {documentsResult.error || foldersResult.error}
                   </p>
-                </CardHeader>
-                <CardContent>
-                  <OCRDemo />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="docs" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Document Management</CardTitle>
-                  <p className="text-muted-foreground">
-                    Manage documents related to this obra (Coming Soon)
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p>Document management features will be implemented here</p>
-                    <p className="text-sm mt-2">
-                      This would include document storage, version control, and automated processing
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                </div>
+              </div>
+            ) : (
+              <ObraFilesClientWrapper
+                obraId={obra.id}
+                obraName={obra.obra_name}
+                searchParams={searchParams || {}}
+                documents={filteredDocuments}
+                folders={folders}
+                currentFolder={currentFolder}
+                folderCounts={folderCounts}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </Suspense>
     </div>
   );
