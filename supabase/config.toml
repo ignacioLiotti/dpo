@@ -8,6 +8,7 @@ schema_paths = [
   "./schemas/02_redeterminaciones.sql",
   "./schemas/03_adicionales.sql",
   "./schemas/04_ampliaciones_plazo.sql",
+  "../app/(sidebar)/document-example/migration.sql",
   # Finally load views and functions
   "./schemas/05_views.sql",
   "./schemas/06_functions.sql",

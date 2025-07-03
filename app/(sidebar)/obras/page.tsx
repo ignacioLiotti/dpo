@@ -17,9 +17,9 @@
 // - basico (fecha)
 // - expediente (numero)
 
-import type { Obra } from '@/types/obra';
-import { ObrasDashboard } from '@/components/obras/obras-page-client';
-import { getAllObrasAction } from '@/app/actions/obras/get-obra-action';
+import type { Obra } from './types';
+import { ObrasDashboard } from './components/obras-page-client';
+import { getAllObrasAction } from './actions/get-obra-action';
 import { Suspense } from 'react';
 
 // Loading component for the dashboard

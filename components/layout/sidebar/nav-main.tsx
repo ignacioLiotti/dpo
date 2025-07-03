@@ -20,6 +20,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/layout/sidebar/sidebar";
 import React from "react";
 
@@ -106,6 +107,8 @@ export function NavMain({
   const isSubItemActive = (subItems?: SubItem[]) =>
     subItems?.some((subItem) => subItem.url === pathname);
 
+  const { toggleSidebar, state } = useSidebar()
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -124,6 +127,12 @@ export function NavMain({
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
+                    onClick={() => {
+                      console.log('as this is a nested button, when the sidebar is collapsed, the button should open the sidebar', item.title)
+                      if (state === 'collapsed') {
+                        toggleSidebar()
+                      }
+                    }}
                     className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary cursor-pointer transition-colors ${item.isActive || hasActiveSubItem ? "bg-white text-primary shadow outline outline-outline outline-1" : ""
                       }`}
                   >
@@ -170,5 +179,5 @@ export function NavMain({
         })}
       </SidebarMenu>
     </SidebarGroup>
-    );
+  );
 }

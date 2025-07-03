@@ -2,12 +2,11 @@
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AnimatePresence, motion } from "framer-motion"
 import { InvoiceForm } from "./invoice-form"
 
 export default function Header() {
   return (
-    <div className="flex flex-col gap-16 items-center justify-center h-full">
+    <div className="flex flex-col gap-16 items-center justify-center h-full bg-white/30 w-full ">
       <h1 className="sr-only">Supabase and Next.js Starter Template</h1>
       <p className="text-3xl lg:text-4xl !leading-tight mx-auto max-w-xl text-center">
         The fastest way to build apps with{" "}

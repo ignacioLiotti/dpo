@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx supabase migration up:*)",
+      "Bash(ls:*)",
+      "Bash(head:*)",
+      "Bash(npm run typecheck:*)"
     ],
     "deny": []
   }

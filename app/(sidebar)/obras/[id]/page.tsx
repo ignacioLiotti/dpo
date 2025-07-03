@@ -32,19 +32,18 @@
 // plazo (numero de dias)
 // fecha final (fecha)
 
-import type { Obra } from '@/types/obra';
+import type { Obra } from '../types';
 import { notFound } from 'next/navigation';
-import ObraEditForm from '@/components/obras/obra-edit-form';
-import { getObraActionByID } from '@/app/actions/obras/get-obra-action';
-import { getObraDocumentsWithFolders, getObraFolders } from '@/lib/actions/document-actions';
+import ObraEditForm from '../components/obra-edit-form';
+import { getObraActionByID } from '../actions/get-obra-action';
+import { getObraDocumentsWithFolders, getObraFolders } from '@/app/(sidebar)/obra-files/actions/document-actions';
 import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { OCRDemo } from '@/components/obras/ocr-demo';
-import { ObraFilesClientWrapper } from '@/components/obras/features/obra-files-server/client-wrapper';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ObraFilesClientWrapper } from '@/app/(sidebar)/obra-files/components/client-wrapper';
+import { cn } from '@/utils/utils';
 
 interface ObraDetailsPageProps {
   params: { id: string };
@@ -202,9 +201,10 @@ export default async function ObraDetailsPage({ params, searchParams }: ObraDeta
     <div className="w-full max-w-full h-full overflow-y-hidden">
       <Suspense fallback={<ObraDetailSkeleton />}>
         <Tabs defaultValue="edit" className="w-full h-full flex flex-col pt-10">
-          <TabsList className="grid w-[calc(100%+2px)] grid-cols-2 h-10 bg-white rounded-none absolute top-[-1px] left-[-1px] z-[1000] ">
-            <TabsTrigger value="edit">Edit Obra</TabsTrigger>
-            <TabsTrigger value="docs">Documents</TabsTrigger>
+          <TabsList className="flex justify-start items-center w-[calc(100%+2px)] overflow-hidden h-10 bg-white rounded-none absolute top-[-1px] left-[-1px] z-[1000] border-b border-outline p-0">
+            <span className={cn('noise-bg !w-full !h-full !absolute !top-0 !left-0 !z-[-1] ')}></span>
+            <TabsTrigger className={cn('mb-[-1px] border border-transparent h-full bg-transparent rounded-none', 'data-[state=active]:border-outline data-[state=active]:border data-[state=active]:border-solid data-[state=active]:bg-transparent data-[state=active]:shadow-none')} value="edit">Edit Obra</TabsTrigger>
+            <TabsTrigger className={cn('mb-[-1px] h-full border border-transparent bg-transparent rounded-none', 'data-[state=active]:border-outline data-[state=active]:border data-[state=active]:border-solid data-[state=active]:bg-transparent data-[state=active]:shadow-none')} value="docs">Documents</TabsTrigger>
           </TabsList>
 
           <TabsContent value="edit" className="space-y-6 overflow-y-auto">

@@ -1,0 +1,494 @@
+'use server';
+
+import { createClient } from '@/supabase/server';
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { extractStructuredData } from '../services/document-processor';
+
+// Schema for field definitions
+const createFieldDefinitionSchema = z.object({
+  folder_id: z.string().uuid(),
+  field_name: z.string().min(1),
+  field_type: z.enum(['text', 'number', 'date', 'currency', 'boolean', 'email', 'phone']),
+  field_label: z.string().min(1),
+  field_description: z.string().optional(),
+  extraction_method: z.enum(['regex', 'ai', 'hybrid']),
+  extraction_pattern: z.string().min(1),
+  validation_pattern: z.string().optional(),
+  is_required: z.boolean().default(false),
+  default_value: z.string().optional(),
+  sort_order: z.number().default(0),
+});
+
+// Schema for enabling extraction on folder
+const toggleFolderExtractionSchema = z.object({
+  folder_id: z.string().uuid(),
+  enable_extraction: z.boolean(),
+});
+
+// Schema for extracting data from document
+const extractDocumentDataSchema = z.object({
+  document_id: z.string().uuid(),
+  force_reextraction: z.boolean().default(false),
+});
+
+// Get field definitions for a folder
+export async function getFolderFieldDefinitions(folderId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data: fields, error } = await supabase
+      .from('folder_field_definitions')
+      .select('*')
+      .eq('folder_id', folderId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching field definitions:', error);
+      return { fields: [], error: error.message };
+    }
+
+    return { fields: fields || [], error: null };
+  } catch (error) {
+    console.error('Error in getFolderFieldDefinitions:', error);
+    return { fields: [], error: 'Failed to fetch field definitions' };
+  }
+}
+
+// Create field definition for folder
+export async function createFolderFieldDefinition(formData: FormData) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Extract and validate form data
+    const rawData = {
+      folder_id: formData.get('folder_id') as string,
+      field_name: formData.get('field_name') as string,
+      field_type: formData.get('field_type') as string,
+      field_label: formData.get('field_label') as string,
+      field_description: formData.get('field_description') as string || undefined,
+      extraction_method: formData.get('extraction_method') as string,
+      extraction_pattern: formData.get('extraction_pattern') as string,
+      validation_pattern: formData.get('validation_pattern') as string || undefined,
+      is_required: formData.get('is_required') === 'true',
+      default_value: formData.get('default_value') as string || undefined,
+      sort_order: parseInt(formData.get('sort_order') as string) || 0,
+    };
+
+    const validatedData = createFieldDefinitionSchema.parse(rawData);
+
+    // Verify user owns the folder
+    const { data: folder, error: folderError } = await supabase
+      .from('folders')
+      .select('id, obra_id, user_id')
+      .eq('id', validatedData.folder_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (folderError || !folder) {
+      throw new Error('Folder not found or you do not have permission');
+    }
+
+    // Create field definition
+    const { data, error } = await supabase
+      .from('folder_field_definitions')
+      .insert({
+        ...validatedData,
+        user_id: user.id,
+        obra_id: folder.obra_id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating field definition:', error);
+      throw new Error(`Failed to create field definition: ${error.message}`);
+    }
+
+    revalidatePath(`/obras/${folder.obra_id}`);
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Create field definition error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to create field definition');
+  }
+}
+
+// Toggle extraction feature for folder
+export async function toggleFolderExtraction(formData: FormData) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const rawData = {
+      folder_id: formData.get('folder_id') as string,
+      enable_extraction: formData.get('enable_extraction') === 'true',
+    };
+
+    const validatedData = toggleFolderExtractionSchema.parse(rawData);
+
+    // Update folder extraction setting
+    const { data, error } = await supabase
+      .from('folders')
+      .update({
+        extract_data: validatedData.enable_extraction,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', validatedData.folder_id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating folder extraction setting:', error);
+      throw new Error(`Failed to update folder: ${error.message}`);
+    }
+
+    revalidatePath(`/obras/${data.obra_id}`);
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Toggle folder extraction error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to update folder');
+  }
+}
+
+// Extract structured data from document
+export async function extractDocumentData(formData: FormData) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const rawData = {
+      document_id: formData.get('document_id') as string,
+      force_reextraction: formData.get('force_reextraction') === 'true',
+    };
+
+    const validatedData = extractDocumentDataSchema.parse(rawData);
+
+    // Get document with OCR content
+    const { data: document, error: docError } = await supabase
+      .from('documents_with_folders')
+      .select('*')
+      .eq('id', validatedData.document_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (docError || !document) {
+      throw new Error('Document not found or access denied');
+    }
+
+    if (!document.folder_id) {
+      throw new Error('Document is not in a folder with extraction enabled');
+    }
+
+    // Get field definitions for the folder
+    const { fields, error: fieldsError } = await getFolderFieldDefinitions(document.folder_id);
+    
+    if (fieldsError || fields.length === 0) {
+      throw new Error('No field definitions found for this folder');
+    }
+
+    // Check if extraction is enabled for this folder
+    const { data: folder, error: folderError } = await supabase
+      .from('folders')
+      .select('extract_data')
+      .eq('id', document.folder_id)
+      .single();
+
+    if (folderError || !folder?.extract_data) {
+      throw new Error('Data extraction is not enabled for this folder');
+    }
+
+    // Extract structured data using OCR content
+    const ocrText = document.ocr_content || '';
+    if (!ocrText) {
+      throw new Error('No OCR content available for this document');
+    }
+
+    const extractionResult = await extractStructuredData(
+      ocrText,
+      fields,
+      document.name
+    );
+
+    // Save extracted data to database
+    const { data: extractedRecord, error: saveError } = await supabase
+      .from('document_extracted_data')
+      .upsert({
+        document_id: validatedData.document_id,
+        folder_id: document.folder_id,
+        extracted_data: extractionResult.extractedData,
+        extraction_confidence: extractionResult.confidence,
+        field_count: extractionResult.fieldCount,
+        extraction_metadata: extractionResult.metadata,
+        user_id: user.id,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error('Error saving extracted data:', saveError);
+      throw new Error(`Failed to save extracted data: ${saveError.message}`);
+    }
+
+    revalidatePath(`/obras/${document.obra_id}`);
+    
+    return { 
+      success: true, 
+      data: {
+        ...extractionResult,
+        id: extractedRecord.id
+      }
+    };
+  } catch (error) {
+    console.error('Extract document data error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to extract document data');
+  }
+}
+
+// Apply template to folder (predefined field sets)
+export async function applyExtractionTemplate(formData: FormData) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const folderId = formData.get('folder_id') as string;
+    const templateName = formData.get('template_name') as string;
+
+    const templates = {
+      invoice: [
+        {
+          field_name: 'invoice_number',
+          field_type: 'text',
+          field_label: 'Número de Factura',
+          extraction_method: 'hybrid',
+          extraction_pattern: '(?:factura|invoice)\\s*#?\\s*([A-Z0-9-]+)',
+          is_required: true,
+          sort_order: 1,
+        },
+        {
+          field_name: 'total_amount',
+          field_type: 'currency',
+          field_label: 'Monto Total',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra el monto total de esta factura',
+          is_required: true,
+          sort_order: 2,
+        },
+        {
+          field_name: 'invoice_date',
+          field_type: 'date',
+          field_label: 'Fecha de Factura',
+          extraction_method: 'hybrid',
+          extraction_pattern: '(?:fecha|date):\\s*(\\d{1,2}[/-]\\d{1,2}[/-]\\d{4})',
+          is_required: true,
+          sort_order: 3,
+        },
+        {
+          field_name: 'vendor_name',
+          field_type: 'text',
+          field_label: 'Proveedor',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra el nombre del proveedor o empresa que emite esta factura',
+          is_required: false,
+          sort_order: 4,
+        },
+      ],
+      contract: [
+        {
+          field_name: 'contract_number',
+          field_type: 'text',
+          field_label: 'Número de Contrato',
+          extraction_method: 'hybrid',
+          extraction_pattern: '(?:contrato|contract)\\s*#?\\s*([A-Z0-9-]+)',
+          is_required: true,
+          sort_order: 1,
+        },
+        {
+          field_name: 'contract_amount',
+          field_type: 'currency',
+          field_label: 'Monto del Contrato',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra el monto total del contrato',
+          is_required: true,
+          sort_order: 2,
+        },
+        {
+          field_name: 'start_date',
+          field_type: 'date',
+          field_label: 'Fecha de Inicio',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra la fecha de inicio del contrato',
+          is_required: false,
+          sort_order: 3,
+        },
+        {
+          field_name: 'end_date',
+          field_type: 'date',
+          field_label: 'Fecha de Finalización',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra la fecha de finalización del contrato',
+          is_required: false,
+          sort_order: 4,
+        },
+        {
+          field_name: 'contractor_name',
+          field_type: 'text',
+          field_label: 'Contratista',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra el nombre del contratista',
+          is_required: false,
+          sort_order: 5,
+        },
+      ],
+      permit: [
+        {
+          field_name: 'permit_number',
+          field_type: 'text',
+          field_label: 'Número de Permiso',
+          extraction_method: 'hybrid',
+          extraction_pattern: '(?:permiso|permit)\\s*#?\\s*([A-Z0-9-]+)',
+          is_required: true,
+          sort_order: 1,
+        },
+        {
+          field_name: 'issue_date',
+          field_type: 'date',
+          field_label: 'Fecha de Emisión',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra la fecha de emisión del permiso',
+          is_required: false,
+          sort_order: 2,
+        },
+        {
+          field_name: 'expiry_date',
+          field_type: 'date',
+          field_label: 'Fecha de Vencimiento',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra la fecha de vencimiento del permiso',
+          is_required: false,
+          sort_order: 3,
+        },
+        {
+          field_name: 'issuing_authority',
+          field_type: 'text',
+          field_label: 'Autoridad Emisora',
+          extraction_method: 'ai',
+          extraction_pattern: 'Encuentra la autoridad que emite este permiso',
+          is_required: false,
+          sort_order: 4,
+        },
+      ],
+    };
+
+    const template = templates[templateName as keyof typeof templates];
+    if (!template) {
+      throw new Error('Template not found');
+    }
+
+    // Get folder to verify ownership
+    const { data: folder, error: folderError } = await supabase
+      .from('folders')
+      .select('obra_id')
+      .eq('id', folderId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (folderError || !folder) {
+      throw new Error('Folder not found or access denied');
+    }
+
+    // Insert template fields
+    const fieldsToInsert = template.map(field => ({
+      ...field,
+      folder_id: folderId,
+      user_id: user.id,
+      obra_id: folder.obra_id,
+    }));
+
+    const { data, error } = await supabase
+      .from('folder_field_definitions')
+      .insert(fieldsToInsert)
+      .select();
+
+    if (error) {
+      console.error('Error applying template:', error);
+      throw new Error(`Failed to apply template: ${error.message}`);
+    }
+
+    // Enable extraction for the folder
+    await supabase
+      .from('folders')
+      .update({ extract_data: true })
+      .eq('id', folderId);
+
+    revalidatePath(`/obras/${folder.obra_id}`);
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Apply template error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to apply template');
+  }
+}
+
+// Get extracted data for documents in a folder
+export async function getFolderExtractedData(folderId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('document_extracted_data')
+      .select(`
+        *,
+        obra_documents!document_extracted_data_document_id_fkey(
+          name, 
+          type, 
+          size, 
+          created_at
+        )
+      `)
+      .eq('folder_id', folderId)
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching extracted data:', error);
+      return { data: [], error: error.message };
+    }
+
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error in getFolderExtractedData:', error);
+    return { data: [], error: 'Failed to fetch extracted data' };
+  }
+}

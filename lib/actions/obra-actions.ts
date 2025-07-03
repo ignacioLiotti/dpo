@@ -10,7 +10,7 @@ import {
   filterObrasSchema,
   type CreateObraFormValues,
   type UpdateObraFormValues,
-} from "@/lib/schemas/obra-schemas";
+} from "../../app/(sidebar)/obras/schema";
 import { createClient } from "@/supabase/server";
 
 // Get all obras action (for backward compatibility)
@@ -22,6 +22,8 @@ export async function getAllObrasAction() {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
+
+    console.log('userr',user);
 
     if (authError || !user) {
       throw new ActionError("User not authenticated");
