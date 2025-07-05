@@ -5,12 +5,12 @@ import { ObraFilesClientWrapper } from './components/client-wrapper';
 import { getObraDocumentsWithFolders, getObraFolders } from './actions/document-actions';
 
 interface ObraFilesPageProps {
-  searchParams: {
+  searchParams: Promise<{
     obra_id?: string;
     search?: string;
     category?: string;
     folder?: string;
-  };
+  }>;
 }
 
 function ObraFilesPageSkeleton() {
@@ -22,7 +22,7 @@ function ObraFilesPageSkeleton() {
           <div className="h-4 w-96 bg-muted animate-pulse rounded" />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="h-96 bg-muted animate-pulse rounded-lg" />
         <div className="lg:col-span-3 h-96 bg-muted animate-pulse rounded-lg" />
@@ -32,9 +32,11 @@ function ObraFilesPageSkeleton() {
 }
 
 export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps) {
-  const obraId = searchParams.obra_id;
-  
-  if (!obraId) {
+  const params = await searchParams;
+  const { obra_id, search, category, folder } = params;
+
+
+  if (!obra_id) {
     return (
       <div className="container mx-auto py-10">
         <Card>
@@ -56,8 +58,8 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
 
   // Fetch documents and folders for the obra
   const [documentsResult, foldersResult] = await Promise.all([
-    getObraDocumentsWithFolders(obraId),
-    getObraFolders(obraId)
+    getObraDocumentsWithFolders(obra_id),
+    getObraFolders(obra_id)
   ]);
 
   const documents = documentsResult.documents || [];
@@ -67,8 +69,8 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
   let filteredDocuments = documents;
 
   // Apply search filter
-  if (searchParams.search) {
-    const searchLower = searchParams.search.toLowerCase();
+  if (search) {
+    const searchLower = search.toLowerCase();
     filteredDocuments = filteredDocuments.filter(doc =>
       doc.name.toLowerCase().includes(searchLower) ||
       (doc.description && doc.description.toLowerCase().includes(searchLower))
@@ -76,15 +78,15 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
   }
 
   // Apply category filter
-  if (searchParams.category) {
+  if (category) {
     filteredDocuments = filteredDocuments.filter(doc =>
-      doc.category === searchParams.category
+      doc.category === category
     );
   }
 
   // Get current folder
-  const currentFolder = searchParams.folder
-    ? folders.find(f => f.id === searchParams.folder) || null
+  const currentFolder = folder
+    ? folders.find(f => f.id === folder) || null
     : null;
 
   // Filter documents by folder
@@ -112,7 +114,7 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Obra Files</h1>
                 <p className="text-muted-foreground">
-                  Document management for obra {obraId}
+                  Document management for obra {obra_id}
                 </p>
               </div>
             </div>
@@ -130,8 +132,8 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
               </Card>
             ) : (
               <ObraFilesClientWrapper
-                obraId={obraId}
-                searchParams={searchParams}
+                obraId={obra_id}
+                searchParams={params}
                 documents={filteredDocuments}
                 folders={folders}
                 currentFolder={currentFolder}

@@ -97,8 +97,12 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
         setProcessingStatus(`Procesando ${file.name} (${i + 1}/${files.length})...`);
         
         // Process file with OCR and AI
+        // Create a copy of the file to preserve the original
+        const fileBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+        const fileCopy = new File([fileBlob], file.name, { type: file.type });
+        
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', fileCopy);
         formData.append('fileName', file.name);
         formData.append('fileType', file.type);
         
@@ -115,9 +119,15 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
         
         const result = await response.json();
         
+        // Create a fresh copy of the file for storage
+        const fileForStorage = new File([await file.arrayBuffer()], file.name, { 
+          type: file.type,
+          lastModified: file.lastModified 
+        });
+        
         if (result.success) {
           processResults.push({
-            file,
+            file: fileForStorage,
             fileName: file.name,
             ocrText: result.ocrText || '',
             aiDescription: result.aiDescription || `Documento: ${file.name}`,
@@ -129,7 +139,7 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
         } else {
           // Add failed result
           processResults.push({
-            file,
+            file: fileForStorage,
             fileName: file.name,
             ocrText: '',
             aiDescription: `Documento: ${file.name}`,
@@ -142,7 +152,13 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
         }
       }
       
-      setEditableResults(JSON.parse(JSON.stringify(processResults))); // Deep copy for editing
+      // Deep copy the results while preserving File objects
+      const editableCopy = processResults.map(result => ({
+        ...result,
+        // File objects can't be JSON serialized, so keep the reference
+        file: result.file
+      }));
+      setEditableResults(editableCopy);
       setIsProcessed(true);
       setShowResults(true);
       setProcessingStatus('');
@@ -509,14 +525,14 @@ function EditableProcessingResultCard({
     switch (provider) {
       case 'mistral-pdf':
       case 'mistral':
-        return <Bot className="h-3 w-3 text-orange-500" title="Mistral AI" />;
+        return <Bot className="h-3 w-3 text-orange-500" />;
       case 'openai-vision':
       case 'openai':
-        return <Zap className="h-3 w-3 text-green-500" title="OpenAI" />;
+        return <Zap className="h-3 w-3 text-green-500" />;
       case 'tesseract':
-        return <Eye className="h-3 w-3 text-blue-500" title="Tesseract OCR" />;
+        return <Eye className="h-3 w-3 text-blue-500" />;
       case 'regex':
-        return <Cpu className="h-3 w-3 text-gray-500" title="Regex Pattern" />;
+        return <Cpu className="h-3 w-3 text-gray-500" />;
       default:
         return <FileText className="h-3 w-3 text-muted-foreground" />;
     }
@@ -526,7 +542,7 @@ function EditableProcessingResultCard({
     const updatedResult = {
       ...result,
       aiDescription: editedDescription,
-      aiTags: editedTags.split(',').map(tag => tag.trim()).filter(Boolean)
+      aiTags: editedTags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
     };
     onUpdate(updatedResult);
     setIsEditing(false);

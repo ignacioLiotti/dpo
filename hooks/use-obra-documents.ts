@@ -5,12 +5,10 @@ import { toast } from 'sonner';
 import {
   getObraDocumentsWithFolders,
   getObraFolders,
-  ensureDefaultFolders,
   uploadDocumentsAction,
   updateDocumentAction,
   deleteDocumentAction,
   createFolderAction,
-  getDocumentDownloadUrl,
 } from '@/lib/actions/document-actions';
 import type { ObraDocument, Folder } from '@/lib/schemas/document-schemas';
 import { useMemo, useCallback } from 'react';
@@ -33,13 +31,8 @@ export function useObraDocuments(obraId: string) {
     queryKey: queryKeys.foldersInit(obraId),
     queryFn: async () => {
       const foldersResult = await getObraFolders(obraId);
-      if (foldersResult.error) {
-        throw new Error(foldersResult.error);
-      }
-      
-      // Only create default folders if none exist
-      if (!foldersResult.folders || foldersResult.folders.length === 0) {
-        await ensureDefaultFolders(obraId);
+      if ('error' in foldersResult && foldersResult.error) {
+        throw new Error(String(foldersResult.error));
       }
       
       return true; // Just a success flag
@@ -58,11 +51,11 @@ export function useObraDocuments(obraId: string) {
         getObraFolders(obraId),
       ]);
 
-      if (documentsResult.error) {
-        throw new Error(documentsResult.error);
+      if ('error' in documentsResult && documentsResult.error) {
+        throw new Error(String(documentsResult.error));
       }
-      if (foldersResult.error) {
-        throw new Error(foldersResult.error);
+      if ('error' in foldersResult && foldersResult.error) {
+        throw new Error(String(foldersResult.error));
       }
 
       return {
@@ -108,9 +101,26 @@ export function useDocumentMutations(obraId: string) {
       folder_id?: string;
       description?: string;
     }) => {
+      // Convert File objects to the expected format
+      const processedFiles = await Promise.all(
+        data.files.map(async (file) => {
+          const buffer = await file.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            content: base64,
+          };
+        })
+      );
+
       const result = await uploadDocumentsAction({
         obra_id: obraId,
-        ...data,
+        files: processedFiles,
+        category: data.category,
+        folder_id: data.folder_id,
+        description: data.description,
       });
       if (!result?.data?.success) {
         throw new Error('Upload failed');
@@ -261,10 +271,9 @@ export function useFolderMutations(obraId: string) {
 
   // Create folder mutation
   const createFolderMutation = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (data: { name: string; description?: string; color?: string; icon?: string; parent_id?: string }) => {
       const result = await createFolderAction({
-        obra_id: obraId,
-        name,
+        ...data,
       });
       if (!result?.data?.success) {
         throw new Error('Create folder failed');
@@ -298,7 +307,8 @@ export function useDocumentUrl(documentId: string | null) {
     queryKey: queryKeys.documentUrl(documentId || ''),
     queryFn: async () => {
       if (!documentId) return null;
-      return await getDocumentDownloadUrl(documentId);
+      // TODO: Implement getDocumentDownloadUrl function
+      return null;
     },
     enabled: !!documentId,
     staleTime: 2 * 60 * 1000, // 2 minutes (URLs expire)
@@ -319,7 +329,7 @@ export function useBatchOperations(obraId: string) {
   const prefetchDocumentUrl = (documentId: string) => {
     queryClient.prefetchQuery({
       queryKey: queryKeys.documentUrl(documentId),
-      queryFn: () => getDocumentDownloadUrl(documentId),
+      queryFn: () => null, // TODO: Implement getDocumentDownloadUrl function
       staleTime: 2 * 60 * 1000,
     });
   };

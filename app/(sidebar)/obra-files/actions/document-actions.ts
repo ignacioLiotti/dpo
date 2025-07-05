@@ -165,7 +165,6 @@ export async function uploadDocumentsAction(formData: FormData) {
             .order('sort_order');
             
           fieldDefinitions = fields || [];
-          console.log(`Folder has extraction enabled with ${fieldDefinitions.length} field definitions`);
         }
       } catch (error) {
         console.warn('Error checking folder extraction settings:', error);
@@ -174,7 +173,6 @@ export async function uploadDocumentsAction(formData: FormData) {
 
     // Process each file
     for (const file of files) {
-      console.log(`Processing file: ${file.name}`);
       
       // Check if we have pre-processed data
       const processedDataKey = `processed_data_${files.indexOf(file)}`;
@@ -204,13 +202,13 @@ export async function uploadDocumentsAction(formData: FormData) {
             aiTags = processedData.aiTags || [];
           }
           
-          console.log(`Using pre-processed data for ${file.name}:`, {
-            ocrLength: ocrText.length,
-            description: aiDescription,
-            tags: aiTags,
-            confidence: processingResult.confidence,
-            extractedFieldsCount: extractedData ? Object.keys(extractedData).length : 0
-          });
+          // console.log(`Using pre-processed data for ${file.name}:`, {
+          //   ocrLength: ocrText.length,
+          //   description: aiDescription,
+          //   tags: aiTags,
+          //   confidence: processingResult.confidence,
+          //   extractedFieldsCount: extractedData ? Object.keys(extractedData).length : 0
+          // });
           
         } catch (parseError) {
           console.warn(`Failed to parse processed data for ${file.name}:`, parseError);
@@ -237,13 +235,13 @@ export async function uploadDocumentsAction(formData: FormData) {
             aiTags = processingResult.aiTags;
           }
           
-          console.log(`Real-time processing completed for ${file.name}:`, {
-            ocrLength: ocrText.length,
-            description: aiDescription,
-            tags: aiTags,
-            confidence: processingResult.confidence,
-            extractedFieldsCount: extractedData ? Object.keys(extractedData).length : 0
-          });
+          // console.log(`Real-time processing completed for ${file.name}:`, {
+          //   ocrLength: ocrText.length,
+          //   description: aiDescription,
+          //   tags: aiTags,
+          //   confidence: processingResult.confidence,
+          //   extractedFieldsCount: extractedData ? Object.keys(extractedData).length : 0
+          // });
           
         } catch (processingError) {
           console.warn(`Document processing failed for ${file.name}:`, processingError);
@@ -347,7 +345,7 @@ export async function uploadDocumentsAction(formData: FormData) {
               console.error('Error saving extracted data:', extractionError);
               // Don't fail the upload, just warn
             } else {
-              console.log(`Saved extracted data for ${file.name}: ${Object.keys(extractedData).length} fields`);
+              // console.log(`Saved extracted data for ${file.name}: ${Object.keys(extractedData).length} fields`);
             }
           } catch (error) {
             console.error('Error processing extracted data:', error);
@@ -560,6 +558,12 @@ export async function deleteDocumentAction(formData: FormData) {
       .delete()
       .eq('document_id', validatedData.id);
 
+    // Delete extracted data
+    await supabase
+      .from('document_extracted_data')
+      .delete()
+      .eq('document_id', validatedData.id);
+
     // Delete from database
     const { error: deleteError } = await supabase
       .from('obra_documents')
@@ -580,6 +584,43 @@ export async function deleteDocumentAction(formData: FormData) {
   } catch (error) {
     console.error('Delete document error:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to delete document');
+  }
+}
+
+// Get document extracted data
+export async function getDocumentExtractedData(documentId: string) {
+  try {
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get document with extracted data
+    const { data: document, error: docError } = await supabase
+      .from('obra_documents')
+      .select(`
+        *,
+        extracted_data:document_extracted_data(*)
+      `)
+      .eq('id', documentId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (docError || !document) {
+      throw new Error('Document not found or access denied');
+    }
+
+    return {
+      document,
+      extractedData: document.extracted_data?.[0] || null,
+      ocrContent: document.ocr_content || null
+    };
+  } catch (error) {
+    console.error('Get extracted data error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to get extracted data');
   }
 }
 

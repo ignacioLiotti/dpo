@@ -26,5 +26,5 @@ export const updateUserSchema = z.object({
 
 export type UpdateUserFormValues = z.infer<typeof updateUserSchema>;
 
-// Export obra schemas
-export * from "./obra-schemas"; 
+// Export document schemas
+export * from "./document-schemas"; 

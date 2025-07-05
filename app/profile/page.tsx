@@ -11,16 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileForm } from "@/app/profile/profile-components/profile-form";
 import { GradientAvatar } from "@/components/ui/gradient-avatar";
-
-// Define a type for the profile data - adjust based on your actual table columns
-export type Profile = {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  website: string | null;
-  // Add other profile fields here
-};
+import type { Profile } from "@/types/supabase";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -38,7 +29,7 @@ export default async function ProfilePage() {
     .from("profiles")
     .select("*") // Select specific columns if needed: 'username, full_name, avatar_url, website'
     .eq("id", user.id)
-    .single<Profile>(); // Use the Profile type
+    .single();
 
   // Handle potential errors during profile fetch
   if (error && error.code !== 'PGRST116') { // PGRST116: Row not found is okay, means no profile yet

@@ -52,7 +52,7 @@ export function InvoiceForm() {
       note: ''
     },
     onSubmit: async ({ value }) => {
-      console.log('Invoice Data:', value)
+      // console.log('Invoice Data:', value)
     }
   })
 
@@ -102,9 +102,9 @@ export function InvoiceForm() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value)}
                 variant="default"
                 className={cn(
-                    'max-w-32',
-                    field.state.meta.errors.length ? 'border-red-500' : ''
-                )}              />
+                  'max-w-32',
+                  field.state.meta.errors.length ? 'border-red-500' : ''
+                )} />
             )}
           />
         </div>
@@ -119,8 +119,8 @@ export function InvoiceForm() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value)}
                 variant="default"
                 className={cn(
-                    'max-w-32',
-                    field.state.meta.errors.length ? 'border-red-500' : ''
+                  'max-w-32',
+                  field.state.meta.errors.length ? 'border-red-500' : ''
                 )}
               />
             )}
@@ -137,9 +137,9 @@ export function InvoiceForm() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value)}
                 variant="default"
                 className={cn(
-                    'max-w-32',
-                    field.state.meta.errors.length ? 'border-red-500' : ''
-                )}              />
+                  'max-w-32',
+                  field.state.meta.errors.length ? 'border-red-500' : ''
+                )} />
             )}
           />
         </div>

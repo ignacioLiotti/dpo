@@ -14,7 +14,7 @@ interface CustomDateFieldProps<
   TFormValues extends Record<string, any>,
   TFieldName extends keyof TFormValues & string
 > {
-  field: FieldApi<TFormValues, TFieldName, any, any, TFormValues[TFieldName]>;
+  field: FieldApi<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
   label: string;
   disabled?: boolean;
   placeholder?: string;
@@ -106,7 +106,7 @@ export function CustomDateField<
     setIsCalendarOpen(false);
   };
 
-  const hasError = field.state.meta.touchedErrors && field.state.meta.touchedErrors.length > 0;
+  const hasError = field.state.meta.errors && field.state.meta.errors.length > 0 && field.state.meta.isTouched;
   const fieldValueAsDate = field.state.value instanceof Date && isValidDate(field.state.value) ? field.state.value : undefined;
 
   return (
@@ -162,7 +162,7 @@ export function CustomDateField<
       {
         hasError && (
           <p id={`${field.name}-error`} className="text-sm text-destructive">
-            {field.state.meta.touchedErrors!.join(', ')}
+            {field.state.meta.errors!.join(', ')}
           </p>
         )
       }

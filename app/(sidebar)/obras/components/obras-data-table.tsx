@@ -85,7 +85,14 @@ export const columns: ColumnDef<Obra>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => <div className="capitalize font-medium">{row.getValue('obra_name')}</div>,
+    cell: ({ row }) => {
+      const obra = row.original;
+      return (
+        <Link href={`/obras/${obra.id}`} className="capitalize font-medium hover:underline">
+          {row.getValue('obra_name')}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: 'estado',

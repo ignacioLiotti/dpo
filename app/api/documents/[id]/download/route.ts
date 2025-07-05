@@ -3,7 +3,7 @@ import { getDocumentDownloadUrl } from '@/app/(sidebar)/obra-files/actions/docum
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;

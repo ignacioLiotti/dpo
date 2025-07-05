@@ -29,13 +29,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  CalendarIcon, 
-  Loader2, 
-  Edit3, 
-  X, 
-  MapPin, 
-  DollarSign, 
+import {
+  CalendarIcon,
+  Loader2,
+  Edit3,
+  X,
+  MapPin,
+  DollarSign,
   Calendar as CalendarDays,
   FileText,
   Building,
@@ -114,7 +114,7 @@ export default function Component({ obra }: ObraProfilePageProps) {
         toast.success(`Obra "${response.data.data.obra_name}" actualizada con éxito.`);
         setIsEditing(false);
       } else {
-        toast.error(response.data?.error?.message || 'Error al actualizar la obra.');
+        toast.error((response.data as any)?.error?.message || 'Error al actualizar la obra.');
       }
     },
     onError: (error) => {
@@ -128,7 +128,7 @@ export default function Component({ obra }: ObraProfilePageProps) {
     if (!obra.id) return;
 
     setIsProcessingStateChange(true);
-    
+
     try {
       const context: ProcessorContext = {
         userId: obra.user_id || 'unknown',
@@ -151,21 +151,16 @@ export default function Component({ obra }: ObraProfilePageProps) {
       if (result.success && result.data) {
         // Update the form state
         form.setFieldValue('estado', targetState as any);
-        
+
         // Show success message with actions
         toast.success(`Estado cambiado a ${targetState}`, {
           description: `Se ejecutarán ${result.data.actions.length} acciones y ${result.data.notifications.length} notificaciones.`,
         });
 
         // Log actions that would be executed
-        console.log('Actions to execute:', result.data.actions);
-        console.log('Notifications to send:', result.data.notifications);
 
         // Here you would typically execute the actions and send notifications
         // For now, we'll just log them
-        for (const action of result.data.actions) {
-          console.log(`Action: ${action.type} - ${action.description}`);
-        }
 
         setStateChangeRequest(null);
       } else {
@@ -307,7 +302,7 @@ export default function Component({ obra }: ObraProfilePageProps) {
                   <Select
                     value={field.state.value}
                     onValueChange={(value) => {
-                      field.handleChange(value);
+                      field.handleChange(value as any);
                     }}
                     disabled={isLoading}
                   >
@@ -450,7 +445,7 @@ export default function Component({ obra }: ObraProfilePageProps) {
                     </Button>
                   ))}
                 </div>
-                
+
                 {getValidTransitions().length === 0 && (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
@@ -616,7 +611,7 @@ export default function Component({ obra }: ObraProfilePageProps) {
                   {obra.departamento}, {obra.provincia}
                 </p>
               </div>
-              
+
               {obra.ubicacion_google_maps && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Mapa</p>

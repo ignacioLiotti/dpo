@@ -128,7 +128,6 @@ export function NavMain({
                   <SidebarMenuButton
                     tooltip={item.title}
                     onClick={() => {
-                      console.log('as this is a nested button, when the sidebar is collapsed, the button should open the sidebar', item.title)
                       if (state === 'collapsed') {
                         toggleSidebar()
                       }

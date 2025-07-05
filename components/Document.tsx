@@ -63,9 +63,6 @@ export interface DocumentProps {
   className?: string
 }
 
-// Helper type for the form instance, derived from useForm
-type AppFormInstance = ReturnType<typeof useForm<DocumentData>>
-
 // --- Main Document Component ---
 
 export function Document({
@@ -122,7 +119,7 @@ interface SectionRendererProps {
 // Define props for the generic field rendering helper
 interface FieldHelperProps<T = any> {
   // Use a basic FieldApi type, acknowledging the complexity
-  field: FieldApi<any, any, any, any, T>;
+  field: FieldApi<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
   component: React.ElementType;
   label?: string;
   placeholder?: string;
@@ -299,7 +296,6 @@ const SectionRenderer = React.memo(
           return null;
         }
 
-        console.log('boplas row model:', table.getRowModel())
 
         return (
           <motion.div

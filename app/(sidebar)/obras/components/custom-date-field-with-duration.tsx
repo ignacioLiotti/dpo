@@ -17,7 +17,7 @@ interface CustomDateFieldWithDurationProps<
     setFieldValue: (name: keyof TFormValues, value: any) => void;
     // getFieldValue?: (name: keyof TFormValues) => any; // Optional: if needed for clearing end date logic
   };
-  startDateField: FieldApi<TFormValues, TStartDateFieldName, any, any, TFormValues[TStartDateFieldName]>;
+  startDateField: FieldApi<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
   endDateFieldName: TEndDateFieldName;
   label: string;
   disabled?: boolean;

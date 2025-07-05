@@ -84,7 +84,6 @@ export const getUsersWithRolesAndEmails = actionClient
 				.select("id, username, full_name, role, created_at")
 				.order("created_at", { ascending: false });
 
-			console.log("authUsersResponse", authUsersResponse);
 
 			if (authUsersError) {
 				console.error("Error fetching auth users:", authUsersError);

@@ -27,6 +27,7 @@ import {
 
 import { DOCUMENT_CATEGORIES } from '../types';
 import type { ObraDocument } from '../types';
+import { getDocumentExtractedData } from '../actions/document-actions';
 
 interface DocumentPreviewSheetProps {
   document: ObraDocument | null;
@@ -53,7 +54,7 @@ export function DocumentPreviewSheet({
 
       Promise.all([
         fetch(`/api/documents/${document.id}/download`).then(res => res.json()),
-        fetch(`/api/documents/${document.id}/extracted-data`).then(res => res.json()).catch(() => ({ success: false }))
+        getDocumentExtractedData(document.id).catch(() => null)
       ])
         .then(([downloadData, extractedDataResponse]) => {
           if (downloadData.url) {
@@ -63,8 +64,8 @@ export function DocumentPreviewSheet({
           }
           
           // Set extracted data if available
-          if (extractedDataResponse.success && extractedDataResponse.data) {
-            setExtractedData(extractedDataResponse.data);
+          if (extractedDataResponse) {
+            setExtractedData(extractedDataResponse.extractedData);
           }
         })
         .catch((error) => {

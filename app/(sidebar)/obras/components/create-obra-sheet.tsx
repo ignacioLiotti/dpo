@@ -75,7 +75,6 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       duracion: 30, // Default duration
     },
     onSubmit: async ({ value }) => {
-      console.log("value submit", value);
       let finalValue = { ...value };
       if (value.fecha_inicio && typeof value.duracion === 'number' && !value.fecha_fin) {
         const startDate = new Date(value.fecha_inicio);
@@ -87,7 +86,6 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
 
   const { execute, status } = useAction(createObraAction, {
     onSuccess: (actionResponseData) => {
-      console.log("actionResponseData", actionResponseData);
       if (actionResponseData.data?.success && actionResponseData.data.data) {
         toast.success(`Obra "${actionResponseData.data.data.obra_name}" creada con éxito.`);
         form.reset();
@@ -142,9 +140,6 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
                 form.setFieldValue('fecha_fin', calculatedFinDate);
               }
 
-              console.log("form values for submit", submissionValues);
-              console.log("form errors", form.state.errorMap);
-              console.log("form canSubmit", form.state.canSubmit);
               form.handleSubmit();
             }}
             className="pb-6 pt-4 gap-3 h-full"

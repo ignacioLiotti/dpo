@@ -13,10 +13,20 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { DocumentPreviewSheet } from './document-preview-sheet';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 import type { ObraDocument, Folder } from '../types';
 import { AddDocumentCard } from './add-document-card';
+import { deleteDocumentAction } from '../actions/document-actions';
 
 interface DocumentGridProps {
   documents: ObraDocument[];
@@ -52,6 +62,7 @@ interface DocumentCardClientProps {
 
 export function DocumentCardClient({ document, folders }: DocumentCardClientProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const router = useRouter();
 
   const handlePreview = () => {
     setIsPreviewOpen(true);
@@ -68,75 +79,120 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
       link.click();
     } catch (error) {
       console.error('Error downloading document:', error);
+      toast.error('Error al descargar el documento');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar "${document.name}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('id', document.id);
+
+      await deleteDocumentAction(formData);
+      toast.success('Documento eliminado correctamente');
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Error al eliminar el documento');
     }
   };
 
   return (
     <>
-      <div
-        className="group cursor-pointer"
-        onClick={handlePreview}
-      >
-        <div className="flex flex-col items-center gap-2 p-3 h-48 w-40  hover:bg-muted transition-colors bg-white outline outline-outline outline-1 shadow-lite relative">
-          <span className=" bg-white absolute top-[-5px] right-[-5px] w-7 h-7 overflow-hidden z-10" >
-            <div className="noise-bg  border border-t-0 border-r-0 !absolute !top-0 !right-0 !w-full !h-full -z-[100]" />
-          </span>
-          <span className="bg-white absolute top-[-1px] right-[-1px] w-6 h-6 border border-t-0 border-r-0 overflow-hidden z-20" >
-            <div className="noise-bg  border border-t-0 border-r-0 !absolute !top-0 !right-0 !w-full !h-full -z-[100]" />
-            <div className="content-[''] absolute top-0 right-0 w-full h-full  border-t-0 border-l-0 border-[#fefefe_#ffffff00] border-[23px] z-[100]" />
-          </span>
-          <div className="text-4xl">
-            {/* {document.type.startsWith('image/') ? '🖼️' : '📄'} */}
-          </div>
-          <span
-            className="text-sm font-medium text-center truncate w-full"
-            title={document.name}
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            className="group cursor-pointer"
+            onClick={handlePreview}
           >
-            {document.name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(document.created_at), {
-              addSuffix: true,
-              locale: es
-            })}
-          </span>
+            <div className="flex flex-col items-center gap-2 p-3 h-48 w-40  hover:bg-muted transition-colors bg-white outline outline-outline outline-1 shadow-lite relative">
+              <span className=" bg-white absolute top-[-5px] right-[-5px] w-7 h-7 overflow-hidden z-10" >
+                <div className="noise-bg  border border-t-0 border-r-0 !absolute !top-0 !right-0 !w-full !h-full -z-[100]" />
+              </span>
+              <span className="bg-white absolute top-[-1px] right-[-1px] w-6 h-6 border border-t-0 border-r-0 overflow-hidden z-20" >
+                <div className="noise-bg  border border-t-0 border-r-0 !absolute !top-0 !right-0 !w-full !h-full -z-[100]" />
+                <div className="content-[''] absolute top-0 right-0 w-full h-full  border-t-0 border-l-0 border-[#fefefe_#ffffff00] border-[23px] z-[100]" />
+              </span>
+              <div className="text-4xl">
+                {/* {document.type.startsWith('image/') ? '🖼️' : '📄'} */}
+              </div>
+              <span
+                className="text-sm font-medium text-center truncate w-full"
+                title={document.name}
+              >
+                {document.name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(document.created_at), {
+                  addSuffix: true,
+                  locale: es
+                })}
+              </span>
 
-          {/* Document Actions */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handlePreview}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Vista previa
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Descargar
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {/* Document Actions */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="pointer-events-auto">
+                    <DropdownMenuItem onClick={handlePreview}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Vista previa
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownload}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={handlePreview}>
+            <Eye className="h-4 w-4 mr-2" />
+            Vista previa
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Descargar
+          </ContextMenuItem>
+          <ContextMenuItem>
+            <Edit3 className="h-4 w-4 mr-2" />
+            Editar
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            className="text-red-600"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <DocumentPreviewSheet
         document={document}

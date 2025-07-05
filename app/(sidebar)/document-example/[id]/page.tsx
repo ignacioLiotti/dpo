@@ -9,7 +9,7 @@ import { DeleteDocumentButton } from '../components/delete-document-button';
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, PRIORITY_LEVELS } from '../types';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function DocumentDetailPage({ params }: PageProps) {
@@ -69,8 +69,8 @@ export default async function DocumentDetailPage({ params }: PageProps) {
               Edit
             </Button>
           </Link>
-          <DeleteDocumentButton 
-            documentId={document.id} 
+          <DeleteDocumentButton
+            documentId={document.id}
             documentTitle={document.title}
             deleteAction={deleteExampleDocument}
           />
@@ -128,11 +128,11 @@ export default async function DocumentDetailPage({ params }: PageProps) {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
-                  <Badge 
+                  <Badge
                     variant="outline"
-                    className={`${getStatusColor(document.status) === 'green' ? 'border-green-500 text-green-700' : 
-                      getStatusColor(document.status) === 'yellow' ? 'border-yellow-500 text-yellow-700' : 
-                      'border-gray-500 text-gray-700'}`}
+                    className={`${getStatusColor(document.status) === 'green' ? 'border-green-500 text-green-700' :
+                      getStatusColor(document.status) === 'yellow' ? 'border-yellow-500 text-yellow-700' :
+                        'border-gray-500 text-gray-700'}`}
                   >
                     {document.status}
                   </Badge>
@@ -142,11 +142,11 @@ export default async function DocumentDetailPage({ params }: PageProps) {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Priority</label>
                 <div className="mt-1">
-                  <Badge 
+                  <Badge
                     variant="outline"
-                    className={`${getPriorityColor(document.priority) === 'red' ? 'border-red-500 text-red-700' : 
-                      getPriorityColor(document.priority) === 'orange' ? 'border-orange-500 text-orange-700' : 
-                      'border-blue-500 text-blue-700'}`}
+                    className={`${getPriorityColor(document.priority) === 'red' ? 'border-red-500 text-red-700' :
+                      getPriorityColor(document.priority) === 'orange' ? 'border-orange-500 text-orange-700' :
+                        'border-blue-500 text-blue-700'}`}
                   >
                     {document.priority}
                   </Badge>

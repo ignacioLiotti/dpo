@@ -472,14 +472,14 @@ function EditableProcessingResultCard({
     switch (provider) {
       case 'mistral-pdf':
       case 'mistral':
-        return <Bot className="h-3 w-3 text-orange-500" title="Mistral AI" />;
+        return <Bot className="h-3 w-3 text-orange-500" />;
       case 'openai-vision':
       case 'openai':
-        return <Zap className="h-3 w-3 text-green-500" title="OpenAI" />;
+        return <Zap className="h-3 w-3 text-green-500" />;
       case 'tesseract':
-        return <Eye className="h-3 w-3 text-blue-500" title="Tesseract OCR" />;
+        return <Eye className="h-3 w-3 text-blue-500" />;
       case 'regex':
-        return <Cpu className="h-3 w-3 text-gray-500" title="Regex Pattern" />;
+        return <Cpu className="h-3 w-3 text-gray-500" />;
       default:
         return <FileText className="h-3 w-3 text-muted-foreground" />;
     }
@@ -489,7 +489,7 @@ function EditableProcessingResultCard({
     const updatedResult = {
       ...result,
       aiDescription: editedDescription,
-      aiTags: editedTags.split(',').map(tag => tag.trim()).filter(Boolean)
+      aiTags: editedTags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
     };
     onUpdate(updatedResult);
     setIsEditing(false);

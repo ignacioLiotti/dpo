@@ -3,7 +3,7 @@ import { DocumentForm } from '../../components/document-form';
 import { getExampleDocumentById, updateExampleDocument } from '../../actions/document-actions';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EditDocumentPage({ params }: PageProps) {
@@ -17,7 +17,7 @@ export default async function EditDocumentPage({ params }: PageProps) {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-center">
-        <DocumentForm 
+        <DocumentForm
           document={document}
           action={updateExampleDocument}
           actionLabel="Update Document"

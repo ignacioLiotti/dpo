@@ -23,8 +23,6 @@ export async function getAllObrasAction() {
       error: authError,
     } = await supabase.auth.getUser();
 
-    console.log('userr',user);
-
     if (authError || !user) {
       throw new ActionError("User not authenticated");
     }

@@ -9,9 +9,9 @@ import { getAllExampleDocuments, searchExampleDocuments } from './actions/docume
 import { createExampleDocumentForSheet } from './actions/sheet-actions';
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
-  };
+  }>;
 }
 
 function DocumentListSkeleton() {
@@ -24,17 +24,17 @@ function DocumentListSkeleton() {
         </div>
         <div className="h-10 w-32 bg-muted animate-pulse rounded" />
       </div>
-      
+
       <div className="h-96 bg-muted animate-pulse rounded-lg" />
     </div>
   );
 }
 
 export default async function DocumentExamplePage({ searchParams }: PageProps) {
-  const search = searchParams.search;
-  
+  const { search } = await searchParams;
+
   // Get documents based on search
-  const documents = search 
+  const documents = search
     ? await searchExampleDocuments(search)
     : await getAllExampleDocuments();
 

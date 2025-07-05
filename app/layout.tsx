@@ -135,7 +135,7 @@ export default async function RootLayout({
                 <div className="flex-1 w-full h-full flex flex-col items-center">
                   <Navbar session={session} />
 
-                  <div className="flex-1 w-full h-full flex flex-col items-center bg-transparent rounded-none max-h-[95vh] outline outline-outline outline-1 shadow z-10 relative" >
+                  <div className="flex-1 w-full h-full flex flex-col items-center bg-transparent rounded-none max-h-[92vh] outline outline-outline outline-1 shadow z-10 relative" >
                     {children}
                     <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-4 bg-white max-h-[10vh]">
                       <p>

@@ -54,12 +54,12 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     },
     onError: (error) => {
       // Handle different types of errors
-      if (error.validationErrors) {
+      if (error.error?.validationErrors) {
         // Handle Zod validation errors
-        const errorMessages = Object.values(error.validationErrors).join(', ');
+        const errorMessages = Object.values(error.error.validationErrors).flat().join(', ');
         toast.error(`Validation Error: ${errorMessages}`);
-      } else if (error.serverError) {
-        toast.error(`Server Error: ${error.serverError}`);
+      } else if (error.error?.serverError) {
+        toast.error(`Server Error: ${error.error.serverError}`);
       } else {
         toast.error('An unexpected error occurred');
       }

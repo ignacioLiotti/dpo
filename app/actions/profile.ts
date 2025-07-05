@@ -59,7 +59,6 @@ export const updateProfile = actionClient
 				.select()
 				.single();
 
-			console.log("dataasdasdasd", data);
 
 			if (error) {
 				console.error("Error updating profile:", error);
@@ -72,7 +71,6 @@ export const updateProfile = actionClient
 				};
 			}
 
-			console.log("Profile updated successfully", data);
 			// Revalidate the profile page to reflect changes
 			revalidatePath("/profile");
 

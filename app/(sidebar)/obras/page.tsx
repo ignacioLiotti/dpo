@@ -33,18 +33,18 @@ function DashboardSkeleton() {
         </div>
         <div className="h-10 w-32 bg-muted animate-pulse rounded" />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="h-64 bg-muted animate-pulse rounded-lg" />
         <div className="h-64 bg-muted animate-pulse rounded-lg" />
       </div>
-      
+
       <div className="h-96 bg-muted animate-pulse rounded-lg" />
     </div>
   );
@@ -53,7 +53,6 @@ function DashboardSkeleton() {
 // This page remains a Server Component
 export default async function ObrasPage() {
   const obrasData: Obra[] | null = await getAllObrasAction();
-  console.log('obrasData', obrasData);
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>

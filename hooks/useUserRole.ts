@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
@@ -41,7 +42,6 @@ export function useUserRole() {
 					.eq("id", user.id)
 					.single();
 
-				console.log("dataaa", data, user.id, supabase);
 
 				if (error) {
 					console.error("Error fetching user role:", error);

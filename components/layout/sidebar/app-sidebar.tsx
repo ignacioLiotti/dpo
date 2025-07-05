@@ -35,8 +35,6 @@ export async function AppSidebar({ mappedData, user }: AppSidebarProps) {
     </Sidebar>;
   }
 
-  console.log('sidebar')
-
   return (
     <Sidebar collapsible="icon" className=" !border-r-0 pt-1 z-20 flex justify-center items-center">
       <SidebarHeader>

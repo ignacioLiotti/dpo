@@ -144,7 +144,7 @@ export function Navbar({ session }: { session: any }) {
               <BellIcon className="h-4 w-4" />
             </Button>
 
-            <Separator orientation="vertical" className=" bg-outline w-[2px] h-6" />
+            <Separator className=" bg-outline w-[2px] h-6" />
 
             {session ? (
               isLoadingUser ? (

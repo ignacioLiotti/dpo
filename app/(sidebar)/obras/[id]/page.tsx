@@ -46,12 +46,12 @@ import { ObraFilesClientWrapper } from '@/app/(sidebar)/obra-files/components/cl
 import { cn } from '@/utils/utils';
 
 interface ObraDetailsPageProps {
-  params: { id: string };
-  searchParams?: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{
     search?: string;
     category?: string;
     folder?: string;
-  };
+  }>;
 }
 
 // Loading component
@@ -141,6 +141,8 @@ function ProcessorIntegrationDemo({ obra }: { obra: Obra }) {
 
 export default async function ObraDetailsPage({ params, searchParams }: ObraDetailsPageProps) {
   const { id } = await params;
+  const searchParamsResolved = await searchParams;
+  const { search, category, folder } = searchParamsResolved;
 
   const obra = await getObraActionByID(id);
 
@@ -161,8 +163,8 @@ export default async function ObraDetailsPage({ params, searchParams }: ObraDeta
   let filteredDocuments = documents;
 
   // Apply search filter
-  if (searchParams?.search) {
-    const searchLower = searchParams.search.toLowerCase();
+  if (search) {
+    const searchLower = search.toLowerCase();
     filteredDocuments = filteredDocuments.filter(doc =>
       doc.name.toLowerCase().includes(searchLower) ||
       (doc.description && doc.description.toLowerCase().includes(searchLower))
@@ -170,15 +172,15 @@ export default async function ObraDetailsPage({ params, searchParams }: ObraDeta
   }
 
   // Apply category filter
-  if (searchParams?.category) {
+  if (category) {
     filteredDocuments = filteredDocuments.filter(doc =>
-      doc.category === searchParams.category
+      doc.category === category
     );
   }
 
   // Get current folder
-  const currentFolder = searchParams?.folder
-    ? folders.find(f => f.id === searchParams.folder) || null
+  const currentFolder = folder
+    ? folders.find(f => f.id === folder) || null
     : null;
 
   // Filter documents by folder
@@ -198,13 +200,13 @@ export default async function ObraDetailsPage({ params, searchParams }: ObraDeta
   }, {} as Record<string, number>);
 
   return (
-    <div className="w-full max-w-full h-full overflow-y-hidden">
+    <div className="w-full max-w-full h-full overflow-y-hidden bg-white/50">
       <Suspense fallback={<ObraDetailSkeleton />}>
         <Tabs defaultValue="edit" className="w-full h-full flex flex-col pt-10">
-          <TabsList className="flex justify-start items-center w-[calc(100%+2px)] overflow-hidden h-10 bg-white rounded-none absolute top-[-1px] left-[-1px] z-[1000] border-b border-outline p-0">
+          <TabsList className="flex justify-start items-center w-[calc(100%+2px)] overflow-hidden h-10 bg-background rounded-none absolute top-[-1px] left-[-1px] z-[1000] border-b border-outline p-0">
             <span className={cn('noise-bg !w-full !h-full !absolute !top-0 !left-0 !z-[-1] ')}></span>
-            <TabsTrigger className={cn('mb-[-1px] border border-transparent h-full bg-transparent rounded-none', 'data-[state=active]:border-outline data-[state=active]:border data-[state=active]:border-solid data-[state=active]:bg-transparent data-[state=active]:shadow-none')} value="edit">Edit Obra</TabsTrigger>
-            <TabsTrigger className={cn('mb-[-1px] h-full border border-transparent bg-transparent rounded-none', 'data-[state=active]:border-outline data-[state=active]:border data-[state=active]:border-solid data-[state=active]:bg-transparent data-[state=active]:shadow-none')} value="docs">Documents</TabsTrigger>
+            <TabsTrigger className={cn('mb-[-1px] border border-transparent h-full bg-transparent rounded-none', 'data-[state=active]:border-outline data-[state=active]:border data-[state=active]:border-solid data-[state=active]:bg-white/50 data-[state=active]:shadow-none')} value="edit">Edit Obra</TabsTrigger>
+            <TabsTrigger className={cn('mb-[-1px] h-full border border-transparent bg-transparent rounded-none', 'data-[state=active]:border-outline data-[state=active]:border data-[state=active]:border-solid data-[state=active]:bg-white/50 data-[state=active]:shadow-none')} value="docs">Documents</TabsTrigger>
           </TabsList>
 
           <TabsContent value="edit" className="space-y-6 overflow-y-auto">
@@ -225,7 +227,7 @@ export default async function ObraDetailsPage({ params, searchParams }: ObraDeta
               <ObraFilesClientWrapper
                 obraId={obra.id}
                 obraName={obra.obra_name}
-                searchParams={searchParams || {}}
+                searchParams={searchParamsResolved || {}}
                 documents={filteredDocuments}
                 folders={folders}
                 currentFolder={currentFolder}

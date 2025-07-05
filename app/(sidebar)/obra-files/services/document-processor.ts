@@ -49,7 +49,7 @@ export async function processDocument(
   const fileSize = file instanceof File ? file.size : Buffer.byteLength(file);
 
   try {
-    console.log(`Processing document: ${fileName} (extraction: ${folderExtractionEnabled})`);
+    // console.log(`Processing document: ${fileName} (extraction: ${folderExtractionEnabled})`);
     
     // Step 1: OCR extraction 
     let ocrText = '';
@@ -87,12 +87,12 @@ export async function processDocument(
             continue;
           }
           
-          console.log(`Trying ${method.name} OCR for ${fileName}...`);
+          // console.log(`Trying ${method.name} OCR for ${fileName}...`);
           ocrText = await method.fn();
           ocrProvider = method.name;
           
           if (ocrText && ocrText.length > 0) {
-            console.log(`${method.name} OCR extracted ${ocrText.length} characters from ${fileName}`);
+            // console.log(`${method.name} OCR extracted ${ocrText.length} characters from ${fileName}`);
             break; // Success, stop trying other methods
           }
         } catch (ocrError) {
@@ -132,7 +132,7 @@ export async function processDocument(
             fieldDefinitions
           );
         }
-        console.log(`Extracted ${Object.keys(extractedData).length} fields from ${fileName}`);
+        // console.log(`Extracted ${Object.keys(extractedData).length} fields from ${fileName}`);
       } catch (extractionError) {
         console.warn(`Data extraction failed for ${fileName}:`, extractionError);
         // Try regex fallback if AI fails
@@ -141,7 +141,7 @@ export async function processDocument(
             fileName,
             fieldDefinitions
           );
-          console.log(`Fallback regex extraction completed for ${fileName}`);
+          // console.log(`Fallback regex extraction completed for ${fileName}`);
         } catch (regexError) {
           console.warn(`Regex extraction also failed for ${fileName}:`, regexError);
         }
@@ -238,7 +238,7 @@ export async function extractStructuredData(
  */
 async function extractTextWithMistral(file: File | Buffer, fileName: string): Promise<string> {
   try {
-    console.log(`Starting Mistral PDF OCR for ${fileName}...`);
+    // console.log(`Starting Mistral PDF OCR for ${fileName}...`);
     
     const { mistral } = await import('@ai-sdk/mistral');
     const { generateText } = await import('ai');
@@ -300,7 +300,7 @@ async function extractTextWithMistral(file: File | Buffer, fileName: string): Pr
  */
 async function extractTextWithOpenAI(file: File | Buffer, fileName: string): Promise<string> {
   try {
-    console.log(`Starting OpenAI Vision OCR for ${fileName}...`);
+    // console.log(`Starting OpenAI Vision OCR for ${fileName}...`);
     
     const { openai } = await import('@ai-sdk/openai');
     const { generateText } = await import('ai');
@@ -351,7 +351,7 @@ async function extractTextWithOpenAI(file: File | Buffer, fileName: string): Pro
  * Extract text using regex patterns on filename (fallback method)
  */
 async function extractTextWithRegex(fileName: string): Promise<string> {
-  console.log(`Trying regex extraction for ${fileName}...`);
+  // console.log(`Trying regex extraction for ${fileName}...`);
   
   // Extract useful information from filename
   const patterns = [
@@ -395,7 +395,7 @@ async function extractTextWithTesseract(file: File | Buffer, fileName: string): 
   const Tesseract = await import('tesseract.js');
   
   try {
-    console.log(`Starting Tesseract OCR for ${fileName}...`);
+    // console.log(`Starting Tesseract OCR for ${fileName}...`);
     
     const { data } = await Tesseract.recognize(
       file,
@@ -403,7 +403,7 @@ async function extractTextWithTesseract(file: File | Buffer, fileName: string): 
       {
         logger: (m) => {
           if (m.status === 'recognizing text') {
-            console.log(`OCR progress: ${Math.round(m.progress * 100)}%`);
+            // console.log(`OCR progress: ${Math.round(m.progress * 100)}%`);
           }
         },
       }
@@ -453,18 +453,18 @@ async function generateDescriptionAndTags(
       try {
         const prompt = `Analyze this document content and generate a concise description and relevant tags.
 
-Filename: ${fileName}
-File type: ${fileType}
-Document content (OCR):
-${ocrText.substring(0, 2000)}
+          Filename: ${fileName}
+          File type: ${fileType}
+          Document content (OCR):
+          ${ocrText.substring(0, 2000)}
 
-Respond with a JSON object in this format:
-{
-  "description": "Brief, descriptive title for this document",
-  "tags": ["tag1", "tag2", "tag3"]
-}
+          Respond with a JSON object in this format:
+          {
+            "description": "Brief, descriptive title for this document",
+            "tags": ["tag1", "tag2", "tag3"]
+          }
 
-Focus on construction/engineering terms if applicable. Use Spanish for the description and tags.`;
+          Focus on construction/engineering terms if applicable. Use Spanish for the description and tags.`;
 
         let text: string;
         
@@ -500,7 +500,7 @@ Focus on construction/engineering terms if applicable. Use Spanish for the descr
         }
         
         const aiResult = JSON.parse(cleanedText);
-        console.log(`AI description generated using ${provider.name}`);
+        // console.log(`AI description generated using ${provider.name}`);
         return {
           description: aiResult.description || `Documento: ${fileName}`,
           tags: Array.isArray(aiResult.tags) ? aiResult.tags : [getDocumentType(fileName), 'documento']
@@ -557,22 +557,22 @@ async function extractStructuredDataWithAI(
   
   const prompt = `Extract specific data fields from this document content.
 
-Document: ${fileName}
-Content:
-${ocrText.substring(0, 3000)}
+    Document: ${fileName}
+    Content:
+    ${ocrText.substring(0, 3000)}
 
-Extract these fields:
-${fieldsDescription}
+    Extract these fields:
+    ${fieldsDescription}
 
-Respond with a JSON object containing only the extracted values. Use null for fields that cannot be found. For dates, use YYYY-MM-DD format. For numbers, use numeric values without currency symbols.
+    Respond with a JSON object containing only the extracted values. Use null for fields that cannot be found. For dates, use YYYY-MM-DD format. For numbers, use numeric values without currency symbols.
 
-Example format:
-{
-  "field_name1": "extracted_value",
-  "field_name2": 123.45,
-  "field_name3": "2024-01-15",
-  "field_name4": null
-}`;
+    Example format:
+    {
+      "field_name1": "extracted_value",
+      "field_name2": 123.45,
+      "field_name3": "2024-01-15",
+      "field_name4": null
+    }`;
 
   try {
     const { openai } = await import('@ai-sdk/openai');
