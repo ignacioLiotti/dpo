@@ -33,12 +33,13 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/utils/utils';
 import { CustomDateField } from './custom-date-field';
 import { AnimatedTextarea } from '@/components/ui/animated-textarea';
 import { Separator } from '@/components/ui/separator';
+import { useCurrentOrganization } from '@/hooks/useCurrentOrganization';
 
 interface CreateObraSheetProps {
   isOpen: boolean;
@@ -46,6 +47,8 @@ interface CreateObraSheetProps {
 }
 
 export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
+  const { organizationId, hasOrganization } = useCurrentOrganization();
+  
   // Initialize form first
   const form = useForm({
     defaultValues: {
@@ -75,7 +78,12 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       duracion: 30, // Default duration
     },
     onSubmit: async ({ value }) => {
-      let finalValue = { ...value };
+      if (!organizationId) {
+        toast.error('Debes seleccionar una organización para crear una obra.');
+        return;
+      }
+      
+      let finalValue = { ...value, organization_id: organizationId };
       if (value.fecha_inicio && typeof value.duracion === 'number' && !value.fecha_fin) {
         const startDate = new Date(value.fecha_inicio);
         finalValue.fecha_fin = new Date(startDate.setDate(startDate.getDate() + value.duracion));
@@ -145,6 +153,17 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
             className="pb-6 pt-4 gap-3 h-full"
           >
             <div className='flex flex-col gap-6 h-full'>
+              {!hasOrganization && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <AlertTriangle className="h-5 w-5" />
+                    <h3 className="font-medium">Organización requerida</h3>
+                  </div>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Debes seleccionar una organización antes de crear una obra.
+                  </p>
+                </div>
+              )}
 
               <form.Field
                 name="obra_name"
@@ -579,9 +598,13 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
               <form.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting]}
                 children={([canSubmit, isSubmitting]) => (
-                  <Button type="submit" form="create-obra-form" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    form="create-obra-form" 
+                    disabled={isLoading || !hasOrganization}
+                  >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isSubmitting ? 'Creando...' : 'Crear Obra'}
+                    {isSubmitting ? 'Creando...' : !hasOrganization ? 'Selecciona una organización' : 'Crear Obra'}
                   </Button>
                 )}
               />

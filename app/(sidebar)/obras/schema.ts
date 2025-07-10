@@ -96,6 +96,7 @@ export const createObraSchema = z.object({
     .optional()
     .nullable(),
   user_id: uuidSchema.optional().nullable(),
+  organization_id: uuidSchema.optional().nullable(),
 });
 
 // Update obra schema (includes ID)
@@ -122,6 +123,7 @@ export const filterObrasSchema = z.object({
   tipo_obra_id: z.number().optional(),
   fecha_inicio: z.coerce.date().optional(),
   fecha_fin: z.coerce.date().optional(),
+  organization_id: uuidSchema.optional(),
   limit: z.number().min(1).max(100).default(10),
   offset: z.number().min(0).default(0),
 });

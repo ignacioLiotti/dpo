@@ -15,8 +15,8 @@ interface SearchAndFiltersProps {
     folder?: string;
   };
   obraId: string;
-  view: 'cards' | 'table';
-  onViewChange: (view: 'cards' | 'table') => void;
+  view: 'cards' | 'table' | 'extracted';
+  onViewChange: (view: 'cards' | 'table' | 'extracted') => void;
 }
 
 export function SearchAndFilters({

@@ -50,13 +50,11 @@ function DashboardSkeleton() {
   );
 }
 
-// This page remains a Server Component
+// This page remains a Server Component  
 export default async function ObrasPage() {
-  const obrasData: Obra[] | null = await getAllObrasAction();
-
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <ObrasDashboard initialObras={obrasData || []} />
+      <ObrasDashboard initialObras={[]} />
     </Suspense>
   );
 }

@@ -71,7 +71,7 @@ function FolderCard({ folder, documentCount, obraId }: FolderCardProps) {
                   <Bot className="w-2.5 h-2.5 text-white" />
                 </div>
               )}
-              
+
               {/* on hover tilt the top of the folder front with origin from bottom */}
               <FolderFront className="w-[100px] h-[65px] absolute -bottom-4 -left-1  transform origin-[50%_100%] group-hover:[transform:perspective(800px)_rotateX(-30deg)] transition-transform duration-300" />
             </div>
@@ -85,7 +85,7 @@ function FolderCard({ folder, documentCount, obraId }: FolderCardProps) {
             </div>
           </div>
         </Link>
-        
+
         {/* Settings button */}
         <Button
           variant="outline"

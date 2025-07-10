@@ -3,6 +3,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { OrganizationProvider } from '@/contexts/organization-context';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -39,7 +40,9 @@ export function Providers({ children }: ProvidersProps) {
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <OrganizationProvider>
+          {children}
+        </OrganizationProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

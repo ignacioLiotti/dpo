@@ -13,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div
         className={cn(
-          "flex h-8 w-full relative justify-start items-center rounded-full border-none outline outline-outline outline-1 inset-ring-1 shadow bg-background text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex h-8 w-full relative justify-start items-center rounded-full border-none outline outline-outline outline-1 inset-ring-1 shadow bg-background text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           showSearchIcon ? "pl-9" : "pl-3",
           showCommandIcon ? "pr-16" : "pr-3",
           className
@@ -25,7 +25,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           ref={ref}
-          className={cn("w-full h-full bg-transparent outline-none", inputDirectClassName)}
+          className={cn(
+            "w-full h-full bg-transparent outline-none file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
+            inputDirectClassName
+          )}
           {...props}
         />
         {showCommandIcon && (

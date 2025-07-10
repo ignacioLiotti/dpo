@@ -34,11 +34,11 @@ export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 // Enum types
 export type ObraEstado = Database["public"]["Enums"]["obra_estado"];
-export type AdicionalEstado = Database["public"]["Enums"]["adicional_estado"];
-export type AmpliacionPlazoEstado =
-	Database["public"]["Enums"]["ampliacion_plazo_estado"];
-export type RedeterminacionEstado =
-	Database["public"]["Enums"]["redeterminacion_estado"];
+// export type AdicionalEstado = Database["public"]["Enums"]["adicional_estado"];
+// export type AmpliacionPlazoEstado =
+// 	Database["public"]["Enums"]["ampliacion_plazo_estado"];
+// export type RedeterminacionEstado =
+// 	Database["public"]["Enums"]["redeterminacion_estado"];
 
 // We'll need types for related entities too, examples:
 export type Reparticion = {

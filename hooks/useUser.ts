@@ -27,13 +27,16 @@ export function useUser() {
 				if (userError) {
 					setError(userError.message);
 					setUser(null);
-				} else {
+					setIsLoading(false);
+			} else {
 					setUser(user);
-				}
+					setIsLoading(false);
+			}
 			} catch (err) {
 				console.error("Error fetching user:", err);
 				setError("An unexpected error occurred");
 				setUser(null);
+				setIsLoading(false);
 			} finally {
 				setIsLoading(false);
 			}

@@ -5,6 +5,55 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { extractStructuredData } from '../services/document-processor';
 
+// Default field definitions for invoice/document extraction
+const DEFAULT_FIELD_DEFINITIONS = [
+  {
+    field_name: 'document_type',
+    field_type: 'text' as const,
+    field_label: 'Tipo de Documento',
+    field_description: 'Tipo de documento (factura, contrato, etc.)',
+    extraction_method: 'ai' as const,
+    extraction_pattern: 'Identify the document type from the content',
+    sort_order: 0
+  },
+  {
+    field_name: 'document_number',
+    field_type: 'text' as const,
+    field_label: 'Número de Documento',
+    field_description: 'Número de identificación del documento',
+    extraction_method: 'ai' as const,
+    extraction_pattern: 'Extract the document number or invoice number',
+    sort_order: 1
+  },
+  {
+    field_name: 'date',
+    field_type: 'date' as const,
+    field_label: 'Fecha',
+    field_description: 'Fecha del documento',
+    extraction_method: 'ai' as const,
+    extraction_pattern: 'Extract the main date from the document',
+    sort_order: 2
+  },
+  {
+    field_name: 'amount',
+    field_type: 'currency' as const,
+    field_label: 'Monto',
+    field_description: 'Monto total del documento',
+    extraction_method: 'ai' as const,
+    extraction_pattern: 'Extract the total amount or price',
+    sort_order: 3
+  },
+  {
+    field_name: 'supplier_name',
+    field_type: 'text' as const,
+    field_label: 'Proveedor/Emisor',
+    field_description: 'Nombre del proveedor o emisor del documento',
+    extraction_method: 'ai' as const,
+    extraction_pattern: 'Extract the supplier or issuer name',
+    sort_order: 4
+  }
+];
+
 // Schema for field definitions
 const createFieldDefinitionSchema = z.object({
   folder_id: z.string().uuid(),
@@ -31,6 +80,87 @@ const extractDocumentDataSchema = z.object({
   document_id: z.string().uuid(),
   force_reextraction: z.boolean().default(false),
 });
+
+// Create default field definitions for a folder
+export async function createDefaultFieldDefinitions(folderId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get folder to validate ownership
+    const { data: folder, error: folderError } = await supabase
+      .from('folders')
+      .select('id, obra_id, user_id')
+      .eq('id', folderId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (folderError || !folder) {
+      throw new Error('Folder not found or you do not have permission');
+    }
+
+    // Check if field definitions already exist
+    const { data: existingFields, error: existingError } = await supabase
+      .from('folder_field_definitions')
+      .select('field_name')
+      .eq('folder_id', folderId);
+
+    if (existingError) {
+      console.error('Error checking existing field definitions:', existingError);
+      throw new Error(`Failed to check existing field definitions: ${existingError.message}`);
+    }
+
+    const existingFieldNames = new Set(existingFields?.map(f => f.field_name) || []);
+    console.log(`Found ${existingFieldNames.size} existing field definitions:`, Array.from(existingFieldNames));
+
+    // Only create fields that don't already exist
+    const newFieldDefinitions = DEFAULT_FIELD_DEFINITIONS
+      .filter(def => !existingFieldNames.has(def.field_name))
+      .map(def => ({
+        ...def,
+        folder_id: folderId,
+        obra_id: folder.obra_id,
+        user_id: user.id,
+        is_active: true
+      }));
+
+    if (newFieldDefinitions.length === 0) {
+      console.log(`All default field definitions already exist for folder ${folderId}`);
+      
+      // Ensure existing fields are active
+      const { error: updateError } = await supabase
+        .from('folder_field_definitions')
+        .update({ is_active: true })
+        .eq('folder_id', folderId);
+
+      if (updateError) {
+        console.error('Error activating existing field definitions:', updateError);
+      }
+
+      return { success: true, fieldDefinitions: existingFields, message: 'Field definitions already exist and have been activated' };
+    }
+
+    const { data, error } = await supabase
+      .from('folder_field_definitions')
+      .insert(newFieldDefinitions)
+      .select();
+
+    if (error) {
+      console.error('Error creating new field definitions:', error);
+      throw new Error(`Failed to create field definitions: ${error.message}`);
+    }
+
+    console.log(`Created ${data.length} new field definitions for folder ${folderId}`);
+    return { success: true, fieldDefinitions: data, message: `Created ${data.length} new field definitions` };
+  } catch (error) {
+    console.error('Create default field definitions error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to create default field definitions');
+  }
+}
 
 // Get field definitions for a folder
 export async function getFolderFieldDefinitions(folderId: string) {
@@ -228,7 +358,8 @@ export async function extractDocumentData(formData: FormData) {
     const extractionResult = await extractStructuredData(
       ocrText,
       fields,
-      document.name
+      document.name,
+      document.type || 'application/pdf'
     );
 
     // Save extracted data to database
@@ -470,7 +601,7 @@ export async function getFolderExtractedData(folderId: string) {
       .from('document_extracted_data')
       .select(`
         *,
-        obra_documents!document_extracted_data_document_id_fkey(
+        obra_documents(
           name, 
           type, 
           size, 

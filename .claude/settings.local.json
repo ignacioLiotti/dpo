@@ -13,7 +13,13 @@
       "Bash(grep:*)",
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(npm install:*)",
+      "Bash(git restore:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx supabase:*)",
+      "Bash(npm run:*)",
+      "Bash(tail:*)"
     ],
     "deny": []
   }

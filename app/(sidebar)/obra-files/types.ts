@@ -20,6 +20,8 @@ export interface ObraDocument {
   folder_id?: string;
   ocr_content?: string;
   extracted_data?: Record<string, any>;
+  processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
+  processing_metadata?: Record<string, any>;
 }
 
 export interface Folder {

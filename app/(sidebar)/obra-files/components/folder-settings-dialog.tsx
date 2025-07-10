@@ -24,13 +24,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { 
+import {
   toggleFolderExtraction,
   getFolderFieldDefinitions,
   applyExtractionTemplate,
   createFolderFieldDefinition,
-  getFolderExtractedData 
+  getFolderExtractedData
 } from '../actions/folder-extraction-actions';
+import { deleteFolderAction } from '../actions/document-actions';
 import type { Folder, FolderFieldDefinition } from '../types';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -50,16 +51,17 @@ interface FolderSettingsDialogProps {
   onUpdate?: () => void;
 }
 
-export function FolderSettingsDialog({ 
-  folder, 
-  isOpen, 
-  onClose, 
-  onUpdate 
+export function FolderSettingsDialog({
+  folder,
+  isOpen,
+  onClose,
+  onUpdate
 }: FolderSettingsDialogProps) {
   const [extractionEnabled, setExtractionEnabled] = useState(false);
   const [fieldDefinitions, setFieldDefinitions] = useState<FolderFieldDefinition[]>([]);
   const [extractedData, setExtractedData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('settings');
   const router = useRouter();
 
@@ -75,7 +77,7 @@ export function FolderSettingsDialog({
 
   const loadFieldDefinitions = async () => {
     if (!folder) return;
-    
+
     setLoading(true);
     try {
       const { fields, error } = await getFolderFieldDefinitions(folder.id);
@@ -95,7 +97,9 @@ export function FolderSettingsDialog({
 
   const loadExtractedData = async () => {
     if (!folder) return;
-    
+
+    console.log('folder', folder.id);
+
     try {
       const { data, error } = await getFolderExtractedData(folder.id);
       if (error) {
@@ -120,11 +124,11 @@ export function FolderSettingsDialog({
       formData.append('enable_extraction', enabled.toString());
 
       await toggleFolderExtraction(formData);
-      
+
       setExtractionEnabled(enabled);
       toast.success(
-        enabled 
-          ? 'Extracción de datos habilitada' 
+        enabled
+          ? 'Extracción de datos habilitada'
           : 'Extracción de datos deshabilitada'
       );
       if (enabled) {
@@ -152,7 +156,7 @@ export function FolderSettingsDialog({
       formData.append('template_name', templateName);
 
       await applyExtractionTemplate(formData);
-      
+
       toast.success('Plantilla aplicada correctamente');
       setExtractionEnabled(true);
       await loadFieldDefinitions();
@@ -164,6 +168,41 @@ export function FolderSettingsDialog({
       toast.error('Error al aplicar plantilla');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!folder) return;
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `¿Estás seguro de que quieres eliminar la carpeta "${folder.name}"?\n\n` +
+      `Esta acción:\n` +
+      `• Eliminará la carpeta permanentemente\n` +
+      `• Desvinculará todos los documentos de la carpeta (los documentos no se eliminarán)\n` +
+      `• Eliminará todas las definiciones de campos y datos extraídos\n` +
+      `• No se puede deshacer\n\n` +
+      `¿Continuar?`
+    );
+
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const formData = new FormData();
+      formData.append('id', folder.id);
+
+      await deleteFolderAction(formData);
+
+      toast.success('Carpeta eliminada correctamente');
+      onUpdate?.();
+      onClose();
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar carpeta');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -180,11 +219,12 @@ export function FolderSettingsDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="settings">Configuración</TabsTrigger>
             <TabsTrigger value="fields">Campos</TabsTrigger>
             <TabsTrigger value="templates">Plantillas</TabsTrigger>
             <TabsTrigger value="data" disabled={!extractionEnabled}>Datos Extraídos</TabsTrigger>
+            <TabsTrigger value="danger" className="text-red-600">⚠️ Eliminar</TabsTrigger>
           </TabsList>
 
           <div className="max-h-[60vh] overflow-y-auto mt-4">
@@ -195,7 +235,7 @@ export function FolderSettingsDialog({
                     🤖 Extracción Automática de Datos
                   </CardTitle>
                   <CardDescription>
-                    Habilita la extracción automática de datos estructurados de los documentos 
+                    Habilita la extracción automática de datos estructurados de los documentos
                     subidos a esta carpeta usando OCR e IA.
                   </CardDescription>
                 </CardHeader>
@@ -204,7 +244,7 @@ export function FolderSettingsDialog({
                     <div className="space-y-1">
                       <p className="font-medium">Extracción de Datos</p>
                       <p className="text-sm text-muted-foreground">
-                        {extractionEnabled 
+                        {extractionEnabled
                           ? 'Los documentos se procesarán automáticamente'
                           : 'Los documentos se almacenarán sin procesar'
                         }
@@ -263,7 +303,7 @@ export function FolderSettingsDialog({
                     <p className="text-sm text-muted-foreground mb-4">
                       Aplica una plantilla o define campos personalizados para comenzar
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => setActiveTab('templates')}
                       variant="outline"
                     >
@@ -320,7 +360,7 @@ export function FolderSettingsDialog({
                       Los documentos subidos a esta carpeta aparecerán aquí con sus datos extraídos
                     </p>
                     {!extractionEnabled && (
-                      <Button 
+                      <Button
                         onClick={() => setActiveTab('settings')}
                         variant="outline"
                       >
@@ -332,6 +372,50 @@ export function FolderSettingsDialog({
               ) : (
                 <ExtractedDataTable data={extractedData} fieldDefinitions={fieldDefinitions} />
               )}
+            </TabsContent>
+
+            <TabsContent value="danger" className="space-y-6">
+              <Card className="border-red-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-700">
+                    ⚠️ Zona de Peligro
+                  </CardTitle>
+                  <CardDescription>
+                    Acciones irreversibles. Procede con precaución.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="text-red-600 text-xl">🗑️</div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-red-800 mb-1">
+                          Eliminar Carpeta
+                        </h4>
+                        <p className="text-sm text-red-700 mb-3">
+                          Elimina permanentemente esta carpeta y toda su configuración. 
+                          Los documentos no se eliminarán, pero se desvincularan de la carpeta.
+                        </p>
+                        <ul className="text-xs text-red-600 mb-4 space-y-1">
+                          <li>• Se eliminará la carpeta permanentemente</li>
+                          <li>• Se desvincularan todos los documentos (no se eliminan)</li>
+                          <li>• Se eliminaran todas las definiciones de campos</li>
+                          <li>• Se eliminaran todos los datos extraídos</li>
+                          <li>• Esta acción no se puede deshacer</li>
+                        </ul>
+                        <Button
+                          onClick={handleDeleteFolder}
+                          disabled={deleting || loading}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          {deleting ? 'Eliminando...' : 'Eliminar Carpeta'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </div>
         </Tabs>
@@ -387,11 +471,11 @@ function FieldDefinitionCard({ field }: { field: FolderFieldDefinition }) {
             {field.extraction_method}
           </Badge>
         </div>
-        
+
         {field.field_description && (
           <p className="text-sm text-muted-foreground mt-2">{field.field_description}</p>
         )}
-        
+
         <div className="mt-3 p-2 bg-muted rounded text-sm font-mono">
           {field.extraction_pattern}
         </div>
@@ -400,12 +484,12 @@ function FieldDefinitionCard({ field }: { field: FolderFieldDefinition }) {
   );
 }
 
-function TemplateCard({ 
-  title, 
-  description, 
-  fields, 
-  onApply, 
-  disabled 
+function TemplateCard({
+  title,
+  description,
+  fields,
+  onApply,
+  disabled
 }: {
   title: string;
   description: string;
@@ -431,8 +515,8 @@ function TemplateCard({
               ))}
             </div>
           </div>
-          <Button 
-            onClick={onApply} 
+          <Button
+            onClick={onApply}
             disabled={disabled}
             className="w-full"
             variant="outline"
@@ -446,12 +530,12 @@ function TemplateCard({
 }
 
 // Component to display extracted data in a table
-function ExtractedDataTable({ 
-  data, 
-  fieldDefinitions 
-}: { 
-  data: any[]; 
-  fieldDefinitions: any[] 
+function ExtractedDataTable({
+  data,
+  fieldDefinitions
+}: {
+  data: any[];
+  fieldDefinitions: any[]
 }) {
   if (data.length === 0) {
     return null;
@@ -475,17 +559,17 @@ function ExtractedDataTable({
     if (value === null || value === undefined) {
       return '-';
     }
-    
+
     // Find field definition to determine type
     const field = fieldDefinitions.find(f => f.field_name === fieldName);
-    
+
     if (field?.field_type === 'currency' && typeof value === 'number') {
       return new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS'
       }).format(value);
     }
-    
+
     if (field?.field_type === 'date' && typeof value === 'string') {
       try {
         const date = new Date(value);
@@ -494,7 +578,7 @@ function ExtractedDataTable({
         return value;
       }
     }
-    
+
     return String(value);
   };
 
@@ -506,7 +590,7 @@ function ExtractedDataTable({
           {Array.from(allFieldNames).length} campos únicos
         </Badge>
       </div>
-      
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -538,11 +622,11 @@ function ExtractedDataTable({
                   {new Date(item.updated_at).toLocaleDateString('es-AR')}
                 </TableCell>
                 <TableCell>
-                  <Badge 
+                  <Badge
                     variant={
-                      item.extraction_confidence > 0.8 ? 'default' : 
-                      item.extraction_confidence > 0.5 ? 'secondary' : 
-                      'destructive'
+                      item.extraction_confidence > 0.8 ? 'default' :
+                        item.extraction_confidence > 0.5 ? 'secondary' :
+                          'destructive'
                     }
                   >
                     {Math.round((item.extraction_confidence || 0) * 100)}%
@@ -551,7 +635,7 @@ function ExtractedDataTable({
                 {Array.from(allFieldNames).map(fieldName => (
                   <TableCell key={fieldName}>
                     {formatValue(
-                      item.extracted_data?.[fieldName], 
+                      item.extracted_data?.[fieldName],
                       fieldName
                     )}
                   </TableCell>
@@ -561,7 +645,7 @@ function ExtractedDataTable({
           </TableBody>
         </Table>
       </div>
-      
+
       <div className="text-sm text-muted-foreground bg-muted p-3 rounded">
         <div className="flex items-center gap-2 mb-1">
           <span>ℹ️</span>

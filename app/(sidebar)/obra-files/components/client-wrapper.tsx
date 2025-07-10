@@ -1,19 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DocumentTable } from './document-table';
 import { FolderGrid } from './folder-grid';
 import { DocumentGrid } from './document-grid';
 import { DocumentTreeView } from './document-tree-view';
 import { ViewToggle } from './view-toggle';
-import { Search, Filter, ArrowLeft, FileText } from 'lucide-react';
+import { ExtractedDataView } from './extracted-data-view';
+import { FolderExtractionPreview } from './folder-extraction-preview';
+import { FolderFieldSetup } from './folder-field-setup';
+import { ExtractionDebugPanel } from './extraction-debug-panel';
+import { SimpleDebugButton } from './simple-debug-button';
+import { Search, Filter, ArrowLeft, FileText, FolderOpen, Home, ChevronRight, Bot } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { DOCUMENT_CATEGORIES } from '../types';
 import type { ObraDocument, Folder } from '../types';
+import FolderFront from '@/components/ui/FolderFront';
+import { cn } from '@/utils/utils';
 
 interface ObraFilesClientWrapperProps {
   obraId: string;
@@ -38,7 +46,8 @@ export function ObraFilesClientWrapper({
   currentFolder,
   folderCounts
 }: ObraFilesClientWrapperProps) {
-  const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [view, setView] = useState<'cards' | 'table' | 'extracted'>('cards');
+  const [folderFieldCount, setFolderFieldCount] = useState(0);
 
   const baseUrl = `/obras/${obraId}`;
 
@@ -53,79 +62,117 @@ export function ObraFilesClientWrapper({
     return params.toString();
   };
 
+  // Check if current folder has extraction enabled
+  const showExtractedDataView = currentFolder?.extract_data || false;
+
+  // Fetch field count when folder changes
+  useEffect(() => {
+    if (currentFolder?.extract_data) {
+      fetchFieldCount();
+    } else {
+      setFolderFieldCount(0);
+    }
+  }, [currentFolder]);
+
+  const fetchFieldCount = async () => {
+    if (!currentFolder) return;
+
+    try {
+      const response = await fetch(`/api/folders/${currentFolder.id}/field-count`);
+      if (response.ok) {
+        const data = await response.json();
+        setFolderFieldCount(data.count || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching field count:', error);
+      setFolderFieldCount(0);
+    }
+  };
+
   return (
     <div className="flex h-full">
       {/* Left Sidebar - Navigation Panel */}
-      <motion.div
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-1/5 min-w-[320px] border-r bg-gradient-to-b from-muted/20 to-muted/40 backdrop-blur-sm"
-      >
+      <div className="w-1/5 min-w-[320px] border-r bg-gradient-to-b from-muted/20 to-muted/40 backdrop-blur-sm">
         <div className="p-6 space-y-6 h-full overflow-y-auto">
-          {/* Header Section */}
+          {/* Header Section with Breadcrumb */}
           <div className="space-y-4">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Link href={baseUrl} className="hover:text-foreground transition-colors">
+                <div className="flex items-center gap-1">
+                  <Home className="w-4 h-4" />
+                  <span>Raíz</span>
+                </div>
+              </Link>
+              {currentFolder && (
+                <>
+                  <ChevronRight className="w-3 h-3" />
+                  <div className="flex items-center gap-1 text-foreground">
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="font-medium">{currentFolder.name}</span>
+                    {currentFolder.extract_data && (
+                      <Bot className="w-3 h-3 text-blue-500" />
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Back Button */}
             <AnimatePresence mode="wait">
               {currentFolder && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <div>
                   <Link href={`${baseUrl}?${buildQuery({ folder: undefined })}`}>
                     <Button variant="ghost" size="sm" className="gap-2 hover:bg-muted/60">
                       <ArrowLeft className="w-4 h-4" />
                       Volver a la raíz
                     </Button>
                   </Link>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
 
+            {/* Title Section */}
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="w-5 h-5 text-primary" />
+              <div className={cn("p-2 rounded-lg bg-primary/10", currentFolder && "py-3")}>
+                {currentFolder ? (
+                  <div className="group cursor-pointer hover:bg-muted transition-colors">
+                    <div className="flex flex-col items-start gap-2 p-3 w-[35px] h-[15px] rounded-lg hover:bg-muted transition-colors bg-gradient-to-b from-[#4F4F4F] to-[#3D3D3D] relative">
+                      {currentFolder.extract_data && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center z-20">
+                          <Bot className="w-2 h-2 text-white" />
+                        </div>
+                      )}
+                      <FolderFront className="w-[45px] h-[25px] absolute -bottom-1 -left-1 transform origin-[50%_100%] group-hover:[transform:perspective(800px)_rotateX(-30deg)] transition-transform duration-300" />
+                    </div>
+                  </div>
+                ) : (
+                  <FileText className="w-5 h-5 text-primary" />
+                )}
               </div>
               <div>
-                <motion.h2
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-xl font-semibold"
-                >
+                <h2 className="text-xl font-semibold">
                   {currentFolder ? currentFolder.name : 'Documentos'}
-                </motion.h2>
-                <p className="text-sm text-muted-foreground">
-                  {obraName || `Obra ${obraId}`}
-                </p>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {obraName || `Obra ${obraId}`}
+                  </p>
+                  {currentFolder?.extract_data && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Bot className="w-3 h-3 mr-1" />
+                      IA habilitada
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
           <Separator />
 
-          {/* View Toggle */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Vista</label>
-              <ViewToggle view={view} onViewChange={setView} />
-            </div>
-          </motion.div>
-
-          <Separator />
-
           {/* Search and Filters */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-4"
-          >
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Buscar</label>
               <div className="relative">
@@ -139,78 +186,29 @@ export function ObraFilesClientWrapper({
                 />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Categoría</label>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground" />
-                <select
-                  name="category"
-                  defaultValue={searchParams.category || 'all'}
-                  className="flex-1 px-3 py-2 border border-input/50 bg-background/50 text-sm rounded-md"
-                  form="search-form"
-                >
-                  <option value="">Todas las categorías</option>
-                  {DOCUMENT_CATEGORIES.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.icon} {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Search Form */}
-            <form
-              id="search-form"
-              method="GET"
-              action={currentFolder ? `${baseUrl}?folder=${currentFolder.id}` : baseUrl}
-              className="hidden"
-            >
-              <Button type="submit" size="sm">Buscar</Button>
-            </form>
-
-            {/* Active Filters */}
-            <AnimatePresence>
-              {(searchParams.search || searchParams.category) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2 pt-2 border-t border-muted"
-                >
-                  <span className="text-sm font-medium text-muted-foreground">Filtros activos:</span>
-                  <div className="space-y-1">
-                    {searchParams.search && (
-                      <span className="inline-block bg-primary/10 text-primary px-2 py-1 rounded-md text-xs">
-                        Buscar: "{searchParams.search}"
-                      </span>
-                    )}
-                    {searchParams.category && (
-                      <span className="inline-block bg-primary/10 text-primary px-2 py-1 rounded-md text-xs">
-                        {DOCUMENT_CATEGORIES.find(c => c.id === searchParams.category)?.name || 'Categoría'}
-                      </span>
-                    )}
-                    <Link
-                      href={currentFolder ? `${baseUrl}?folder=${currentFolder.id}` : baseUrl}
-                      className="block text-primary hover:underline text-xs mt-1"
-                    >
-                      Limpiar filtros
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          </div>
 
           <Separator />
 
+          {/* Folder Field Setup / Extraction Preview / Debug Panel */}
+          {currentFolder && (
+            <>
+              <FolderFieldSetup
+                folder={currentFolder}
+                fieldCount={folderFieldCount}
+              />
+              <FolderExtractionPreview folder={currentFolder} />
+              <ExtractionDebugPanel
+                folder={currentFolder}
+                documents={documents}
+              />
+              <SimpleDebugButton folderId={currentFolder.id} />
+              <Separator />
+            </>
+          )}
+
           {/* Document Tree View */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
+          <div>
             <DocumentTreeView
               folders={folders}
               documents={documents}
@@ -218,134 +216,139 @@ export function ObraFilesClientWrapper({
               obraId={obraId}
               searchParams={searchParams}
             />
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Right Content Area */}
-      <motion.div
-        initial={{ x: 20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-        className="flex-1 overflow-hidden"
-      >
+      <div className="flex-1 overflow-hidden">
         <div className="p-6 h-full overflow-y-auto space-y-6">
-          {/* Folders Section */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  Carpetas
-                </h3>
-                <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                  {folders.length} carpeta{folders.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-
-              <motion.div
-                className="flex flex-wrap gap-6"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: {
-                    opacity: 1,
-                    transition: {
-                      staggerChildren: 0.1
-                    }
-                  }
-                }}
-              >
-                <FolderGrid
-                  folders={folders}
-                  folderCounts={folderCounts}
-                  obraId={obraId}
-                />
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Documents Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="space-y-4"
-          >
-            <div className="flex items-center justify-between">
+          {/* Content Header with View Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                {currentFolder ? `Documentos en ${currentFolder.name}` : 'Documentos'}
+                {view === 'extracted' ? 'Datos Extraídos' :
+                  currentFolder ? `Contenido de ${currentFolder.name} con el id ${currentFolder.id}` : 'Documentos de la Obra'}
               </h3>
-              <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                {documents.length} documento{documents.length !== 1 ? 's' : ''}
-              </span>
+              <p className="text-sm text-muted-foreground">
+                {view === 'extracted' ?
+                  `Datos estructurados extraídos de ${documents.filter(d => d.extracted_data).length} documentos` :
+                  `${documents.length} documento${documents.length !== 1 ? 's' : ''} y ${folders.length} carpeta${folders.length !== 1 ? 's' : ''}`
+                }
+              </p>
             </div>
 
-            {/* Documents Display */}
-            <AnimatePresence mode="wait">
-              {view === 'table' ? (
-                <motion.div
-                  key="table"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <DocumentTable documents={documents} folders={folders} />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="cards"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-wrap gap-4"
-                >
-                  <DocumentGrid
-                    documents={documents}
-                    obraId={obraId}
-                    currentFolder={currentFolder}
-                    folders={folders}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* View Toggle - Moved to right side */}
+            <ViewToggle
+              view={view}
+              onViewChange={setView}
+              showExtractedData={showExtractedDataView}
+            />
+          </div>
 
-            {/* Empty State */}
-            <AnimatePresence>
-              {documents.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-center py-16"
-                >
-                  <div className="text-6xl mb-4 opacity-50">
-                    {currentFolder ? '📁' : '📄'}
+          {/* Content Display */}
+          <AnimatePresence mode="wait">
+            {view === 'extracted' ? (
+              <motion.div
+                key="extracted"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ExtractedDataView documents={documents} currentFolder={currentFolder} />
+              </motion.div>
+            ) : (
+              <div className="space-y-6">
+                {/* Folders Section - Only show when not in extracted view and not in a folder */}
+                {!currentFolder && (
+                  <AnimatePresence mode="wait">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-base font-medium">Carpetas</h4>
+                        <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                          {folders.length} carpeta{folders.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-6">
+                        <FolderGrid
+                          folders={folders}
+                          folderCounts={folderCounts}
+                          obraId={obraId}
+                        />
+                      </div>
+                    </div>
+                  </AnimatePresence>
+                )}
+
+                {/* Documents Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-medium">
+                      {currentFolder ? 'Documentos' : 'Documentos Recientes'}
+                    </h4>
+                    <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                      {documents.length} documento{documents.length !== 1 ? 's' : ''}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">
-                    {currentFolder ? 'Carpeta vacía' : 'No hay documentos'}
-                  </h3>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    {currentFolder
-                      ? 'Esta carpeta no contiene documentos todavía. Puedes subir archivos usando el botón de arriba.'
-                      : 'Los documentos aparecerán aquí cuando se suban. Comienza creando una carpeta o subiendo un archivo.'
-                    }
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+
+                  {/* Documents Display */}
+                  <AnimatePresence mode="wait">
+                    {view === 'table' ? (
+                      <motion.div
+                        key="table"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <DocumentTable documents={documents} folders={folders} />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="cards"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <DocumentGrid
+                          documents={documents}
+                          obraId={obraId}
+                          currentFolder={currentFolder}
+                          folders={folders}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Empty State */}
+                  <AnimatePresence>
+                    {documents.length === 0 && (
+                      <div className="text-center py-16">
+                        <div className="text-6xl mb-4 opacity-50">
+                          {currentFolder ? '📁' : '📄'}
+                        </div>
+                        <h3 className="text-lg font-medium mb-2">
+                          {currentFolder ? 'Carpeta vacía' : 'No hay documentos'}
+                        </h3>
+                        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                          {currentFolder
+                            ? 'Esta carpeta no contiene documentos todavía. Puedes subir archivos usando el botón de agregar documentos.'
+                            : 'Los documentos aparecerán aquí cuando se suban. Comienza creando una carpeta o subiendo un archivo.'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
-} 
+}

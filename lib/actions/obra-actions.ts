@@ -13,8 +13,8 @@ import {
 } from "../../app/(sidebar)/obras/schema";
 import { createClient } from "@/supabase/server";
 
-// Get all obras action (for backward compatibility)
-export async function getAllObrasAction() {
+// Get all obras action (organization-scoped)
+export async function getAllObrasAction(organizationId?: string) {
   try {
     const supabase = await createClient();
     
@@ -27,11 +27,33 @@ export async function getAllObrasAction() {
       throw new ActionError("User not authenticated");
     }
 
-    const { data, error } = await supabase
+    // Build query based on whether organization ID is provided
+    let query = supabase
       .from("obras")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("fecha_creacion", { ascending: false });
+      .select("*");
+
+    if (organizationId) {
+      // Organization-scoped query
+      query = query.eq("organization_id", organizationId);
+      
+      // Verify user has access to this organization
+      const { data: membership } = await supabase
+        .from('organization_memberships')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .single();
+        
+      if (!membership) {
+        throw new ActionError("User does not have access to this organization");
+      }
+    } else {
+      // Fallback to user-scoped query for backward compatibility
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query.order("fecha_creacion", { ascending: false });
 
     if (error) {
       throw new ActionError(`Error fetching obras: ${error.message}`);
@@ -84,11 +106,32 @@ export const createObraAction = authActionClient
   .schema(createObraSchema)
   .action(async ({ parsedInput, ctx: { user, supabase } }) => {
     try {
+      // Verify user has access to the organization
+      if (parsedInput.organization_id) {
+        const { data: membership } = await supabase
+          .from('organization_memberships')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('organization_id', parsedInput.organization_id)
+          .eq('is_active', true)
+          .single();
+          
+        if (!membership) {
+          throw new ActionError("User does not have access to this organization");
+        }
+        
+        // Check if user has permission to create obras
+        if (!['owner', 'admin', 'member'].includes(membership.role)) {
+          throw new ActionError("Insufficient permissions to create obras");
+        }
+      }
+
       const { data, error } = await supabase
         .from("obras")
         .insert({
           ...parsedInput,
           user_id: user.id,
+          organization_id: parsedInput.organization_id || null,
         })
         .select()
         .single();
@@ -194,8 +237,28 @@ export const filterObrasAction = authActionClient
     try {
       let query = supabase
         .from("obras")
-        .select("*")
-        .eq("user_id", user.id); // Ensure user can only access their own obras
+        .select("*");
+
+      // Apply organization scoping or fallback to user scoping
+      if (parsedInput.organization_id) {
+        // Verify user has access to the organization
+        const { data: membership } = await supabase
+          .from('organization_memberships')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('organization_id', parsedInput.organization_id)
+          .eq('is_active', true)
+          .single();
+          
+        if (!membership) {
+          throw new ActionError("User does not have access to this organization");
+        }
+        
+        query = query.eq("organization_id", parsedInput.organization_id);
+      } else {
+        // Fallback to user-scoped query for backward compatibility
+        query = query.eq("user_id", user.id);
+      }
 
       // Apply filters
       if (parsedInput.search) {

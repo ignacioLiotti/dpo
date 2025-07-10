@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Obra } from '../types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,12 +16,15 @@ import {
   AlertTriangle,
   CheckCircle,
   Pause,
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { ObrasDataTable } from './obras-data-table';
 import { CreateObraSheet } from './create-obra-sheet';
 import { format, isAfter, isBefore, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useCurrentOrganization } from '@/hooks/useCurrentOrganization';
+import { getAllObrasAction } from '../actions/get-obra-action';
 
 interface ObrasDashboardProps {
   initialObras: Obra[];
@@ -29,20 +32,43 @@ interface ObrasDashboardProps {
 
 export function ObrasDashboard({ initialObras }: ObrasDashboardProps) {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [obras, setObras] = useState<Obra[]>(initialObras);
+  const [isLoading, setIsLoading] = useState(false);
+  const { organizationId, hasOrganization, isLoading: orgLoading } = useCurrentOrganization();
 
   const handleOpenCreateSheet = () => setIsCreateSheetOpen(true);
   const handleCloseCreateSheet = () => setIsCreateSheetOpen(false);
 
+  // Fetch organization-scoped obras when organization changes
+  useEffect(() => {
+    const fetchObras = async () => {
+      if (orgLoading) return; // Wait for organization context to load
+      
+      setIsLoading(true);
+      try {
+        const obrasData = await getAllObrasAction(organizationId || undefined);
+        setObras(obrasData || []);
+      } catch (error) {
+        console.error('Error fetching obras:', error);
+        setObras([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchObras();
+  }, [organizationId, orgLoading]);
+
   // Calculate dashboard metrics
   const dashboardMetrics = useMemo(() => {
-    const total = initialObras.length;
+    const total = obras.length;
     // TODO: Add estado field to obras table
     const enProgreso = 0; // initialObras.filter(obra => obra.estado === 'EN_EJECUCION').length;
     const completadas = 0; // initialObras.filter(obra => obra.estado === 'FINALIZADA').length;
     const pausadas = 0; // initialObras.filter(obra => obra.estado === 'SUSPENDIDA').length;
     const canceladas = 0; // initialObras.filter(obra => obra.estado === 'CANCELADA').length;
 
-    const totalPresupuesto = initialObras.reduce((sum, obra) => sum + (obra.presupuesto || 0), 0);
+    const totalPresupuesto = obras.reduce((sum, obra) => sum + (obra.presupuesto || 0), 0);
     const totalPresupuestoOficial = 0; // TODO: Add presupuesto_oficial field to obras table
 
     // Obras próximas a vencer (próximos 30 días)
@@ -83,7 +109,7 @@ export function ObrasDashboard({ initialObras }: ObrasDashboardProps) {
       obrasProximasAVencer: proximasAVencer,
       obrasAtrasadas: atrasadas
     };
-  }, [initialObras]);
+  }, [obras]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -387,10 +413,25 @@ export function ObrasDashboard({ initialObras }: ObrasDashboardProps) {
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Todas las Obras</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Todas las Obras
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <ObrasDataTable data={initialObras} />
+          {!hasOrganization && !orgLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Selecciona una organización para ver las obras</p>
+            </div>
+          ) : isLoading ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Cargando obras...</p>
+            </div>
+          ) : (
+            <ObrasDataTable data={obras} />
+          )}
         </CardContent>
       </Card>
 
