@@ -1,61 +1,77 @@
 import { createClient } from '@/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper function to get user's organization
+async function getUserOrganization(supabase: any) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Get user's organization
+  const { data: orgId } = await supabase.rpc('get_user_organization_id');
+  if (!orgId) {
+    throw new Error('User is not a member of any organization');
+  }
+
+  return { user, organizationId: orgId };
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const folderId = params.id;
+    const { id: folderId } = await params;
     const supabase = await createClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get folder info
+    // Get folder info (verify it belongs to user's organization)
     const { data: folder, error: folderError } = await supabase
       .from('folders')
       .select('*')
       .eq('id', folderId)
+      .eq('organization_id', organizationId)
       .single();
 
     // Get field definitions
     const { data: fieldDefinitions, error: fieldsError } = await supabase
-      .from('folder_field_definitions')
+      .from('folder_extraction_configs')
       .select('*')
       .eq('folder_id', folderId)
-      .eq('is_active', true)
-      .order('sort_order');
+      .order('field_name');
 
-    // Get documents in folder with extracted data
-    const { data: documents, error: docsError } = await supabase
-      .from('obra_documents')
+    // Get files in folder with extracted data
+    const { data: files, error: filesError } = await supabase
+      .from('files')
       .select(`
         *,
-        folder_documents!inner (folder_id),
-        document_extracted_data (*)
+        file_folder_assignments!inner (
+          folder_id
+        ),
+        file_analysis (*),
+        extracted_data (*)
       `)
-      .eq('folder_documents.folder_id', folderId);
+      .eq('file_folder_assignments.folder_id', folderId)
+      .eq('organization_id', organizationId);
 
     // Get all extracted data records for this folder
     const { data: extractedDataRecords, error: extractedError } = await supabase
-      .from('document_extracted_data')
+      .from('extracted_data')
       .select('*')
       .eq('folder_id', folderId);
 
     return NextResponse.json({
       folder: folder || null,
       fieldDefinitions: fieldDefinitions || [],
-      documents: documents || [],
+      files: files || [],
       extractedDataRecords: extractedDataRecords || [],
       debug: {
         folderError: folderError?.message || null,
         fieldsError: fieldsError?.message || null,
-        docsError: docsError?.message || null,
-        extractedError: extractedError?.message || null
+        filesError: filesError?.message || null,
+        extractedError: extractedError?.message || null,
+        organizationId
       }
     });
 

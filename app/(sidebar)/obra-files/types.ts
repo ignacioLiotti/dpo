@@ -1,10 +1,10 @@
-// Types for obra file management system
+// Types for organization file management system
 
 export interface ObraDocument {
   id: string;
   created_at: string;
   updated_at: string;
-  obra_id: string;
+  organization_id: string;
   name: string;
   type: string;
   size: number;
@@ -28,7 +28,7 @@ export interface Folder {
   id: string;
   created_at: string;
   updated_at: string;
-  obra_id: string;
+  organization_id: string;
   name: string;
   description?: string;
   parent_id?: string;
@@ -43,7 +43,6 @@ export interface FolderFieldDefinition {
   created_at: string;
   updated_at: string;
   folder_id: string;
-  obra_id: string;
   user_id: string;
   field_name: string;
   field_type: 'text' | 'number' | 'date' | 'currency' | 'boolean' | 'email' | 'phone';
@@ -72,7 +71,7 @@ export interface DocumentExtractedData {
 }
 
 export interface CreateDocumentInput {
-  obra_id: string;
+  organization_id: string;
   files: File[];
   category?: string;
   description?: string;
@@ -90,7 +89,7 @@ export interface UpdateDocumentInput {
 }
 
 export interface CreateFolderInput {
-  obra_id: string;
+  organization_id: string;
   name: string;
   description?: string;
   parent_id?: string;

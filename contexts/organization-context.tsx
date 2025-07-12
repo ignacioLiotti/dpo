@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { createClient } from '@/utils/client';
+import { createOrganizationAction } from '@/app/actions/organizations';
 import type {
   Organization,
   OrganizationInsert,
@@ -149,51 +150,28 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
   // Create a new organization
   const createOrganization = useCallback(async (data: OrganizationInsert): Promise<Organization> => {
     try {
-      // Refresh the session to ensure it's properly synchronized
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Creating organization via server action:', data);
 
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw new Error('Authentication session error. Please sign in again.');
-      }
+      // Use server action for better authentication handling
+      const result = await createOrganizationAction(data);
 
-      if (!session?.user) {
-        throw new Error('You must be signed in to create an organization.');
-      }
-
-      // Get a fresh client with the current session
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        throw new Error('Unable to verify authentication. Please sign in again.');
-      }
-
-      console.log('Creating organization with authenticated user:', user.id);
-
-      const { data: newOrg, error } = await supabase
-        .from('organizations')
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       // Refresh organizations to include the new one
       await loadOrganizations();
 
-      toast.success(`Organization "${newOrg.name}" created successfully`);
+      toast.success(`Organization "${result.data.name}" created successfully`);
 
-      return newOrg;
+      return result.data;
     } catch (err) {
       console.error('Create organization error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create organization';
       toast.error(errorMessage);
       throw err;
     }
-  }, [supabase, loadOrganizations]);
+  }, [loadOrganizations]);
 
   // Update current organization
   const updateOrganization = useCallback(async (id: string, data: OrganizationUpdate): Promise<Organization> => {

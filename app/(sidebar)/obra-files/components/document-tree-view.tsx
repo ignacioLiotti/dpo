@@ -11,7 +11,6 @@ interface DocumentTreeViewProps {
   folders: Folder[];
   documents: ObraDocument[];
   currentFolder: Folder | null;
-  obraId: string;
   searchParams: {
     search?: string;
     category?: string;
@@ -32,7 +31,6 @@ export function DocumentTreeView({
   folders,
   documents,
   currentFolder,
-  obraId,
   searchParams
 }: DocumentTreeViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
@@ -118,7 +116,7 @@ export function DocumentTreeView({
             </Button>
 
             <Link
-              href={`/obras/${obraId}?${buildQuery({ folder: node.id })}`}
+              href={`/obra-files?${buildQuery({ folder: node.id })}`}
               className={cn(
                 "flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-muted transition-colors flex-1",
                 isCurrentFolder && "bg-muted font-medium"
@@ -162,15 +160,15 @@ export function DocumentTreeView({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-muted-foreground">Estructura</h4>
+        <h4 className="text-sm font-medium text-muted-foreground">Structure</h4>
         <Link
-          href={`/obras/${obraId}?${buildQuery({ folder: undefined })}`}
+          href={`/obra-files?${buildQuery({ folder: undefined })}`}
           className={cn(
             "text-xs px-2 py-1 rounded hover:bg-muted transition-colors",
             !currentFolder && "bg-muted font-medium"
           )}
         >
-          Raíz
+          Root
         </Link>
       </div>
 

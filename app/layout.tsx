@@ -46,46 +46,27 @@ export default async function RootLayout({
           "title": "Main",
           "url": "/obras",
           "iconKey": "House"
-        },
-        // {
-        //   "title": "Create",
-        //   "url": "/obras/create",
-        //   "iconKey": "FilePlus",
-        //   "items": [
-        //     {
-        //       "title": "Main",
-        //       "url": "/obras/create",
-        //       "iconKey": "House"
-        //     }
-        //   ]
-        // },
-        {
-          "title": "Obra de Ejemplo",
-          "url": "/obras/1284",
-          "iconKey": "HardHatIcon",
-          "items": [
-            {
-              "title": "Main",
-              "url": "/obras/1",
-              "iconKey": "House"
-            }
-          ]
         }
       ]
+    },
+    {
+      "title": "Organization Files",
+      "url": "/files",
+      "iconKey": "FolderSearch2",
+      "items": []
+    },
+    {
+      "title": "Document Examples",
+      "url": "/document-example",
+      "iconKey": "LayoutTemplateIcon",
+      "items": []
     },
     {
       "title": "OCR Playground",
       "url": "/playground",
       "iconKey": "BrainCogIcon",
-      "items": [
-      ]
+      "items": []
     },
-    // {
-    //   "title": "Items de Construcción",
-    //   "url": "/",
-    //   "iconKey": "LayoutListIcon",
-    //   "items": []
-    // },
     {
       "title": "Auth",
       "url": "#",

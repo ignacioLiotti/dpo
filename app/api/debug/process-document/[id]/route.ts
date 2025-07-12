@@ -1,28 +1,39 @@
 import { createClient } from '@/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper function to get user's organization
+async function getUserOrganization(supabase: any) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Get user's organization
+  const { data: orgId } = await supabase.rpc('get_user_organization_id');
+  if (!orgId) {
+    throw new Error('User is not a member of any organization');
+  }
+
+  return { user, organizationId: orgId };
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const documentId = params.id;
+    const { id: documentId } = await params;
     const { provider = 'gpt' } = await request.json();
     
     const supabase = await createClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get document details with folder information
-    const { data: document, error: docError } = await supabase
-      .from('obra_documents')
+    // Get file details with folder information
+    const { data: file, error: fileError } = await supabase
+      .from('files')
       .select(`
         *,
-        folder_documents (
+        file_folder_assignments (
           folder_id,
           folder:folder_id (
             id,
@@ -32,38 +43,39 @@ export async function POST(
         )
       `)
       .eq('id', documentId)
-      .eq('user_id', user.id)
+      .eq('organization_id', organizationId)
       .single();
 
-    if (docError || !document) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    if (fileError || !file) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const folderData = document.folder_documents?.[0]?.folder;
+    const folderAssignment = file.file_folder_assignments?.[0];
+    const folderData = folderAssignment?.folder;
 
     // Get field definitions if in a folder with extraction enabled
     let fieldDefinitions = [];
     if (folderData?.extract_data) {
       const { data: fields } = await supabase
-        .from('folder_field_definitions')
+        .from('folder_extraction_configs')
         .select('*')
         .eq('folder_id', folderData.id)
-        .order('sort_order');
+        .order('field_name');
       
-      fieldDefinitions = fields?.filter(f => f.is_active !== false) || [];
+      fieldDefinitions = fields || [];
     }
 
     // Check current extracted data
     const { data: currentExtractedData } = await supabase
-      .from('document_extracted_data')
+      .from('extracted_data')
       .select('*')
-      .eq('document_id', documentId);
+      .eq('file_id', documentId);
 
     return NextResponse.json({
-      document: {
-        id: document.id,
-        name: document.name,
-        processing_status: document.processing_status,
+      file: {
+        id: file.id,
+        name: file.name,
+        processing_status: file.processing_status,
         folder: folderData
       },
       fieldDefinitions,
@@ -71,7 +83,8 @@ export async function POST(
       debug: {
         folderHasExtraction: !!folderData?.extract_data,
         fieldDefinitionsCount: fieldDefinitions.length,
-        currentExtractedDataCount: currentExtractedData?.length || 0
+        currentExtractedDataCount: currentExtractedData?.length || 0,
+        organizationId
       }
     });
 

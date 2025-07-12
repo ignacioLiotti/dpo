@@ -2,11 +2,11 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ObraFilesClientWrapper } from './components/client-wrapper';
-import { getObraDocumentsWithFolders, getObraFolders } from './actions/document-actions';
+import { getOrganizationDocumentsWithFolders, getOrganizationFolders } from './actions/document-actions';
+import { getFolderExtractedData } from './actions/folder-extraction-actions';
 
 interface ObraFilesPageProps {
   searchParams: Promise<{
-    obra_id?: string;
     search?: string;
     category?: string;
     folder?: string;
@@ -33,33 +33,12 @@ function ObraFilesPageSkeleton() {
 
 export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps) {
   const params = await searchParams;
-  const { obra_id, search, category, folder } = params;
+  const { search, category, folder } = params;
 
-
-  if (!obra_id) {
-    return (
-      <div className="container mx-auto py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>Obra Files Manager</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Please provide an obra_id parameter to view files for a specific obra.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Example: /obra-files?obra_id=your-obra-id
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Fetch documents and folders for the obra
+  // Fetch documents and folders for the organization
   const [documentsResult, foldersResult] = await Promise.all([
-    getObraDocumentsWithFolders(obra_id),
-    getObraFolders(obra_id)
+    getOrganizationDocumentsWithFolders(),
+    getOrganizationFolders()
   ]);
 
   const documents = documentsResult.documents || [];
@@ -105,44 +84,40 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
     return acc;
   }, {} as Record<string, number>);
 
-  return (
-    <div className="w-full max-w-full h-full overflow-y-hidden">
-      <Suspense fallback={<ObraFilesPageSkeleton />}>
-        <div className="container mx-auto py-6">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Obra Files</h1>
-                <p className="text-muted-foreground">
-                  Document management for obra {obra_id}
-                </p>
-              </div>
-            </div>
+  // Fetch extracted data for current folder if extraction is enabled
+  let extractedData: any[] = [];
+  if (currentFolder?.extract_data) {
+    try {
+      const extractedResult = await getFolderExtractedData(currentFolder.id);
+      extractedData = extractedResult.data || [];
+    } catch (error) {
+      console.error('Error fetching extracted data:', error);
+    }
+  }
 
-            {documentsResult.error || foldersResult.error ? (
-              <Card>
-                <CardContent className="py-12">
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium mb-2">Error al cargar documentos</h3>
-                    <p className="text-muted-foreground">
-                      {documentsResult.error || foldersResult.error}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <ObraFilesClientWrapper
-                obraId={obra_id}
-                searchParams={params}
-                documents={filteredDocuments}
-                folders={folders}
-                currentFolder={currentFolder}
-                folderCounts={folderCounts}
-              />
-            )}
-          </div>
-        </div>
-      </Suspense>
-    </div>
+  return (
+    <Suspense fallback={<ObraFilesPageSkeleton />}>
+      {documentsResult.error || foldersResult.error ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-2">Error al cargar documentos</h3>
+              <p className="text-muted-foreground">
+                {documentsResult.error || foldersResult.error}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <ObraFilesClientWrapper
+          searchParams={params}
+          documents={filteredDocuments}
+          folders={folders}
+          currentFolder={currentFolder}
+          folderCounts={folderCounts}
+          extractedData={extractedData}
+        />
+      )}
+    </Suspense>
   );
 }

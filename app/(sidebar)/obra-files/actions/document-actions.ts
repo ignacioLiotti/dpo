@@ -10,9 +10,25 @@ import { processDocument } from '../services/document-processor';
 // Import types from our local schema
 import type { ObraDocument, Folder } from '../types';
 
+// Helper function to get user's organization
+async function getUserOrganization(supabase: any) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Get user's organization
+  const { data: orgId } = await supabase.rpc('get_user_organization_id');
+  if (!orgId) {
+    throw new Error('User is not a member of any organization');
+  }
+
+  return { user, organizationId: orgId };
+}
+
 // Schemas for validation
 const uploadDocumentsSchema = z.object({
-  obra_id: z.string().uuid(),
+  organization_id: z.string().uuid().optional(), // Make optional since we'll get from user context
   files: z.array(z.any()),
   category: z.string().optional(),
   description: z.string().optional(),
@@ -21,7 +37,7 @@ const uploadDocumentsSchema = z.object({
 });
 
 const createFolderSchema = z.object({
-  obra_id: z.string().uuid(),
+  organization_id: z.string().uuid().optional(), // Make optional since we'll get from user context
   name: z.string().min(1, 'Folder name is required'),
   description: z.string().optional(),
   parent_id: z.string().uuid().optional(),
@@ -46,18 +62,20 @@ const deleteFolderSchema = z.object({
   id: z.string().uuid(),
 });
 
-// Get all documents for an obra with folder information
-export async function getObraDocumentsWithFolders(obraId: string) {
+// Get all documents for an organization with folder information
+export async function getOrganizationDocumentsWithFolders() {
   try {
     const supabase = await createClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
     
-    // Fetch documents with folder info and extracted data
+    // Fetch files with folder info and analysis data
     const { data: documents, error } = await supabase
-      .from('obra_documents')
+      .from('files')
       .select(`
         *,
-        folder_documents (
+        file_folder_assignments (
           folder_id,
+          sort_order,
           folder:folder_id (
             id,
             name,
@@ -66,14 +84,22 @@ export async function getObraDocumentsWithFolders(obraId: string) {
             extract_data
           )
         ),
-        document_extracted_data (
-          extracted_data,
-          extraction_confidence,
-          field_count,
-          extraction_metadata
+        file_analysis (
+          ocr_text,
+          ai_description,
+          ai_category,
+          ai_tags,
+          confidence_score,
+          analysis_metadata
+        ),
+        extracted_data (
+          extracted_value,
+          confidence_score,
+          is_verified
         )
       `)
-      .eq('obra_id', obraId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -83,24 +109,41 @@ export async function getObraDocumentsWithFolders(obraId: string) {
 
     // Transform the data to flatten the structure
     const flatDocuments = documents?.map(doc => {
-      const folderData = doc.folder_documents?.[0]?.folder;
-      const extractedData = doc.document_extracted_data?.[0];
+      const folderAssignment = doc.file_folder_assignments?.[0];
+      const folderData = folderAssignment?.folder;
+      const analysis = doc.file_analysis?.[0];
+      const extractedData = doc.extracted_data?.[0];
       
       const flatDoc = {
         ...doc,
+        // Map to expected obra document format
+        obra_id: organizationId, // Use organization ID for compatibility
+        name: doc.name,
+        type: doc.file_type,
+        size: doc.file_size,
+        path: [doc.storage_path],
         folder_id: folderData?.id || null,
         folder_name: folderData?.name || null,
         folder_color: folderData?.color || null,
         folder_icon: folderData?.icon || null,
         folder_extract_data: folderData?.extract_data || false,
-        extracted_data: extractedData?.extracted_data || null,
-        extraction_confidence: extractedData?.extraction_confidence || null,
-        field_count: extractedData?.field_count || null,
-        extraction_metadata: extractedData?.extraction_metadata || null,
-        // Remove the nested objects
-        folder_documents: undefined,
-        document_extracted_data: undefined
+        ocr_content: analysis?.ocr_text || null,
+        description: analysis?.ai_description || null,
+        category: analysis?.ai_category || null,
+        tags: analysis?.ai_tags || [],
+        extracted_data: extractedData ? JSON.parse(extractedData.extracted_value || '{}') : null,
+        extraction_confidence: extractedData?.confidence_score || null,
+        processing_status: doc.processing_status || 'completed',
+        processing_metadata: analysis?.analysis_metadata || null,
+        is_public: false,
+        version: 1,
+        checksum: doc.checksum,
       };
+      
+      // Remove the nested objects to avoid duplication
+      delete flatDoc.file_folder_assignments;
+      delete flatDoc.file_analysis;
+      delete flatDoc.extracted_data;
       
       // Debug logging for documents with extracted data
       if (extractedData?.extracted_data) {
@@ -117,16 +160,18 @@ export async function getObraDocumentsWithFolders(obraId: string) {
   }
 }
 
-// Get all folders for an obra
-export async function getObraFolders(obraId: string) {
+// Get all folders for an organization
+export async function getOrganizationFolders() {
   try {
     const supabase = await createClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
     
     const { data: folders, error } = await supabase
       .from('folders')
       .select('*')
-      .eq('obra_id', obraId)
-      .order('name', { ascending: true });
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
 
     if (error) {
       console.error('Error fetching folders:', error);
@@ -135,291 +180,163 @@ export async function getObraFolders(obraId: string) {
 
     return { folders: folders || [], error: null };
   } catch (error) {
-    console.error('Error in getObraFolders:', error);
+    console.error('Error in getOrganizationFolders:', error);
     return { folders: [], error: 'Failed to fetch folders' };
   }
 }
 
-// Upload documents action
+// Upload documents action for organization files
 export async function uploadDocumentsAction(formData: FormData) {
   try {
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
-    // Extract form data
-    const obraId = formData.get('obra_id') as string;
-    const category = formData.get('category') as string;
-    const description = formData.get('description') as string;
-    const folderId = formData.get('folder_id') as string;
-    const tagsString = formData.get('tags') as string;
-    const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    // Extract files from FormData
+    const files: File[] = Array
+    .from(formData.values())
+    .filter((v): v is File => v instanceof File);
+    const folderId = formData.get('folder_id') as string || null;
+    const category = formData.get('category') as string || 'general';
+    const description = formData.get('description') as string || null;
 
-    // Get files from formData
-    const files: File[] = [];
-    const entries = Array.from(formData.entries());
-    
-    for (const [key, value] of entries) {
-      if (key.startsWith('file_') && value instanceof File && value.size > 0) {
-        files.push(value);
-      }
-    }
+    console.log('[uploadDocumentsAction] FormData keys:', Array.from(formData.keys()));
+    console.log('[uploadDocumentsAction] Files extracted:', formData);
+    console.log('[uploadDocumentsAction] Files extracted:', files.length, files.map(f => f.name));
+    console.log('[uploadDocumentsAction] Folder ID:', folderId);
+    console.log('[uploadDocumentsAction] Organization ID:', organizationId);
 
-    if (files.length === 0) {
+    if (!files || files.length === 0) {
+      console.error('[uploadDocumentsAction] No files provided');
       throw new Error('No files provided');
     }
 
-    // Validate input
-    const validatedData = uploadDocumentsSchema.parse({
-      obra_id: obraId,
-      files,
-      category: category || undefined,
-      description: description || undefined,
-      tags: tags.length > 0 ? tags : undefined,
-      folder_id: folderId || undefined,
-    });
-
     const uploadedDocuments = [];
-    const uploadWarnings: string[] = [];
+    const errors = [];
 
-    // Process each file (upload only, no AI processing)
+    console.log('[uploadDocumentsAction] Starting upload for', files.length, 'files');
+
     for (const file of files) {
-      console.log(`[UploadAction] Processing file upload: ${file.name} (${file.size} bytes)`);
-      
-      // Use basic metadata for upload (no AI processing)
-      const basicDescription = description || `Documento subido: ${file.name}`;
-      const basicTags = tags.length > 0 ? tags : [];
-      
-      // Basic file validation
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        uploadWarnings.push(`${file.name}: Archivo muy grande (máximo 10MB)`);
-        continue;
-      }
-      
-      const allowedTypes = [
-        'application/pdf',
-        'image/jpeg',
-        'image/jpg', 
-        'image/png',
-        'image/tiff',
-        'image/bmp'
-      ];
-      
-      if (!allowedTypes.includes(file.type.toLowerCase())) {
-        uploadWarnings.push(`${file.name}: Tipo de archivo no soportado (${file.type})`);
-        continue;
-      }
+      try {
+        console.log(`[uploadDocumentsAction] Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+        
+        // Generate storage path for organization-files bucket
+        const timestamp = Date.now();
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storagePath = `${organizationId}/${timestamp}_${sanitizedName}`;
+        
+        console.log(`[uploadDocumentsAction] Storage path: ${storagePath}`);
 
-      // Step 2: Generate unique filename and upload to storage
-      const timestamp = Date.now();
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `${timestamp}-${file.name}`;
-      const storagePath = `${obraId}/${fileName}`;
+        // Convert file to buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const fileBuffer = new Uint8Array(arrayBuffer);
+        
+        console.log(`[uploadDocumentsAction] File buffer size: ${fileBuffer.length}`);
 
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('obra-vault')
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (storageError) {
-        console.error('Storage upload error:', storageError);
-        throw new Error(`Failed to upload ${file.name}: ${storageError.message}`);
-      }
-
-      // Step 3: Insert document record (without AI processing data)
-      const { data: document, error: documentError } = await supabase
-        .from('obra_documents')
-        .insert({
-          obra_id: obraId,
-          user_id: user.id,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          path: [obraId, fileName],
-          description: basicDescription,
-          category: category || null,
-          tags: basicTags.length > 0 ? basicTags : null,
-          folder: 'Sin Clasificar',
-          ocr_content: null,
-          is_public: false,
-          version: 1,
-          processing_status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (documentError) {
-        console.error('Document insert error:', documentError);
-        // Clean up uploaded file if database insert fails
-        await supabase.storage.from('obra-vault').remove([storagePath]);
-        throw new Error(`Failed to save document ${file.name}: ${documentError.message}`);
-      }
-
-      // Step 4: Link to folder if specified and check for auto-processing
-      let shouldAutoProcess = false;
-      if (folderId) {
-        // Link to folder
-        const { error: linkError } = await supabase
-          .from('folder_documents')
-          .insert({
-            folder_id: folderId,
-            document_id: document.id,
+        // Upload file to organization-files storage bucket
+        const { error: uploadError } = await supabase.storage
+          .from('organization-files')
+          .upload(storagePath, fileBuffer, {
+            contentType: file.type,
+            upsert: false,
           });
 
-        if (linkError) {
-          console.error('Error linking document to folder:', linkError);
-          uploadWarnings.push(`${file.name}: No se pudo vincular a la carpeta`);
-        } else {
-          // Check if folder has extraction enabled
-          const { data: folder } = await supabase
-            .from('folders')
-            .select('extraction_enabled')
-            .eq('id', folderId)
-            .single();
-          
-          if (folder?.extraction_enabled) {
-            shouldAutoProcess = true;
-          }
+        if (uploadError) {
+          console.error(`[uploadDocumentsAction] Storage upload error for ${file.name}:`, uploadError);
+          errors.push({ file: file.name, error: uploadError.message });
+          continue;
         }
-      }
+        
+        console.log(`[uploadDocumentsAction] Successfully uploaded ${file.name} to storage`);
 
-      uploadedDocuments.push({ ...document, shouldAutoProcess });
-      console.log(`[UploadAction] Successfully uploaded: ${file.name} → ${document.id}${shouldAutoProcess ? ' (will auto-process)' : ''}`);
-    }
+        // Create file record in the files table
+        const fileRecord = {
+          name: file.name,
+          original_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          storage_path: storagePath,
+          organization_id: organizationId,
+          user_id: user.id,
+          processing_status: 'pending',
+        };
+        
+        console.log(`[uploadDocumentsAction] Inserting file record:`, fileRecord);
+        
+        const { data: document, error: docError } = await supabase
+          .from('files')
+          .insert(fileRecord)
+          .select()
+          .single();
 
-    // Step 5: Auto-process documents in folders with extraction enabled
-    const documentsToProcess = uploadedDocuments.filter((doc: any) => doc.shouldAutoProcess);
-    let processedCount = 0;
+        if (docError) {
+          console.error(`[uploadDocumentsAction] Database insert error for ${file.name}:`, docError);
+          errors.push({ file: file.name, error: docError.message });
+          // Clean up uploaded file
+          console.log(`[uploadDocumentsAction] Cleaning up storage file: ${storagePath}`);
+          await supabase.storage.from('organization-files').remove([storagePath]);
+          continue;
+        }
+        
+        console.log(`[uploadDocumentsAction] Successfully created file record for ${file.name}:`, document);
 
-    if (documentsToProcess.length > 0) {
-      console.log(`[UploadAction] Auto-processing ${documentsToProcess.length} documents...`);
-      
-      for (const doc of documentsToProcess) {
-        try {
-          // Generate signed URL for the document
-          const storagePath = doc.path.join('/');
-          const { data: signedUrlData, error: urlError } = await supabase.storage
-            .from('obra-vault')
-            .createSignedUrl(storagePath, 3600);
-
-          if (urlError || !signedUrlData) {
-            console.error(`[UploadAction] Failed to generate URL for ${doc.name}:`, urlError);
-            continue;
-          }
-
-          // Process with document processor
-          const { processDocument } = await import('../services/document-processor');
+        // If folder is specified, create folder assignment
+        if (folderId && document) {
+          console.log(`[uploadDocumentsAction] Creating folder assignment: file_id=${document.id}, folder_id=${folderId}`);
           
-          // Get folder field definitions for extraction
-          const { data: folderData } = await supabase
-            .from('folders')
-            .select(`
-              *,
-              folder_field_definitions(*)
-            `)
-            .eq('id', folderId)
-            .single();
+          const { error: assignmentError } = await supabase
+            .from('file_folder_assignments')
+            .insert({
+              file_id: document.id,
+              folder_id: folderId,
+              user_id: user.id,
+              sort_order: 0,
+            });
 
-          const fieldDefinitions = folderData?.folder_field_definitions || [];
-          const hasFieldDefinitions = fieldDefinitions.length > 0;
-
-          const result = await processDocument(
-            signedUrlData.signedUrl,
-            doc.name,
-            doc.type,
-            hasFieldDefinitions,
-            fieldDefinitions
-          );
-
-          // Update document with processing results
-          const { error: updateError } = await supabase
-            .from('obra_documents')
-            .update({
-              ocr_content: result.ocrText,
-              description: result.aiDescription,
-              tags: result.aiTags,
-              processing_status: 'completed',
-              processing_metadata: {
-                provider: result.metadata.ocrProvider,
-                processed_at: new Date().toISOString(),
-                confidence: result.confidence
-              }
-            })
-            .eq('id', doc.id);
-
-          if (updateError) {
-            console.error(`[UploadAction] Failed to update document ${doc.name}:`, updateError);
+          if (assignmentError) {
+            console.error(`[uploadDocumentsAction] Error creating folder assignment for ${file.name}:`, assignmentError);
+            // Don't fail the upload for this, just log it
           } else {
-            // Save extracted data if any
-            if (result.extractedData && Object.keys(result.extractedData).length > 0) {
-              const { error: extractedDataError } = await supabase
-                .from('document_extracted_data')
-                .insert({
-                  document_id: doc.id,
-                  extracted_data: result.extractedData,
-                  confidence: result.confidence,
-                  extraction_method: 'automatic',
-                  field_count: Object.keys(result.extractedData).length
-                });
-
-              if (extractedDataError) {
-                console.error(`[UploadAction] Failed to save extracted data for ${doc.name}:`, extractedDataError);
-              }
-            }
-
-            processedCount++;
-            console.log(`[UploadAction] Successfully auto-processed: ${doc.name}`);
+            console.log(`[uploadDocumentsAction] Successfully created folder assignment for ${file.name}`);
           }
-        } catch (processError) {
-          console.error(`[UploadAction] Auto-processing failed for ${doc.name}:`, processError);
-          
-          // Update status to failed
-          await supabase
-            .from('obra_documents')
-            .update({ 
-              processing_status: 'failed',
-              processing_metadata: {
-                error: processError instanceof Error ? processError.message : 'Unknown error',
-                failed_at: new Date().toISOString()
-              }
-            })
-            .eq('id', doc.id);
         }
+
+        uploadedDocuments.push(document);
+      } catch (fileError) {
+        errors.push({ 
+          file: file.name, 
+          error: fileError instanceof Error ? fileError.message : 'Unknown error' 
+        });
       }
     }
 
-    // Revalidate relevant paths
-    revalidatePath(`/obras/${obraId}`);
-    revalidatePath(`/obra-files`);
-
-    // Create appropriate success message
-    let message = `${uploadedDocuments.length} archivo(s) subido(s) exitosamente.`;
-    if (processedCount > 0) {
-      message += ` ${processedCount} archivo(s) procesado(s) automáticamente con IA.`;
+    // Revalidate paths
+    revalidatePath('/obra-files');
+    
+    // Determine success based on actual uploads
+    const success = uploadedDocuments.length > 0;
+    const hasErrors = errors.length > 0;
+    
+    if (!success) {
+      throw new Error(`Failed to upload any files. Errors: ${errors.map(e => `${e.file}: ${e.error}`).join(', ')}`);
     }
-    if (documentsToProcess.length > processedCount) {
-      const failedCount = documentsToProcess.length - processedCount;
-      uploadWarnings.push(`${failedCount} archivo(s) no se pudieron procesar automáticamente.`);
-    }
-
-    return { 
-      success: true, 
-      documents: uploadedDocuments.map((doc: any) => {
-        const { shouldAutoProcess, ...cleanDoc } = doc;
-        return cleanDoc;
-      }),
-      warnings: uploadWarnings.length > 0 ? uploadWarnings : undefined,
-      message
+    
+    return {
+      success: true,
+      data: {
+        uploaded: uploadedDocuments,
+        errors: errors,
+        totalFiles: files.length,
+        successCount: uploadedDocuments.length,
+        errorCount: errors.length,
+      },
+      warnings: hasErrors ? errors.map(e => `${e.file}: ${e.error}`) : undefined
     };
   } catch (error) {
     console.error('Upload documents error:', error);
-    throw new Error(error instanceof Error ? error.message : 'Failed to upload documents');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown upload error'
+    };
   }
 }
 
@@ -427,16 +344,11 @@ export async function uploadDocumentsAction(formData: FormData) {
 export async function createFolderAction(formData: FormData) {
   try {
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     // Extract and validate form data
     const rawData = {
-      obra_id: formData.get('obra_id') as string,
+      organization_id: organizationId, // Use organization ID from user context
       name: formData.get('name') as string,
       description: formData.get('description') as string || undefined,
       parent_id: formData.get('parent_id') as string || undefined,
@@ -462,8 +374,8 @@ export async function createFolderAction(formData: FormData) {
     }
 
     // Revalidate paths
-    revalidatePath(`/obras/${validatedData.obra_id}`);
-    revalidatePath(`/obra-files`);
+    revalidatePath('/files');
+    revalidatePath('/obra-files');
 
     return { success: true, folder };
   } catch (error) {
@@ -476,12 +388,7 @@ export async function createFolderAction(formData: FormData) {
 export async function deleteFolderAction(formData: FormData) {
   try {
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     // Extract and validate form data
     const rawData = {
@@ -490,39 +397,39 @@ export async function deleteFolderAction(formData: FormData) {
 
     const validatedData = deleteFolderSchema.parse(rawData);
 
-    // Get folder details first to ensure ownership and get obra_id
+    // Get folder details first to ensure ownership and organization membership
     const { data: folder, error: fetchError } = await supabase
       .from('folders')
       .select('*')
       .eq('id', validatedData.id)
-      .eq('user_id', user.id)
+      .eq('organization_id', organizationId)
       .single();
 
     if (fetchError || !folder) {
       throw new Error('Folder not found or access denied');
     }
 
-    // Check if folder has documents linked to it
-    const { data: folderDocuments, error: documentsError } = await supabase
-      .from('folder_documents')
-      .select('document_id')
+    // Check if folder has files linked to it
+    const { data: folderFiles, error: filesError } = await supabase
+      .from('file_folder_assignments')
+      .select('file_id')
       .eq('folder_id', validatedData.id);
 
-    if (documentsError) {
-      console.error('Error checking folder documents:', documentsError);
+    if (filesError) {
+      console.error('Error checking folder files:', filesError);
       throw new Error('Failed to check folder contents');
     }
 
-    // If folder has documents, unlink them (don't delete the documents, just remove from folder)
-    if (folderDocuments && folderDocuments.length > 0) {
+    // If folder has files, unlink them (don't delete the files, just remove from folder)
+    if (folderFiles && folderFiles.length > 0) {
       const { error: unlinkError } = await supabase
-        .from('folder_documents')
+        .from('file_folder_assignments')
         .delete()
         .eq('folder_id', validatedData.id);
 
       if (unlinkError) {
-        console.error('Error unlinking documents from folder:', unlinkError);
-        throw new Error('Failed to unlink documents from folder');
+        console.error('Error unlinking files from folder:', unlinkError);
+        throw new Error('Failed to unlink files from folder');
       }
     }
 
@@ -539,7 +446,7 @@ export async function deleteFolderAction(formData: FormData) {
 
     // Delete extracted data associated with this folder
     const { error: extractedDataError } = await supabase
-      .from('document_extracted_data')
+      .from('extracted_data')
       .delete()
       .eq('folder_id', validatedData.id);
 
@@ -553,7 +460,7 @@ export async function deleteFolderAction(formData: FormData) {
       .from('folders')
       .delete()
       .eq('id', validatedData.id)
-      .eq('user_id', user.id);
+      .eq('organization_id', organizationId);
 
     if (deleteError) {
       console.error('Error deleting folder:', deleteError);
@@ -561,8 +468,8 @@ export async function deleteFolderAction(formData: FormData) {
     }
 
     // Revalidate paths
-    revalidatePath(`/obras/${folder.obra_id}`);
-    revalidatePath(`/obra-files`);
+    revalidatePath('/files');
+    revalidatePath('/obra-files');
 
     return { success: true };
   } catch (error) {
@@ -575,12 +482,7 @@ export async function deleteFolderAction(formData: FormData) {
 export async function updateDocumentAction(formData: FormData) {
   try {
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     // Extract and validate form data
     const rawData = {
@@ -594,41 +496,61 @@ export async function updateDocumentAction(formData: FormData) {
 
     const validatedData = updateDocumentSchema.parse(rawData);
 
-    // Update document (without folder_id)
-    const { data: document, error } = await supabase
-      .from('obra_documents')
+    // Update file in the files table
+    const { data: file, error } = await supabase
+      .from('files')
       .update({
         name: validatedData.name,
-        description: validatedData.description,
-        category: validatedData.category,
-        tags: validatedData.tags,
         updated_at: new Date().toISOString(),
       })
       .eq('id', validatedData.id)
-      .eq('user_id', user.id) // Ensure user owns the document
+      .eq('organization_id', organizationId) // Ensure file belongs to user's organization
       .select()
       .single();
 
     if (error) {
-      console.error('Error updating document:', error);
-      throw new Error(`Failed to update document: ${error.message}`);
+      console.error('Error updating file:', error);
+      throw new Error(`Failed to update file: ${error.message}`);
+    }
+
+    // Update file analysis if description, category, or tags are provided
+    if (validatedData.description || validatedData.category || validatedData.tags) {
+      const { error: analysisError } = await supabase
+        .from('file_analysis')
+        .upsert({
+          file_id: validatedData.id,
+          user_id: user.id,
+          ai_description: validatedData.description,
+          ai_category: validatedData.category,
+          ai_tags: validatedData.tags,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'file_id'
+        });
+
+      if (analysisError) {
+        console.error('Error updating file analysis:', analysisError);
+        // Don't fail the operation, just warn
+      }
     }
 
     // Handle folder relationship separately if folder_id is provided
     if (validatedData.folder_id !== undefined) {
       // First remove existing folder relationships
       await supabase
-        .from('folder_documents')
+        .from('file_folder_assignments')
         .delete()
-        .eq('document_id', validatedData.id);
+        .eq('file_id', validatedData.id);
 
       // Add new folder relationship if folder_id is provided
       if (validatedData.folder_id) {
         const { error: linkError } = await supabase
-          .from('folder_documents')
+          .from('file_folder_assignments')
           .insert({
             folder_id: validatedData.folder_id,
-            document_id: validatedData.id,
+            file_id: validatedData.id,
+            user_id: user.id,
+            sort_order: 0,
           });
 
         if (linkError) {
@@ -638,12 +560,11 @@ export async function updateDocumentAction(formData: FormData) {
       }
     }
 
-    // Get obra_id for revalidation
-    const obraId = document.obra_id;
-    revalidatePath(`/obras/${obraId}`);
-    revalidatePath(`/obra-files`);
+    // Revalidate paths
+    revalidatePath('/files');
+    revalidatePath('/obra-files');
 
-    return { success: true, document };
+    return { success: true, document: file };
   } catch (error) {
     console.error('Update document error:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to update document');
@@ -654,12 +575,7 @@ export async function updateDocumentAction(formData: FormData) {
 export async function deleteDocumentAction(formData: FormData) {
   try {
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     // Extract and validate form data
     const rawData = {
@@ -668,24 +584,23 @@ export async function deleteDocumentAction(formData: FormData) {
 
     const validatedData = deleteDocumentSchema.parse(rawData);
 
-    // Get document details first
-    const { data: document, error: fetchError } = await supabase
-      .from('obra_documents')
+    // Get file details first
+    const { data: file, error: fetchError } = await supabase
+      .from('files')
       .select('*')
       .eq('id', validatedData.id)
-      .eq('user_id', user.id)
+      .eq('organization_id', organizationId)
       .single();
 
-    if (fetchError || !document) {
-      throw new Error('Document not found or access denied');
+    if (fetchError || !file) {
+      throw new Error('File not found or access denied');
     }
 
     // Delete from storage
-    if (document.path && document.path.length > 0) {
-      const storagePath = document.path.join('/');
+    if (file.storage_path) {
       const { error: storageError } = await supabase.storage
-        .from('obra-vault')
-        .remove([storagePath]);
+        .from('organization-files')
+        .remove([file.storage_path]);
 
       if (storageError) {
         console.warn('Failed to delete file from storage:', storageError);
@@ -695,31 +610,37 @@ export async function deleteDocumentAction(formData: FormData) {
 
     // Delete folder relationships first
     await supabase
-      .from('folder_documents')
+      .from('file_folder_assignments')
       .delete()
-      .eq('document_id', validatedData.id);
+      .eq('file_id', validatedData.id);
+
+    // Delete file analysis
+    await supabase
+      .from('file_analysis')
+      .delete()
+      .eq('file_id', validatedData.id);
 
     // Delete extracted data
     await supabase
-      .from('document_extracted_data')
+      .from('extracted_data')
       .delete()
-      .eq('document_id', validatedData.id);
+      .eq('file_id', validatedData.id);
 
     // Delete from database
     const { error: deleteError } = await supabase
-      .from('obra_documents')
+      .from('files')
       .delete()
       .eq('id', validatedData.id)
-      .eq('user_id', user.id);
+      .eq('organization_id', organizationId);
 
     if (deleteError) {
-      console.error('Error deleting document:', deleteError);
-      throw new Error(`Failed to delete document: ${deleteError.message}`);
+      console.error('Error deleting file:', deleteError);
+      throw new Error(`Failed to delete file: ${deleteError.message}`);
     }
 
     // Revalidate paths
-    revalidatePath(`/obras/${document.obra_id}`);
-    revalidatePath(`/obra-files`);
+    revalidatePath('/files');
+    revalidatePath('/obra-files');
 
     return { success: true };
   } catch (error) {
@@ -732,32 +653,42 @@ export async function deleteDocumentAction(formData: FormData) {
 export async function getDocumentExtractedData(documentId: string) {
   try {
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
-    // Get document with extracted data
-    const { data: document, error: docError } = await supabase
-      .from('obra_documents')
+    // Get file with extracted data
+    const { data: file, error: fileError } = await supabase
+      .from('files')
       .select(`
         *,
-        extracted_data:document_extracted_data(*)
+        file_analysis (*),
+        extracted_data (*)
       `)
       .eq('id', documentId)
-      .eq('user_id', user.id)
+      .eq('organization_id', organizationId)
       .single();
 
-    if (docError || !document) {
-      throw new Error('Document not found or access denied');
+    if (fileError || !file) {
+      throw new Error('File not found or access denied');
     }
 
+    const analysis = file.file_analysis?.[0];
+    const extractedData = file.extracted_data?.[0];
+
     return {
-      document,
-      extractedData: document.extracted_data?.[0] || null,
-      ocrContent: document.ocr_content || null
+      document: {
+        ...file,
+        // Map to expected format for compatibility
+        ocr_content: analysis?.ocr_text || null,
+        description: analysis?.ai_description || null,
+        category: analysis?.ai_category || null,
+        tags: analysis?.ai_tags || [],
+        processing_metadata: analysis?.analysis_metadata || null,
+      },
+      extractedData: extractedData ? {
+        ...extractedData,
+        extracted_data: JSON.parse(extractedData.extracted_value || '{}'),
+      } : null,
+      ocrContent: analysis?.ocr_text || null
     };
   } catch (error) {
     console.error('Get extracted data error:', error);
@@ -788,34 +719,29 @@ async function processWithProvider(documentId: string, provider: string, provide
   try {
     console.log(`[${provider}] Starting processing for document: ${documentId}`);
     const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return { success: false, message: 'User not authenticated' };
-    }
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     if (!documentId) {
       return { success: false, message: 'Document ID is required' };
     }
 
-    // Get document details first
-    const { data: document, error: docError } = await supabase
-      .from('obra_documents')
+    // Get file details first
+    const { data: file, error: fileError } = await supabase
+      .from('files')
       .select('*')
       .eq('id', documentId)
-      .eq('user_id', user.id)
+      .eq('organization_id', organizationId)
       .single();
 
-    if (docError || !document) {
-      console.error(`[${provider}] Document query error:`, docError);
-      return { success: false, message: 'Document not found or access denied' };
+    if (fileError || !file) {
+      console.error(`[${provider}] File query error:`, fileError);
+      return { success: false, message: 'File not found or access denied' };
     }
 
-    // Get folder information through folder_documents junction table
-    let folderInfo = null;
+    // Get folder information through file_folder_assignments junction table
+    let folderInfo: { id: string; name: string; extract_data: boolean } | null = null;
     const { data: folderLink, error: folderError } = await supabase
-      .from('folder_documents')
+      .from('file_folder_assignments')
       .select(`
         folder_id,
         folder:folder_id (
@@ -824,27 +750,34 @@ async function processWithProvider(documentId: string, provider: string, provide
           extract_data
         )
       `)
-      .eq('document_id', documentId)
+      .eq('file_id', documentId)
       .single();
 
     if (!folderError && folderLink?.folder) {
-      folderInfo = folderLink.folder;
-      console.log(`[${provider}] Document is in folder: ${folderInfo.name} (extract_data: ${folderInfo.extract_data})`);
+      // Handle the case where folder might be typed as an array by Supabase
+      const folder = Array.isArray(folderLink.folder) ? folderLink.folder[0] : folderLink.folder;
+      if (folder) {
+        folderInfo = {
+          id: folder.id,
+          name: folder.name,
+          extract_data: folder.extract_data
+        };
+        console.log(`[${provider}] File is in folder: ${folderInfo.name} (extract_data: ${folderInfo.extract_data})`);
+      }
     } else {
-      console.log(`[${provider}] Document is not in any folder or folder lookup failed:`, folderError);
+      console.log(`[${provider}] File is not in any folder or folder lookup failed:`, folderError);
     }
 
     // Update status to processing
     await supabase
-      .from('obra_documents')
+      .from('files')
       .update({ processing_status: 'processing' })
       .eq('id', documentId);
 
-    // Generate signed URL for the document
-    const storagePath = document.path.join('/');
+    // Generate signed URL for the file
     const { data: signedUrlData, error: urlError } = await supabase.storage
-      .from('obra-vault')
-      .createSignedUrl(storagePath, 3600);
+      .from('organization-files')
+      .createSignedUrl(file.storage_path, 3600);
 
     if (urlError || !signedUrlData) {
       return { success: false, message: `Failed to generate document URL: ${urlError?.message}` };
@@ -900,13 +833,13 @@ async function processWithProvider(documentId: string, provider: string, provide
       
       if (provider === 'gpt') {
         console.log(`[${provider}] Processing with OpenAI...`);
-        baseResult = await processWithOpenAI(signedUrlData.signedUrl, document.name, document.type);
+        baseResult = await processWithOpenAI(signedUrlData.signedUrl, file.name, file.file_type);
       } else if (provider === 'mistral') {
         console.log(`[${provider}] Processing with Mistral...`);
-        baseResult = await processWithMistralSimple(signedUrlData.signedUrl, document.name, document.type);
+        baseResult = await processWithMistralSimple(signedUrlData.signedUrl, file.name, file.file_type);
       } else if (provider === 'ocr-only') {
         console.log(`[${provider}] Processing with OCR only...`);
-        baseResult = await processOCROnly(document.name);
+        baseResult = await processOCROnly(file.name);
       } else {
         throw new Error(`Unknown provider: ${provider}`);
       }
@@ -916,7 +849,7 @@ async function processWithProvider(documentId: string, provider: string, provide
       // Step 2: If structured extraction is needed, reuse the AI-extracted text
       if (shouldExtractStructuredData && fieldDefinitions.length > 0 && baseResult.ocrText) {
         console.log(`[${provider}] ========== ADDING STRUCTURED EXTRACTION ==========`);
-        console.log(`[${provider}] Document: ${document.name}`);
+        console.log(`[${provider}] File: ${file.name}`);
         console.log(`[${provider}] Provider: ${provider}`);
         console.log(`[${provider}] Reusing AI-extracted text (${baseResult.ocrText.length} chars)`);
         console.log(`[${provider}] Field definitions:`, fieldDefinitions.map(f => ({
@@ -931,8 +864,8 @@ async function processWithProvider(documentId: string, provider: string, provide
         const extractedData = await extractStructuredData(
           baseResult.ocrText,
           fieldDefinitions,
-          document.name,
-          document.type,
+          file.name,
+          file.file_type,
           signedUrlData.signedUrl
         );
         
@@ -945,68 +878,155 @@ async function processWithProvider(documentId: string, provider: string, provide
         });
       }
 
-      // Update document with results
-      const { error: updateError } = await supabase
-        .from('obra_documents')
+      // Update file status
+      const { error: fileUpdateError } = await supabase
+        .from('files')
         .update({
-          ocr_content: result.ocrText,
-          description: result.description || result.aiDescription,
-          tags: result.tags || result.aiTags,
           processing_status: 'completed',
-          processing_metadata: {
-            provider: providerName,
-            processed_at: new Date().toISOString(),
-            confidence: result.confidence
-          }
         })
         .eq('id', documentId);
+
+      if (fileUpdateError) {
+        console.error(`[${provider}] Failed to update file status:`, fileUpdateError);
+      }
+
+      // Update or insert file analysis
+      const analysisMetadata: any = {
+        provider: providerName,
+        processed_at: new Date().toISOString(),
+        confidence: result.confidence
+      };
+
+      // Add extracted data to metadata if available
+      if (result.extractedData && Object.keys(result.extractedData).length > 0) {
+        analysisMetadata.extracted_data = result.extractedData;
+        analysisMetadata.extraction_enabled = folderInfo?.extract_data || false;
+        analysisMetadata.folder_id = folderInfo?.id || null;
+        analysisMetadata.field_count = Object.keys(result.extractedData).length;
+      }
+
+      const { error: updateError } = await supabase
+        .from('file_analysis')
+        .upsert({
+          file_id: documentId,
+          user_id: user.id,
+          ocr_text: result.ocrText,
+          ai_description: result.description || result.aiDescription,
+          ai_category: result.category || 'document',
+          ai_tags: result.tags || result.aiTags,
+          confidence_score: result.confidence || 0.8,
+          analysis_metadata: analysisMetadata
+        }, {
+          onConflict: 'file_id'
+        });
 
       if (updateError) {
         return { success: false, message: `Failed to save results: ${updateError.message}` };
       }
 
-      // Save extracted data if available and we're in an extraction-enabled folder
+      // Save structured extracted data to extracted_data table if available
       if (result.extractedData && Object.keys(result.extractedData).length > 0 && folderInfo) {
-        console.log(`[${provider}] Saving extracted data with ${Object.keys(result.extractedData).length} fields`);
+        console.log(`[${provider}] Saving structured extracted data to extracted_data table...`);
         
-        // First delete any existing extracted data for this document
-        await supabase
-          .from('document_extracted_data')
-          .delete()
-          .eq('document_id', documentId);
-
-        // Insert new extracted data
-        const { error: extractedDataError } = await supabase
-          .from('document_extracted_data')
-          .insert({
-            document_id: documentId,
-            folder_id: folderInfo.id,
-            user_id: user.id,
-            extracted_data: result.extractedData,
-            extraction_confidence: result.confidence || 0.8,
-            field_count: Object.keys(result.extractedData).length,
-            extraction_metadata: {
-              method: 'manual',
-              provider: providerName,
-              processed_at: new Date().toISOString()
-            }
-          });
-
-        if (extractedDataError) {
-          console.error(`[${provider}] Failed to save extracted data:`, extractedDataError);
-          console.error(`[${provider}] Error details:`, JSON.stringify(extractedDataError, null, 2));
-          // Don't fail the entire operation, just log the error
-        } else {
-          console.log(`[${provider}] Successfully saved extracted data`);
+        // For AI extractions, we need to create a dummy extraction_config_id
+        // since the table requires it but we're not using the formal extraction config system
+        // We'll use a deterministic UUID based on the folder_id
+        const dummyConfigId = `00000000-0000-0000-0000-${folderInfo.id.substring(24)}`;
+        
+        // First check if we need to create this dummy config
+        const { data: existingConfig } = await supabase
+          .from('folder_extraction_configs')
+          .select('id')
+          .eq('id', dummyConfigId)
+          .single();
+          
+        if (!existingConfig) {
+          // Create a dummy field config entry (required by schema)
+          const { error: configError } = await supabase
+            .from('folder_extraction_configs')
+            .insert({
+              id: dummyConfigId,
+              folder_id: folderInfo.id,
+              user_id: user.id,
+              field_name: '_ai_extraction',
+              field_label: 'AI Extracted Data',
+              field_type: 'text',
+              extraction_pattern: 'AI-based extraction',
+              is_required: false,
+              is_active: true
+            });
+            
+          if (configError) {
+            console.error(`[${provider}] Failed to create dummy extraction config:`, configError);
+          }
         }
+        
+        // Check if there's already extracted data for this file
+        const { data: existingData } = await supabase
+          .from('extracted_data')
+          .select('id')
+          .eq('file_id', documentId)
+          .single();
+
+        if (existingData) {
+          // Update existing record
+          const { error: updateError } = await supabase
+            .from('extracted_data')
+            .update({
+              extracted_value: JSON.stringify(result.extractedData),
+              confidence_score: result.confidence || 0.8,
+              is_verified: false,
+              extraction_metadata: {
+                provider: providerName,
+                processed_at: new Date().toISOString(),
+                field_count: Object.keys(result.extractedData).length,
+                extraction_method: 'ai_structured'
+              },
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingData.id);
+
+          if (updateError) {
+            console.error(`[${provider}] Failed to update extracted data:`, updateError);
+          } else {
+            console.log(`[${provider}] Successfully updated ${Object.keys(result.extractedData).length} extracted fields in extracted_data table`);
+          }
+        } else {
+          // Insert new record
+          const { error: insertError } = await supabase
+            .from('extracted_data')
+            .insert({
+              file_id: documentId,
+              folder_id: folderInfo.id,
+              extraction_config_id: dummyConfigId,
+              user_id: user.id,
+              extracted_value: JSON.stringify(result.extractedData),
+              confidence_score: result.confidence || 0.8,
+              is_verified: false,
+              extraction_metadata: {
+                provider: providerName,
+                processed_at: new Date().toISOString(),
+                field_count: Object.keys(result.extractedData).length,
+                extraction_method: 'ai_structured'
+              }
+            });
+
+          if (insertError) {
+            console.error(`[${provider}] Failed to insert extracted data:`, insertError);
+          } else {
+            console.log(`[${provider}] Successfully saved ${Object.keys(result.extractedData).length} extracted fields to extracted_data table`);
+          }
+        }
+      } else if (result.extractedData && Object.keys(result.extractedData).length > 0) {
+        console.log(`[${provider}] AI analysis contains ${Object.keys(result.extractedData).length} extracted fields but no folder context - not saving to extracted_data table`);
       }
 
-      revalidatePath(`/obras/${document.obra_id}`);
-      revalidatePath(`/obra-files`);
+      revalidatePath('/files');
+      revalidatePath('/obra-files');
 
       // Log detailed results to console
       console.log(`[${provider}] ========== PROCESSING RESULTS ==========`);
-      console.log(`[${provider}] Document: ${document.name}`);
+      console.log(`[${provider}] File: ${file.name}`);
       console.log(`[${provider}] Provider: ${providerName}`);
       console.log(`[${provider}] OCR Text Length: ${result.ocrText.length} characters`);
       console.log(`[${provider}] OCR Text Preview: "${result.ocrText.substring(0, 200)}${result.ocrText.length > 200 ? '...' : ''}"`);
@@ -1030,14 +1050,9 @@ async function processWithProvider(documentId: string, provider: string, provide
     } catch (processingError) {
       // Update status to failed
       await supabase
-        .from('obra_documents')
+        .from('files')
         .update({ 
-          processing_status: 'failed',
-          processing_metadata: {
-            provider: providerName,
-            error: processingError instanceof Error ? processingError.message : 'Unknown error',
-            failed_at: new Date().toISOString()
-          }
+          processing_status: 'failed'
         })
         .eq('id', documentId);
 
@@ -1505,18 +1520,93 @@ function getFileTypeFromExtension(extension: string): string {
   return typeMap[extension] || 'archivo';
 }
 
-// Get document download URL
+// Get document download URL with fallback to legacy obra system
 export async function getDocumentDownloadUrl(documentId: string) {
   try {
     const supabase = await createClient();
     
-    // Get current user
+    // First try to get user organization for organization files
+    try {
+      console.log('[getDocumentDownloadUrl] Starting for document ID:', documentId);
+      const { user, organizationId } = await getUserOrganization(supabase);
+
+      // Try to get file from organization files table
+      const { data: file, error: fileError } = await supabase
+        .from('files')
+        .select('*')
+        .eq('id', documentId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (file && !fileError) {
+        // Generate signed URL for organization file
+        if (file.storage_path) {
+          // Database might have organizationId/filename but storage has just filename in the org folder
+          const fileName = file.storage_path.includes('/') ? file.storage_path.split('/')[1] : file.storage_path;
+          const correctStoragePath = `${organizationId}/${fileName}`;
+          
+          const { data, error } = await supabase.storage
+            .from('organization-files')
+            .createSignedUrl(correctStoragePath, 3600);
+
+          console.log('[getDocumentDownloadUrl] Signed URL:', data);
+          console.log('[getDocumentDownloadUrl] URL Error:', error);
+
+          if (error) {
+            // Try to find the file in the old obra-vault bucket using the filename
+            const fileName = file.storage_path.split('/')[1]; // Get just the filename
+            
+            // Try different potential paths in obra-vault
+            const potentialPaths = [
+              fileName, // Direct filename
+              `documents/${fileName}`, // In documents folder
+              `uploads/${fileName}`, // In uploads folder
+              file.storage_path
+            ];
+            
+            for (const path of potentialPaths) {
+              console.log('[getDocumentDownloadUrl] Trying legacy path:', path);
+              const { data: legacyUrl, error: legacyError } = await supabase.storage
+                .from('organization-files')
+                .createSignedUrl(path, 3600);
+
+              console.log('[getDocumentDownloadUrl] Legacy URL:', legacyUrl);
+              console.log('[getDocumentDownloadUrl] Legacy Error:', legacyError);
+                
+              if (!legacyError && legacyUrl?.signedUrl) {
+                return { url: legacyUrl.signedUrl, document: file };
+              }
+            }
+            
+            // File exists in database but not in storage - return a special response indicating this
+            return { 
+              url: null, 
+              document: file, 
+              error: 'FILE_MISSING_FROM_STORAGE',
+              message: 'File record exists but the actual file is missing from storage. This may be due to a migration or storage cleanup.'
+            };
+          }
+
+          if (data?.signedUrl) {
+            return { url: data.signedUrl, document: file };
+          } else {
+            throw new Error('Failed to generate signed URL for organization file');
+          }
+        } else {
+          throw new Error('File storage path not found');
+        }
+      }
+    } catch (orgError) {
+      // Organization system failed, try legacy system
+    }
+
+    // Fallback to legacy obra_documents system
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       throw new Error('User not authenticated');
     }
 
-    // Get document
+    // Try to get document from legacy obra_documents table
     const { data: document, error: docError } = await supabase
       .from('obra_documents')
       .select('*')
@@ -1525,26 +1615,25 @@ export async function getDocumentDownloadUrl(documentId: string) {
       .single();
 
     if (docError || !document) {
-      throw new Error('Document not found or access denied');
+      throw new Error(`Document not found in either system. Organization error: file not found, Legacy error: ${docError?.message || 'No document found'}`);
     }
 
-    // Generate signed URL
+    // Generate signed URL for legacy document
     if (document.path && document.path.length > 0) {
       const storagePath = document.path.join('/');
       const { data: signedUrl, error: urlError } = await supabase.storage
         .from('obra-vault')
-        .createSignedUrl(storagePath, 3600); // 1 hour expiry
+        .createSignedUrl(storagePath, 3600);
 
       if (urlError) {
-        throw new Error(`Failed to generate download URL: ${urlError.message}`);
+        throw new Error(`Failed to generate legacy download URL: ${urlError.message}`);
       }
 
       return { url: signedUrl.signedUrl, document };
     } else {
-      throw new Error('Document path not found');
+      throw new Error('Document path not found in legacy system');
     }
   } catch (error) {
-    console.error('Get download URL error:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to get download URL');
   }
 }

@@ -8,10 +8,6 @@ import { DocumentGrid } from './document-grid';
 import { DocumentTreeView } from './document-tree-view';
 import { ViewToggle } from './view-toggle';
 import { ExtractedDataView } from './extracted-data-view';
-import { FolderExtractionPreview } from './folder-extraction-preview';
-import { FolderFieldSetup } from './folder-field-setup';
-import { ExtractionDebugPanel } from './extraction-debug-panel';
-import { SimpleDebugButton } from './simple-debug-button';
 import { Search, Filter, ArrowLeft, FileText, FolderOpen, Home, ChevronRight, Bot } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -24,8 +20,6 @@ import FolderFront from '@/components/ui/FolderFront';
 import { cn } from '@/utils/utils';
 
 interface ObraFilesClientWrapperProps {
-  obraId: string;
-  obraName?: string;
   searchParams: {
     search?: string;
     category?: string;
@@ -35,21 +29,21 @@ interface ObraFilesClientWrapperProps {
   folders: Folder[];
   currentFolder: Folder | null;
   folderCounts: Record<string, number>;
+  extractedData?: any[];
 }
 
 export function ObraFilesClientWrapper({
-  obraId,
-  obraName,
   searchParams,
   documents,
   folders,
   currentFolder,
-  folderCounts
+  folderCounts,
+  extractedData = []
 }: ObraFilesClientWrapperProps) {
   const [view, setView] = useState<'cards' | 'table' | 'extracted'>('cards');
   const [folderFieldCount, setFolderFieldCount] = useState(0);
 
-  const baseUrl = `/obras/${obraId}`;
+  const baseUrl = '/obra-files';
 
   // Build query params helper
   const buildQuery = (updates: Record<string, string | undefined>) => {
@@ -78,11 +72,10 @@ export function ObraFilesClientWrapper({
     if (!currentFolder) return;
 
     try {
-      const response = await fetch(`/api/folders/${currentFolder.id}/field-count`);
-      if (response.ok) {
-        const data = await response.json();
-        setFolderFieldCount(data.count || 0);
-      }
+      // Use our action instead of API endpoint
+      const { getFolderFieldDefinitions } = await import('../actions/folder-extraction-actions');
+      const result = await getFolderFieldDefinitions(currentFolder.id);
+      setFolderFieldCount(result.fields?.length || 0);
     } catch (error) {
       console.error('Error fetching field count:', error);
       setFolderFieldCount(0);
@@ -90,7 +83,7 @@ export function ObraFilesClientWrapper({
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full bg-white/50 w-full">
       {/* Left Sidebar - Navigation Panel */}
       <div className="w-1/5 min-w-[320px] border-r bg-gradient-to-b from-muted/20 to-muted/40 backdrop-blur-sm">
         <div className="p-6 space-y-6 h-full overflow-y-auto">
@@ -101,7 +94,7 @@ export function ObraFilesClientWrapper({
               <Link href={baseUrl} className="hover:text-foreground transition-colors">
                 <div className="flex items-center gap-1">
                   <Home className="w-4 h-4" />
-                  <span>Raíz</span>
+                  <span>Root</span>
                 </div>
               </Link>
               {currentFolder && (
@@ -125,7 +118,7 @@ export function ObraFilesClientWrapper({
                   <Link href={`${baseUrl}?${buildQuery({ folder: undefined })}`}>
                     <Button variant="ghost" size="sm" className="gap-2 hover:bg-muted/60">
                       <ArrowLeft className="w-4 h-4" />
-                      Volver a la raíz
+                      Back to Root
                     </Button>
                   </Link>
                 </div>
@@ -152,16 +145,16 @@ export function ObraFilesClientWrapper({
               </div>
               <div>
                 <h2 className="text-xl font-semibold">
-                  {currentFolder ? currentFolder.name : 'Documentos'}
+                  {currentFolder ? currentFolder.name : 'Files'}
                 </h2>
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-muted-foreground">
-                    {obraName || `Obra ${obraId}`}
+                    Organization Files
                   </p>
                   {currentFolder?.extract_data && (
                     <Badge variant="secondary" className="text-xs">
                       <Bot className="w-3 h-3 mr-1" />
-                      IA habilitada
+                      AI Enabled
                     </Badge>
                   )}
                 </div>
@@ -174,11 +167,11 @@ export function ObraFilesClientWrapper({
           {/* Search and Filters */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Buscar</label>
+              <label className="text-sm font-medium text-muted-foreground">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder={currentFolder ? `Buscar en ${currentFolder.name}...` : "Buscar documentos..."}
+                  placeholder={currentFolder ? `Search in ${currentFolder.name}...` : "Search files..."}
                   defaultValue={searchParams.search || ''}
                   className="pl-10 bg-background/50 border-muted-foreground/20"
                   name="search"
@@ -193,17 +186,7 @@ export function ObraFilesClientWrapper({
           {/* Folder Field Setup / Extraction Preview / Debug Panel */}
           {currentFolder && (
             <>
-              <FolderFieldSetup
-                folder={currentFolder}
-                fieldCount={folderFieldCount}
-              />
-              <FolderExtractionPreview folder={currentFolder} />
-              <ExtractionDebugPanel
-                folder={currentFolder}
-                documents={documents}
-              />
-              <SimpleDebugButton folderId={currentFolder.id} />
-              <Separator />
+
             </>
           )}
 
@@ -213,7 +196,6 @@ export function ObraFilesClientWrapper({
               folders={folders}
               documents={documents}
               currentFolder={currentFolder}
-              obraId={obraId}
               searchParams={searchParams}
             />
           </div>
@@ -227,13 +209,13 @@ export function ObraFilesClientWrapper({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                {view === 'extracted' ? 'Datos Extraídos' :
-                  currentFolder ? `Contenido de ${currentFolder.name} con el id ${currentFolder.id}` : 'Documentos de la Obra'}
+                {view === 'extracted' ? 'Extracted Data' :
+                  currentFolder ? `Contents of ${currentFolder.name}` : 'Organization Files'}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {view === 'extracted' ?
-                  `Datos estructurados extraídos de ${documents.filter(d => d.extracted_data).length} documentos` :
-                  `${documents.length} documento${documents.length !== 1 ? 's' : ''} y ${folders.length} carpeta${folders.length !== 1 ? 's' : ''}`
+                  `Structured data extracted from ${documents.filter(d => d.extracted_data).length} files` :
+                  `${documents.length} file${documents.length !== 1 ? 's' : ''} and ${folders.length} folder${folders.length !== 1 ? 's' : ''}`
                 }
               </p>
             </div>
@@ -256,7 +238,7 @@ export function ObraFilesClientWrapper({
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <ExtractedDataView documents={documents} currentFolder={currentFolder} />
+                <ExtractedDataView documents={documents} currentFolder={currentFolder} extractedData={extractedData} />
               </motion.div>
             ) : (
               <div className="space-y-6">
@@ -265,9 +247,9 @@ export function ObraFilesClientWrapper({
                   <AnimatePresence mode="wait">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-base font-medium">Carpetas</h4>
+                        <h4 className="text-base font-medium">Folders</h4>
                         <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                          {folders.length} carpeta{folders.length !== 1 ? 's' : ''}
+                          {folders.length} folder{folders.length !== 1 ? 's' : ''}
                         </span>
                       </div>
 
@@ -275,7 +257,6 @@ export function ObraFilesClientWrapper({
                         <FolderGrid
                           folders={folders}
                           folderCounts={folderCounts}
-                          obraId={obraId}
                         />
                       </div>
                     </div>
@@ -286,10 +267,10 @@ export function ObraFilesClientWrapper({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-base font-medium">
-                      {currentFolder ? 'Documentos' : 'Documentos Recientes'}
+                      {currentFolder ? 'Files' : 'Recent Files'}
                     </h4>
                     <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                      {documents.length} documento{documents.length !== 1 ? 's' : ''}
+                      {documents.length} file{documents.length !== 1 ? 's' : ''}
                     </span>
                   </div>
 
@@ -316,7 +297,6 @@ export function ObraFilesClientWrapper({
                       >
                         <DocumentGrid
                           documents={documents}
-                          obraId={obraId}
                           currentFolder={currentFolder}
                           folders={folders}
                         />
@@ -332,12 +312,12 @@ export function ObraFilesClientWrapper({
                           {currentFolder ? '📁' : '📄'}
                         </div>
                         <h3 className="text-lg font-medium mb-2">
-                          {currentFolder ? 'Carpeta vacía' : 'No hay documentos'}
+                          {currentFolder ? 'Empty folder' : 'No files'}
                         </h3>
                         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                           {currentFolder
-                            ? 'Esta carpeta no contiene documentos todavía. Puedes subir archivos usando el botón de agregar documentos.'
-                            : 'Los documentos aparecerán aquí cuando se suban. Comienza creando una carpeta o subiendo un archivo.'
+                            ? 'This folder doesn\'t contain any files yet. You can upload files using the add documents button.'
+                            : 'Files will appear here when uploaded. Start by creating a folder or uploading a file.'
                           }
                         </p>
                       </div>

@@ -30,12 +30,11 @@ import { deleteDocumentAction } from '../actions/document-actions';
 
 interface DocumentGridProps {
   documents: ObraDocument[];
-  obraId: string;
   currentFolder: Folder | null;
   folders: Folder[];
 }
 
-export function DocumentGrid({ documents, obraId, currentFolder, folders }: DocumentGridProps) {
+export function DocumentGrid({ documents, currentFolder, folders }: DocumentGridProps) {
   return (
     <>
       {documents.map((document) => (
@@ -46,7 +45,6 @@ export function DocumentGrid({ documents, obraId, currentFolder, folders }: Docu
         />
       ))}
       <AddDocumentCard
-        obraId={obraId}
         currentFolder={currentFolder}
         folders={folders}
       />
@@ -79,12 +77,12 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
       link.click();
     } catch (error) {
       console.error('Error downloading document:', error);
-      toast.error('Error al descargar el documento');
+      toast.error('Error downloading document');
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar "${document.name}"? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`Are you sure you want to delete "${document.name}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -93,11 +91,11 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
       formData.append('id', document.id);
 
       await deleteDocumentAction(formData);
-      toast.success('Documento eliminado correctamente');
+      toast.success('Document deleted successfully');
       router.refresh();
     } catch (error) {
       console.error('Error deleting document:', error);
-      toast.error('Error al eliminar el documento');
+      toast.error('Error deleting document');
     }
   };
 
@@ -129,7 +127,7 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(document.created_at), {
                   addSuffix: true,
-                  locale: es
+                  locale: undefined
                 })}
               </span>
 
@@ -149,20 +147,20 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
                   <DropdownMenuContent align="end" className="pointer-events-auto">
                     <DropdownMenuItem onClick={handlePreview}>
                       <Eye className="h-4 w-4 mr-2" />
-                      Vista previa
+                      Preview
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleDownload}>
                       <Download className="h-4 w-4 mr-2" />
-                      Descargar
+                      Download
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Edit3 className="h-4 w-4 mr-2" />
-                      Editar
+                      Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Eliminar
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -173,15 +171,15 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
         <ContextMenuContent>
           <ContextMenuItem onClick={handlePreview}>
             <Eye className="h-4 w-4 mr-2" />
-            Vista previa
+            Preview
           </ContextMenuItem>
           <ContextMenuItem onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
-            Descargar
+            Download
           </ContextMenuItem>
           <ContextMenuItem>
             <Edit3 className="h-4 w-4 mr-2" />
-            Editar
+            Edit
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -189,7 +187,7 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
             onClick={handleDelete}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar
+            Delete
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

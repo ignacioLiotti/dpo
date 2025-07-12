@@ -28,12 +28,11 @@ import { uploadDocumentsAction } from '../actions/document-actions';
 import type { Folder } from '../types';
 
 interface AddDocumentCardProps {
-  obraId: string;
   currentFolder: Folder | null;
   folders: Folder[];
 }
 
-export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentCardProps) {
+export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -101,7 +100,7 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
 
   const handleUpload = async () => {
     if (files.length === 0) {
-      toast.error('Selecciona al menos un archivo');
+      toast.error('Select at least one file');
       return;
     }
 
@@ -109,7 +108,6 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
 
     try {
       const formData = new FormData();
-      formData.append('obra_id', obraId);
       formData.append('category', category);
       formData.append('description', description);
       formData.append('tags', tags);
@@ -129,8 +127,8 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
 
       // Show success message
       const successMessage = folderHasExtraction
-        ? `${files.length} documento${files.length !== 1 ? 's' : ''} subido${files.length !== 1 ? 's' : ''} correctamente. Los archivos se procesarán automáticamente con IA.`
-        : `${files.length} documento${files.length !== 1 ? 's' : ''} subido${files.length !== 1 ? 's' : ''} correctamente.`;
+        ? `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully. Files will be automatically processed with AI.`
+        : `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully.`;
 
       toast.success(successMessage);
 
@@ -151,7 +149,7 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
       router.refresh();
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error instanceof Error ? error.message : 'Error al subir documentos');
+      toast.error(error instanceof Error ? error.message : 'Error uploading documents');
     } finally {
       setIsLoading(false);
     }
@@ -176,12 +174,12 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
         <Plus className={`mx-auto h-12 w-12 mb-4 transition-colors ${isCardDragging ? 'text-primary' : 'text-gray-400'
           }`} />
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          {isCardDragging ? 'Suelta los archivos aquí' : 'Subir Documentos'}
+          {isCardDragging ? 'Drop files here' : 'Upload Documents'}
         </h3>
         <p className="text-sm text-gray-500">
           {isCardDragging
-            ? 'Suelta para subir los documentos'
-            : 'Haz clic aquí o arrastra archivos para agregar nuevos documentos a la obra'
+            ? 'Drop to upload documents'
+            : 'Click here or drag files to add new documents'
           }
         </p>
       </div>
@@ -189,7 +187,7 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Subir Nuevos Documentos</DialogTitle>
+            <DialogTitle>Upload New Documents</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -204,10 +202,10 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
               <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <div className="space-y-2">
                 <p className="text-lg font-medium">
-                  {files.length > 0 ? `${files.length} archivo${files.length !== 1 ? 's' : ''} seleccionado${files.length !== 1 ? 's' : ''}` : 'Selecciona archivos o arrastra aquí'}
+                  {files.length > 0 ? `${files.length} file${files.length !== 1 ? 's' : ''} selected` : 'Select files or drag here'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Formatos soportados: PDF, JPG, PNG, TIFF, BMP (máx. 10MB c/u)
+                  Supported formats: PDF, JPG, PNG, TIFF, BMP (max 10MB each)
                 </p>
                 <Input
                   type="file"
@@ -223,7 +221,7 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
             {/* Selected Files List */}
             {files.length > 0 && (
               <div className="space-y-2">
-                <h4 className="font-medium">Archivos seleccionados:</h4>
+                <h4 className="font-medium">Selected files:</h4>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
@@ -316,11 +314,11 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
                 <div className="flex items-center gap-2">
                   <span className="text-blue-600">🤖</span>
                   <span className="text-sm text-blue-800 font-medium">
-                    Procesamiento automático con IA habilitado
+                    Automatic AI processing enabled
                   </span>
                 </div>
                 <p className="text-xs text-blue-600 mt-1">
-                  Los archivos en esta carpeta se procesarán automáticamente con OCR e IA para extraer datos estructurados.
+                  Files in this folder will be automatically processed with OCR and AI to extract structured data.
                 </p>
               </div>
             )}
@@ -328,13 +326,13 @@ export function AddDocumentCard({ obraId, currentFolder, folders }: AddDocumentC
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Cancelar
+              Cancel
             </Button>
             <Button
               onClick={handleUpload}
               disabled={files.length === 0 || isLoading}
             >
-              {isLoading ? 'Subiendo...' : `📤 Subir ${files.length} archivo${files.length !== 1 ? 's' : ''}`}
+              {isLoading ? 'Uploading...' : `📤 Upload ${files.length} file${files.length !== 1 ? 's' : ''}`}
             </Button>
           </DialogFooter>
         </DialogContent>

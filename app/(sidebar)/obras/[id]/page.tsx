@@ -36,7 +36,6 @@ import type { Obra } from '../types';
 import { notFound } from 'next/navigation';
 import ObraEditForm from '../components/obra-edit-form';
 import { getObraActionByID } from '../actions/get-obra-action';
-import { getObraDocumentsWithFolders, getObraFolders } from '@/app/(sidebar)/obra-files/actions/document-actions';
 import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +43,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ObraFilesClientWrapper } from '@/app/(sidebar)/obra-files/components/client-wrapper';
 import { cn } from '@/utils/utils';
+import { getObraDocumentsWithFolders, getObraFolders } from '@/lib/actions/document-actions';
 
 interface ObraDetailsPageProps {
   params: Promise<{ id: string }>;

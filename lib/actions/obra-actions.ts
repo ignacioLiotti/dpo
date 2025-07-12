@@ -69,6 +69,19 @@ export async function getAllObrasAction(organizationId?: string) {
 // Get obra by ID action (for backward compatibility)
 export async function getObraActionByID(id: string) {
   try {
+    // Validate ID parameter
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('Invalid obra ID provided:', id);
+      return null;
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      console.error('Invalid UUID format for obra ID:', id);
+      return null;
+    }
+
     const supabase = await createClient();
     
     const {

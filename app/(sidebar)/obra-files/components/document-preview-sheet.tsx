@@ -15,7 +15,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DOCUMENT_CATEGORIES } from '../types';
 import type { ObraDocument } from '../types';
 
@@ -47,12 +46,25 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
 
       try {
         const response = await fetch(`/api/documents/${document.id}/download`);
-        if (!response.ok) throw new Error('Failed to fetch document URL');
-
         const data = await response.json();
-        setPreviewUrl(data.url);
+
+        if (!response.ok) {
+          if (response.status === 410) {
+            // File missing from storage
+            setError(`File not available: ${data.message || 'The file exists in the database but is missing from storage.'}`);
+          } else {
+            setError(`Error loading document: ${data.error || 'Unknown error'}`);
+          }
+          return;
+        }
+
+        if (data.url) {
+          setPreviewUrl(data.url);
+        } else {
+          setError('No download URL available');
+        }
       } catch (err) {
-        setError('Error al cargar la vista previa');
+        setError('Error loading preview');
         console.error('Error fetching document URL:', err);
       } finally {
         setLoading(false);
@@ -65,10 +77,15 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
   const handleDownload = async () => {
     if (!document || !previewUrl) return;
 
-    const link = window.document.createElement('a');
-    link.href = previewUrl;
-    link.download = document.name;
-    link.click();
+    try {
+      const link = window.document.createElement('a');
+      link.href = previewUrl;
+      link.download = document.name;
+      link.click();
+    } catch (err) {
+      console.error('Error downloading file:', err);
+      setError('Error downloading file');
+    }
   };
 
   const handleProcessWithProvider = async (provider: 'gpt' | 'mistral' | 'ocr-only') => {
@@ -81,7 +98,7 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
       console.log(`Processing document with ${provider}:`, document.id);
       const formData = new FormData();
       formData.append('document_id', document.id);
-      
+
       let result;
       if (provider === 'gpt') {
         result = await processWithGPTAction(formData);
@@ -90,14 +107,14 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
       } else {
         result = await processWithOCROnlyAction(formData);
       }
-      
+
       console.log('Processing result:', result);
-      
+
       if (result.success) {
         setProcessMessage(result.message || 'Documento procesado exitosamente');
         setProcessingResult(result.result);
         setShowResults(true);
-        
+
         // Update document status in UI without reloading
         if (document) {
           document.processing_status = 'completed';
@@ -209,9 +226,8 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
 
               {/* Process Message */}
               {processMessage && (
-                <div className={`mb-4 p-3 rounded-md ${
-                  processMessage.startsWith('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                }`}>
+                <div className={`mb-4 p-3 rounded-md ${processMessage.startsWith('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
+                  }`}>
                   <p className="text-sm">{processMessage}</p>
                 </div>
               )}
@@ -219,7 +235,7 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
               {/* Processing Results */}
               {processingResult && (
                 <div className="mb-4 border rounded-lg overflow-hidden">
-                  <div 
+                  <div
                     className="bg-gray-50 p-3 cursor-pointer flex items-center justify-between hover:bg-gray-100"
                     onClick={() => setShowResults(!showResults)}
                   >
@@ -230,17 +246,16 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
                       <ChevronDown className="w-4 h-4" />
                     )}
                   </div>
-                  
+
                   {showResults && (
                     <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
                       {/* Provider Info */}
                       <div className="flex items-center gap-2 text-xs text-gray-600">
                         <span className="font-medium">Proveedor:</span>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          processingResult.provider?.includes('GPT') ? 'bg-green-100 text-green-700' :
+                        <span className={`px-2 py-1 rounded text-xs ${processingResult.provider?.includes('GPT') ? 'bg-green-100 text-green-700' :
                           processingResult.provider?.includes('Mistral') ? 'bg-blue-100 text-blue-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                            'bg-gray-100 text-gray-700'
+                          }`}>
                           {processingResult.provider || 'Desconocido'}
                         </span>
                         {processingResult.timestamp && (
@@ -276,7 +291,7 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
                           <h4 className="font-medium text-sm mb-2">Etiquetas</h4>
                           <div className="flex flex-wrap gap-1">
                             {processingResult.tags.map((tag: string, index: number) => (
-                              <span 
+                              <span
                                 key={index}
                                 className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
                               >
@@ -530,18 +545,17 @@ function DocumentMetadata({ document }: { document: ObraDocument }) {
           <div>
             <label className="text-sm font-medium text-muted-foreground">Estado de procesamiento</label>
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${
-                document.processing_status === 'completed' ? 'bg-green-500' :
+              <span className={`w-2 h-2 rounded-full ${document.processing_status === 'completed' ? 'bg-green-500' :
                 document.processing_status === 'processing' ? 'bg-yellow-500' :
-                document.processing_status === 'failed' ? 'bg-red-500' :
-                'bg-gray-400'
-              }`}></span>
+                  document.processing_status === 'failed' ? 'bg-red-500' :
+                    'bg-gray-400'
+                }`}></span>
               <span className="text-sm capitalize">
                 {document.processing_status === 'pending' ? 'Pendiente' :
-                 document.processing_status === 'processing' ? 'Procesando' :
-                 document.processing_status === 'completed' ? 'Completado' :
-                 document.processing_status === 'failed' ? 'Error' :
-                 'Desconocido'}
+                  document.processing_status === 'processing' ? 'Procesando' :
+                    document.processing_status === 'completed' ? 'Completado' :
+                      document.processing_status === 'failed' ? 'Error' :
+                        'Desconocido'}
               </span>
             </div>
             {/* Show processing metadata if available */}

@@ -23,12 +23,11 @@ import { DOCUMENT_CATEGORIES } from '../types';
 import type { Folder } from '../types';
 
 interface UploadFormClientProps {
-  obraId: string;
   currentFolder: Folder | null;
   folders: Folder[];
 }
 
-export function UploadFormClient({ obraId, currentFolder, folders }: UploadFormClientProps) {
+export function UploadFormClient({ currentFolder, folders }: UploadFormClientProps) {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [uploadCategory, setUploadCategory] = useState<string>('otros');
@@ -85,7 +84,6 @@ export function UploadFormClient({ obraId, currentFolder, folders }: UploadFormC
 
     try {
       const formData = new FormData();
-      formData.append('obra_id', obraId);
       formData.append('category', uploadCategory);
       formData.append('description', uploadDescription);
       formData.append('tags', uploadTags);
@@ -97,18 +95,28 @@ export function UploadFormClient({ obraId, currentFolder, folders }: UploadFormC
       }
 
       // Add files
-      files.forEach((file, index) => {
-        formData.append(`file_${index}`, file);
+      files.forEach((file) => {
+        formData.append('files', file);
       });
 
       const result = await uploadDocumentsAction(formData);
       
-      // Show success message
-      const successMessage = folderHasExtraction 
-        ? `${files.length} documento${files.length !== 1 ? 's' : ''} subido${files.length !== 1 ? 's' : ''} correctamente. Los archivos se procesarán automáticamente con IA.`
-        : `${files.length} documento${files.length !== 1 ? 's' : ''} subido${files.length !== 1 ? 's' : ''} correctamente.`;
+      // Check if the result was successful
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
       
-      toast.success(successMessage);
+      // Show success message based on actual uploads
+      const successCount = result.data?.successCount || 0;
+      const errorCount = result.data?.errorCount || 0;
+      
+      if (successCount > 0) {
+        const successMessage = folderHasExtraction 
+          ? `${successCount} documento${successCount !== 1 ? 's' : ''} subido${successCount !== 1 ? 's' : ''} correctamente. Los archivos se procesarán automáticamente con IA.`
+          : `${successCount} documento${successCount !== 1 ? 's' : ''} subido${successCount !== 1 ? 's' : ''} correctamente.`;
+        
+        toast.success(successMessage);
+      }
       
       // Show warnings if any
       if (result.warnings && result.warnings.length > 0) {
@@ -119,11 +127,18 @@ export function UploadFormClient({ obraId, currentFolder, folders }: UploadFormC
         });
       }
       
-      // Reset form after successful upload
-      setFiles([]);
-      setUploadDescription('');
-      setUploadTags('');
-      router.refresh();
+      // Show error summary if there were failures
+      if (errorCount > 0) {
+        toast.error(`${errorCount} archivo${errorCount !== 1 ? 's' : ''} no se pudo${errorCount !== 1 ? 'ieron' : ''} subir. Revisa las advertencias.`);
+      }
+      
+      // Reset form only if there were successful uploads
+      if (successCount > 0) {
+        setFiles([]);
+        setUploadDescription('');
+        setUploadTags('');
+        router.refresh();
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error instanceof Error ? error.message : 'Error al subir documentos');

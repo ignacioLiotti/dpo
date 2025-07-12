@@ -25,10 +25,9 @@ import { FolderSettingsDialog } from './folder-settings-dialog';
 interface FolderGridProps {
   folders: Folder[];
   folderCounts: Record<string, number>;
-  obraId: string;
 }
 
-export function FolderGrid({ folders, folderCounts, obraId }: FolderGridProps) {
+export function FolderGrid({ folders, folderCounts }: FolderGridProps) {
   return (
     <>
       {folders.map((folder) => (
@@ -36,10 +35,9 @@ export function FolderGrid({ folders, folderCounts, obraId }: FolderGridProps) {
           key={folder.id}
           folder={folder}
           documentCount={folderCounts[folder.id] || 0}
-          obraId={obraId}
         />
       ))}
-      <AddFolderCard obraId={obraId} />
+      <AddFolderCard />
     </>
   );
 }
@@ -47,10 +45,9 @@ export function FolderGrid({ folders, folderCounts, obraId }: FolderGridProps) {
 interface FolderCardProps {
   folder: Folder;
   documentCount: number;
-  obraId: string;
 }
 
-function FolderCard({ folder, documentCount, obraId }: FolderCardProps) {
+function FolderCard({ folder, documentCount }: FolderCardProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSettingsClick = (e: React.MouseEvent) => {
@@ -62,7 +59,7 @@ function FolderCard({ folder, documentCount, obraId }: FolderCardProps) {
   return (
     <>
       <div className="relative w-28 h-28 group">
-        <Link href={`/obras/${obraId}?folder=${folder.id}`} className="w-full h-full flex items-center justify-center rounded-2xl hover:bg-containerHollowBackground transition-colors">
+        <Link href={`/obra-files?folder=${folder.id}`} className="w-full h-full flex items-center justify-center rounded-2xl hover:bg-containerHollowBackground transition-colors">
           <div className="group cursor-pointer hover:bg-muted transition-colors">
             <div className="flex flex-col items-start gap-2 p-3 w-[90px] h-[50px] rounded-2xl hover:bg-muted transition-colors bg-gradient-to-b from-[#4F4F4F] to-[#3D3D3D] relative">
               {/* Extraction indicator */}
@@ -80,7 +77,7 @@ function FolderCard({ folder, documentCount, obraId }: FolderCardProps) {
                 {folder.name.charAt(0).toUpperCase() + folder.name.slice(1)}
               </span>
               <span className="text-xs text-white/70">
-                {documentCount} archivo{documentCount !== 1 ? 's' : ''}
+                {documentCount} file{documentCount !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
@@ -110,11 +107,9 @@ function FolderCard({ folder, documentCount, obraId }: FolderCardProps) {
   );
 }
 
-interface AddFolderCardProps {
-  obraId: string;
-}
+interface AddFolderCardProps {}
 
-export function AddFolderCard({ obraId }: AddFolderCardProps) {
+export function AddFolderCard() {
   const [isOpen, setIsOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -124,7 +119,7 @@ export function AddFolderCard({ obraId }: AddFolderCardProps) {
     e.preventDefault();
 
     if (!folderName.trim()) {
-      toast.error('El nombre de la carpeta es requerido');
+      toast.error('Folder name is required');
       return;
     }
 
@@ -132,18 +127,17 @@ export function AddFolderCard({ obraId }: AddFolderCardProps) {
 
     try {
       const formData = new FormData();
-      formData.append('obra_id', obraId);
       formData.append('name', folderName.trim());
 
       const result = await createFolderAction(formData);
 
-      toast.success('Carpeta creada correctamente');
+      toast.success('Folder created successfully');
       setFolderName('');
       setIsOpen(false);
       router.refresh();
     } catch (error) {
       console.error('Create folder error:', error);
-      toast.error(error instanceof Error ? error.message : 'Error al crear la carpeta');
+      toast.error(error instanceof Error ? error.message : 'Error creating folder');
     } finally {
       setIsLoading(false);
     }
@@ -173,15 +167,15 @@ export function AddFolderCard({ obraId }: AddFolderCardProps) {
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Crear Nueva Carpeta</DialogTitle>
+            <DialogTitle>Create New Folder</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="folder-name">Nombre de la carpeta</Label>
+              <Label htmlFor="folder-name">Folder name</Label>
               <Input
                 id="folder-name"
-                placeholder="Nombre de la carpeta..."
+                placeholder="Folder name..."
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
                 autoFocus
@@ -190,13 +184,13 @@ export function AddFolderCard({ obraId }: AddFolderCardProps) {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>
-                Cancelar
+                Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || !folderName.trim()}
               >
-                {isLoading ? 'Creando...' : 'Crear Carpeta'}
+                {isLoading ? 'Creating...' : 'Create Folder'}
               </Button>
             </DialogFooter>
           </form>

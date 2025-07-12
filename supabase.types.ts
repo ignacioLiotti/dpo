@@ -7,312 +7,543 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
-      adicionales: {
-        Row: {
-          created_at: string
-          descripcion: string | null
-          expediente: string | null
-          fecha_aprobacion: string | null
-          id: string
-          monto: number
-          numero: number
-          obra_id: string
-          tipo_adicional_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          descripcion?: string | null
-          expediente?: string | null
-          fecha_aprobacion?: string | null
-          id?: string
-          monto: number
-          numero: number
-          obra_id: string
-          tipo_adicional_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          descripcion?: string | null
-          expediente?: string | null
-          fecha_aprobacion?: string | null
-          id?: string
-          monto?: number
-          numero?: number
-          obra_id?: string
-          tipo_adicional_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "adicionales_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "adicionales_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_adicionales"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "adicionales_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_ampliaciones_plazo"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "adicionales_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_completas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "adicionales_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_redeterminaciones"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "adicionales_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_resumen"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "adicionales_tipo_adicional_id_fkey"
-            columns: ["tipo_adicional_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_adicional"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ampliaciones_plazo: {
-        Row: {
-          created_at: string
-          descripcion: string | null
-          dias: number
-          expediente: string | null
-          fecha_aprobacion: string | null
-          id: string
-          numero: number
-          obra_id: string
-          tipo_ampliacion_plazo_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          descripcion?: string | null
-          dias: number
-          expediente?: string | null
-          fecha_aprobacion?: string | null
-          id?: string
-          numero: number
-          obra_id: string
-          tipo_ampliacion_plazo_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          descripcion?: string | null
-          dias?: number
-          expediente?: string | null
-          fecha_aprobacion?: string | null
-          id?: string
-          numero?: number
-          obra_id?: string
-          tipo_ampliacion_plazo_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ampliaciones_plazo_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ampliaciones_plazo_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_adicionales"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "ampliaciones_plazo_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_ampliaciones_plazo"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "ampliaciones_plazo_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_completas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ampliaciones_plazo_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_redeterminaciones"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "ampliaciones_plazo_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_resumen"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ampliaciones_plazo_tipo_ampliacion_plazo_id_fkey"
-            columns: ["tipo_ampliacion_plazo_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_ampliacion_plazo"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       areas: {
         Row: {
-          created_at: string
           id: number
-          nombre: string
+          name: string
+          created_at: string
           updated_at: string
         }
         Insert: {
-          created_at?: string
           id?: number
-          nombre: string
+          name: string
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          created_at?: string
           id?: number
-          nombre?: string
+          name?: string
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
       }
-      obras: {
+      document_examples: {
         Row: {
-          area_id: number
-          calle: string
-          created_at: string
-          departamento: string
-          descripcion: string | null
-          duracion: number | null
-          estado: Database["public"]["Enums"]["obra_estado"]
-          etapa: Database["public"]["Enums"]["obra_etapa"]
-          expediente: string | null
-          fecha_basico: string | null
-          fecha_creacion: string
-          fecha_fin: string | null
-          fecha_inicio: string | null
-          fecha_inicio_prevista: string | null
           id: string
-          obra_name: string
-          presupuesto: number
-          presupuesto_oficial: number | null
-          provincia: string
-          reparticion_id: number
-          tipo_obra_id: number
-          ubicacion_google_maps: string | null
+          organization_id: string
+          user_id: string
+          title: string
+          description: string | null
+          content: string | null
+          category: string | null
+          tags: string[] | null
+          is_active: boolean | null
+          created_at: string
           updated_at: string
-          user_id: string | null
         }
         Insert: {
-          area_id: number
-          calle: string
-          created_at?: string
-          departamento: string
-          descripcion?: string | null
-          duracion?: number | null
-          estado: Database["public"]["Enums"]["obra_estado"]
-          etapa?: Database["public"]["Enums"]["obra_etapa"]
-          expediente?: string | null
-          fecha_basico?: string | null
-          fecha_creacion?: string
-          fecha_fin?: string | null
-          fecha_inicio?: string | null
-          fecha_inicio_prevista?: string | null
           id?: string
-          obra_name: string
-          presupuesto: number
-          presupuesto_oficial?: number | null
-          provincia: string
-          reparticion_id: number
-          tipo_obra_id: number
-          ubicacion_google_maps?: string | null
+          organization_id: string
+          user_id: string
+          title: string
+          description?: string | null
+          content?: string | null
+          category?: string | null
+          tags?: string[] | null
+          is_active?: boolean | null
+          created_at?: string
           updated_at?: string
-          user_id?: string | null
         }
         Update: {
-          area_id?: number
-          calle?: string
-          created_at?: string
-          departamento?: string
-          descripcion?: string | null
-          duracion?: number | null
-          estado?: Database["public"]["Enums"]["obra_estado"]
-          etapa?: Database["public"]["Enums"]["obra_etapa"]
-          expediente?: string | null
-          fecha_basico?: string | null
-          fecha_creacion?: string
-          fecha_fin?: string | null
-          fecha_inicio?: string | null
-          fecha_inicio_prevista?: string | null
           id?: string
-          obra_name?: string
-          presupuesto?: number
-          presupuesto_oficial?: number | null
-          provincia?: string
-          reparticion_id?: number
-          tipo_obra_id?: number
-          ubicacion_google_maps?: string | null
+          organization_id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          content?: string | null
+          category?: string | null
+          tags?: string[] | null
+          is_active?: boolean | null
+          created_at?: string
           updated_at?: string
-          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_examples_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_examples_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      extracted_data: {
+        Row: {
+          id: string
+          file_id: string
+          folder_id: string
+          extraction_config_id: string
+          user_id: string
+          extracted_value: string | null
+          confidence_score: number | null
+          is_verified: boolean | null
+          verification_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          folder_id: string
+          extraction_config_id: string
+          user_id: string
+          extracted_value?: string | null
+          confidence_score?: number | null
+          is_verified?: boolean | null
+          verification_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          folder_id?: string
+          extraction_config_id?: string
+          user_id?: string
+          extracted_value?: string | null
+          confidence_score?: number | null
+          is_verified?: boolean | null
+          verification_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_data_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_data_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_data_extraction_config_id_fkey"
+            columns: ["extraction_config_id"]
+            isOneToOne: false
+            referencedRelation: "folder_extraction_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_data_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      file_analysis: {
+        Row: {
+          id: string
+          file_id: string
+          user_id: string
+          ocr_text: string | null
+          ai_description: string | null
+          ai_category: string | null
+          ai_tags: string[] | null
+          confidence_score: number | null
+          analysis_metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          user_id: string
+          ocr_text?: string | null
+          ai_description?: string | null
+          ai_category?: string | null
+          ai_tags?: string[] | null
+          confidence_score?: number | null
+          analysis_metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          user_id?: string
+          ocr_text?: string | null
+          ai_description?: string | null
+          ai_category?: string | null
+          ai_tags?: string[] | null
+          confidence_score?: number | null
+          analysis_metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_analysis_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: true
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_analysis_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      file_folder_assignments: {
+        Row: {
+          id: string
+          file_id: string
+          folder_id: string
+          user_id: string
+          sort_order: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          folder_id: string
+          user_id: string
+          sort_order?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          folder_id?: string
+          user_id?: string
+          sort_order?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_folder_assignments_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_folder_assignments_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_folder_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      files: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          name: string
+          original_name: string
+          file_type: string
+          file_size: number
+          storage_path: string
+          checksum: string | null
+          is_active: boolean | null
+          processing_status: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          name: string
+          original_name: string
+          file_type: string
+          file_size: number
+          storage_path: string
+          checksum?: string | null
+          is_active?: boolean | null
+          processing_status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          name?: string
+          original_name?: string
+          file_type?: string
+          file_size?: number
+          storage_path?: string
+          checksum?: string | null
+          is_active?: boolean | null
+          processing_status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      folder_extraction_configs: {
+        Row: {
+          id: string
+          folder_id: string
+          user_id: string
+          field_name: string
+          field_label: string
+          field_type: string
+          extraction_pattern: string | null
+          is_required: boolean | null
+          default_value: string | null
+          sort_order: number | null
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          folder_id: string
+          user_id: string
+          field_name: string
+          field_label: string
+          field_type: string
+          extraction_pattern?: string | null
+          is_required?: boolean | null
+          default_value?: string | null
+          sort_order?: number | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          folder_id?: string
+          user_id?: string
+          field_name?: string
+          field_label?: string
+          field_type?: string
+          extraction_pattern?: string | null
+          is_required?: boolean | null
+          default_value?: string | null
+          sort_order?: number | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folder_extraction_configs_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folder_extraction_configs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      folders: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          name: string
+          description: string | null
+          color: string | null
+          icon: string | null
+          sort_order: number | null
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          name: string
+          description?: string | null
+          color?: string | null
+          icon?: string | null
+          sort_order?: number | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          name?: string
+          description?: string | null
+          color?: string | null
+          icon?: string | null
+          sort_order?: number | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      obras: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          obra_name: string
+          descripcion: string | null
+          provincia: string
+          departamento: string
+          calle: string
+          area_id: number
+          reparticion_id: number
+          tipo_obra_id: number
+          presupuesto: number
+          presupuesto_oficial: number | null
+          estado: Database["public"]["Enums"]["obra_estado"]
+          etapa: Database["public"]["Enums"]["obra_etapa"] | null
+          duracion: number | null
+          fecha_inicio: string | null
+          fecha_fin: string | null
+          fecha_inicio_prevista: string | null
+          fecha_basico: string | null
+          fecha_creacion: string | null
+          expediente: string | null
+          ubicacion_google_maps: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          obra_name: string
+          descripcion?: string | null
+          provincia: string
+          departamento: string
+          calle: string
+          area_id: number
+          reparticion_id: number
+          tipo_obra_id: number
+          presupuesto: number
+          presupuesto_oficial?: number | null
+          estado?: Database["public"]["Enums"]["obra_estado"]
+          etapa?: Database["public"]["Enums"]["obra_etapa"] | null
+          duracion?: number | null
+          fecha_inicio?: string | null
+          fecha_fin?: string | null
+          fecha_inicio_prevista?: string | null
+          fecha_basico?: string | null
+          fecha_creacion?: string | null
+          expediente?: string | null
+          ubicacion_google_maps?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          obra_name?: string
+          descripcion?: string | null
+          provincia?: string
+          departamento?: string
+          calle?: string
+          area_id?: number
+          reparticion_id?: number
+          tipo_obra_id?: number
+          presupuesto?: number
+          presupuesto_oficial?: number | null
+          estado?: Database["public"]["Enums"]["obra_estado"]
+          etapa?: Database["public"]["Enums"]["obra_etapa"] | null
+          duracion?: number | null
+          fecha_inicio?: string | null
+          fecha_fin?: string | null
+          fecha_inicio_prevista?: string | null
+          fecha_basico?: string | null
+          fecha_creacion?: string | null
+          expediente?: string | null
+          ubicacion_google_maps?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obras_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obras_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "obras_area_id_fkey"
             columns: ["area_id"]
@@ -333,373 +564,286 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tipos_obra"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
-      redeterminaciones: {
+      organization_invitations: {
         Row: {
-          created_at: string
-          expediente: string | null
-          fecha_basico: string
           id: string
-          monto: number
-          numero: number
-          obra_id: string
-          tipo_redeterminacion_id: string
+          organization_id: string
+          email: string
+          role: string
+          invited_by: string
+          token: string
+          expires_at: string
+          accepted_at: string | null
+          is_active: boolean
+          created_at: string
           updated_at: string
         }
         Insert: {
-          created_at?: string
-          expediente?: string | null
-          fecha_basico: string
           id?: string
-          monto: number
-          numero: number
-          obra_id: string
-          tipo_redeterminacion_id: string
+          organization_id: string
+          email: string
+          role?: string
+          invited_by: string
+          token?: string
+          expires_at?: string
+          accepted_at?: string | null
+          is_active?: boolean
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          created_at?: string
-          expediente?: string | null
-          fecha_basico?: string
           id?: string
-          monto?: number
-          numero?: number
-          obra_id?: string
-          tipo_redeterminacion_id?: string
+          organization_id?: string
+          email?: string
+          role?: string
+          invited_by?: string
+          token?: string
+          expires_at?: string
+          accepted_at?: string | null
+          is_active?: boolean
+          created_at?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "redeterminaciones_obra_id_fkey"
-            columns: ["obra_id"]
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "obras"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "redeterminaciones_obra_id_fkey"
-            columns: ["obra_id"]
+            foreignKeyName: "organization_invitations_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
-            referencedRelation: "obras_adicionales"
-            referencedColumns: ["obra_id"]
-          },
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_memberships: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          role: string
+          invited_by: string | null
+          joined_at: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          role?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          role?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "redeterminaciones_obra_id_fkey"
-            columns: ["obra_id"]
+            foreignKeyName: "organization_memberships_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "obras_ampliaciones_plazo"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "redeterminaciones_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_completas"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "redeterminaciones_obra_id_fkey"
-            columns: ["obra_id"]
+            foreignKeyName: "organization_memberships_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "obras_redeterminaciones"
-            referencedColumns: ["obra_id"]
-          },
-          {
-            foreignKeyName: "redeterminaciones_obra_id_fkey"
-            columns: ["obra_id"]
-            isOneToOne: false
-            referencedRelation: "obras_resumen"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "redeterminaciones_tipo_redeterminacion_id_fkey"
-            columns: ["tipo_redeterminacion_id"]
+            foreignKeyName: "organization_memberships_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
-            referencedRelation: "tipos_redeterminacion"
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string | null
+          logo_url: string | null
+          website: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          address: string | null
+          settings: Json | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string | null
+          logo_url?: string | null
+          website?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          address?: string | null
+          settings?: Json | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          logo_url?: string | null
+          website?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          address?: string | null
+          settings?: Json | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          id: string
+          username: string | null
+          full_name: string | null
+          role: string
+          organization_id: string | null
+          avatar_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          username?: string | null
+          full_name?: string | null
+          role?: string
+          organization_id?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          username?: string | null
+          full_name?: string | null
+          role?: string
+          organization_id?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
         ]
       }
       reparticiones: {
         Row: {
-          created_at: string
           id: number
-          nombre: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          nombre: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          nombre?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tipos_adicional: {
-        Row: {
+          name: string
           created_at: string
-          id: string
-          nombre: string
           updated_at: string
         }
         Insert: {
+          id?: number
+          name: string
           created_at?: string
-          id?: string
-          nombre: string
           updated_at?: string
         }
         Update: {
+          id?: number
+          name?: string
           created_at?: string
-          id?: string
-          nombre?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tipos_ampliacion_plazo: {
-        Row: {
-          created_at: string
-          id: string
-          nombre: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          nombre: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          nombre?: string
           updated_at?: string
         }
         Relationships: []
       }
       tipos_obra: {
         Row: {
-          created_at: string
           id: number
-          nombre: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          nombre: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          nombre?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tipos_redeterminacion: {
-        Row: {
+          name: string
           created_at: string
-          id: string
-          nombre: string
           updated_at: string
         }
         Insert: {
+          id?: number
+          name: string
           created_at?: string
-          id?: string
-          nombre: string
           updated_at?: string
         }
         Update: {
+          id?: number
+          name?: string
           created_at?: string
-          id?: string
-          nombre?: string
           updated_at?: string
         }
         Relationships: []
       }
     }
     Views: {
-      obras_adicionales: {
-        Row: {
-          cantidad_adicionales: number | null
-          monto_total_adicionales: number | null
-          obra_id: string | null
-          obra_nombre: string | null
-        }
-        Relationships: []
-      }
-      obras_ampliaciones_plazo: {
-        Row: {
-          cantidad_ampliaciones: number | null
-          dias_totales_ampliacion: number | null
-          obra_id: string | null
-          obra_nombre: string | null
-        }
-        Relationships: []
-      }
-      obras_completas: {
-        Row: {
-          area_id: number | null
-          area_nombre: string | null
-          calle: string | null
-          created_at: string | null
-          departamento: string | null
-          descripcion: string | null
-          duracion: number | null
-          estado: Database["public"]["Enums"]["obra_estado"] | null
-          etapa: Database["public"]["Enums"]["obra_etapa"] | null
-          expediente: string | null
-          fecha_basico: string | null
-          fecha_creacion: string | null
-          fecha_fin: string | null
-          fecha_inicio: string | null
-          fecha_inicio_prevista: string | null
-          id: string | null
-          obra_name: string | null
-          presupuesto: number | null
-          presupuesto_oficial: number | null
-          provincia: string | null
-          reparticion_id: number | null
-          reparticion_nombre: string | null
-          tipo_obra_id: number | null
-          tipo_obra_nombre: string | null
-          ubicacion_google_maps: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "obras_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "obras_reparticion_id_fkey"
-            columns: ["reparticion_id"]
-            isOneToOne: false
-            referencedRelation: "reparticiones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "obras_tipo_obra_id_fkey"
-            columns: ["tipo_obra_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_obra"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      obras_redeterminaciones: {
-        Row: {
-          cantidad_redeterminaciones: number | null
-          monto_total_redeterminaciones: number | null
-          obra_id: string | null
-          obra_nombre: string | null
-        }
-        Relationships: []
-      }
-      obras_resumen: {
-        Row: {
-          area_id: number | null
-          area_nombre: string | null
-          calle: string | null
-          cantidad_adicionales: number | null
-          cantidad_ampliaciones: number | null
-          cantidad_redeterminaciones: number | null
-          created_at: string | null
-          departamento: string | null
-          descripcion: string | null
-          dias_totales_ampliacion: number | null
-          duracion: number | null
-          estado: Database["public"]["Enums"]["obra_estado"] | null
-          etapa: Database["public"]["Enums"]["obra_etapa"] | null
-          expediente: string | null
-          fecha_basico: string | null
-          fecha_creacion: string | null
-          fecha_fin: string | null
-          fecha_inicio: string | null
-          fecha_inicio_prevista: string | null
-          id: string | null
-          monto_total: number | null
-          monto_total_adicionales: number | null
-          monto_total_redeterminaciones: number | null
-          obra_name: string | null
-          presupuesto: number | null
-          presupuesto_oficial: number | null
-          provincia: string | null
-          reparticion_id: number | null
-          reparticion_nombre: string | null
-          tipo_obra_id: number | null
-          tipo_obra_nombre: string | null
-          ubicacion_google_maps: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "obras_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "obras_reparticion_id_fkey"
-            columns: ["reparticion_id"]
-            isOneToOne: false
-            referencedRelation: "reparticiones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "obras_tipo_obra_id_fkey"
-            columns: ["tipo_obra_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_obra"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      calculate_obra_total_amount: {
-        Args: { p_obra_id: string }
-        Returns: number
+      accept_organization_invitation: {
+        Args: { invitation_token: string }
+        Returns: Json
       }
-      calculate_obra_total_extension_days: {
-        Args: { p_obra_id: string }
-        Returns: number
+      get_user_organization_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
-      get_latest_redeterminacion: {
-        Args: { p_obra_id: string }
-        Returns: {
-          id: string
-          numero: number
-          monto: number
-          fecha_basico: string
-          tipo_redeterminacion_id: string
-          tipo_redeterminacion_nombre: string
-        }[]
+      handle_new_organization: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      handle_new_user: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
-      obra_estado:
-        | "PLANIFICADA"
-        | "EN_EJECUCION"
-        | "FINALIZADA"
-        | "SUSPENDIDA"
-        | "CANCELADA"
+      obra_estado: "PLANIFICADA" | "EN_EJECUCION" | "FINALIZADA" | "SUSPENDIDA" | "CANCELADA"
       obra_etapa: "LICITACION" | "CONTRATACION" | "EJECUCION" | "FINALIZACION"
     }
     CompositeTypes: {
@@ -798,30 +942,29 @@ export type Enums<
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+// Helper types for easier usage
+export type Organization = Tables<"organizations">
+export type Profile = Tables<"profiles">
+export type OrganizationMembership = Tables<"organization_memberships">
+export type OrganizationInvitation = Tables<"organization_invitations">
+export type DocumentExample = Tables<"document_examples">
+export type Obra = Tables<"obras">
+export type File = Tables<"files">
+export type Folder = Tables<"folders">
+export type FileFolderAssignment = Tables<"file_folder_assignments">
+export type FileAnalysis = Tables<"file_analysis">
+export type FolderExtractionConfig = Tables<"folder_extraction_configs">
+export type ExtractedData = Tables<"extracted_data">
+export type Area = Tables<"areas">
+export type Reparticion = Tables<"reparticiones">
+export type TipoObra = Tables<"tipos_obra">
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       obra_estado: [
         "PLANIFICADA",
-        "EN_EJECUCION",
+        "EN_EJECUCION", 
         "FINALIZADA",
         "SUSPENDIDA",
         "CANCELADA",
@@ -830,4 +973,3 @@ export const Constants = {
     },
   },
 } as const
-

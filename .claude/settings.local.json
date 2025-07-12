@@ -19,8 +19,15 @@
       "Bash(npm uninstall:*)",
       "Bash(npx supabase:*)",
       "Bash(npm run:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(mv:*)",
+      "Bash(supabase db describe:*)",
+      "Bash(psql:*)",
+      "Bash(PGPASSWORD=postgres psql:*)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

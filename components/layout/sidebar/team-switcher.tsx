@@ -25,17 +25,17 @@ import { CreateOrganizationDialog } from "@/components/organizations/create-orga
 
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
-  const { 
-    currentOrganization, 
-    organizations, 
+  const {
+    currentOrganization,
+    organizations,
     memberships,
-    isLoading, 
-    switchOrganization 
+    isLoading,
+    switchOrganization
   } = useOrganization()
 
   const handleSelect = async (organizationId: string) => {
     if (organizationId === currentOrganization?.id) return;
-    
+
     try {
       await switchOrganization(organizationId);
     } catch (error) {
@@ -117,11 +117,11 @@ export function TeamSwitcher() {
               {currentOrganization ? (
                 <>
                   <Avatar className="size-8">
-                    <AvatarImage 
-                      src={currentOrganization.logo_url || undefined} 
+                    <AvatarImage
+                      src={currentOrganization.logo_url || undefined}
                       alt={currentOrganization.name}
                     />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-[#ff5800] text-primary-foreground outline outline-2 outline-outline border-2">
                       {currentOrganization.name.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -166,8 +166,8 @@ export function TeamSwitcher() {
                   className="gap-2 p-2"
                 >
                   <Avatar className="size-6">
-                    <AvatarImage 
-                      src={org.logo_url || undefined} 
+                    <AvatarImage
+                      src={org.logo_url || undefined}
                       alt={org.name}
                     />
                     <AvatarFallback className="text-xs">
@@ -176,7 +176,7 @@ export function TeamSwitcher() {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="truncate font-medium">{org.name}</div>
-                    <Badge 
+                    <Badge
                       variant={getRoleBadgeVariant(role)}
                       className="text-xs px-1 py-0 h-4 mt-1"
                     >

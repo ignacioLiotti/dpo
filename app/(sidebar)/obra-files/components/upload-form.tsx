@@ -23,12 +23,11 @@ import type { Folder } from '../types';
 import { UploadFormClient } from './upload-form-client';
 
 interface UploadFormProps {
-  obraId: string;
   currentFolder: Folder | null;
   folders: Folder[];
 }
 
-export function UploadForm({ obraId, currentFolder, folders }: UploadFormProps) {
+export function UploadForm({ currentFolder, folders }: UploadFormProps) {
   return (
     <div className="flex gap-2">
       <Dialog>
@@ -45,7 +44,6 @@ export function UploadForm({ obraId, currentFolder, folders }: UploadFormProps) 
           </DialogHeader>
 
           <UploadFormClient
-            obraId={obraId}
             currentFolder={currentFolder}
             folders={folders}
           />
@@ -63,18 +61,14 @@ export function UploadForm({ obraId, currentFolder, folders }: UploadFormProps) 
             <DialogTitle>Crear Nueva Carpeta</DialogTitle>
           </DialogHeader>
 
-          <CreateFolderForm obraId={obraId} />
+          <CreateFolderForm />
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
-interface CreateFolderFormProps {
-  obraId: string;
-}
-
-function CreateFolderForm({ obraId }: CreateFolderFormProps) {
+function CreateFolderForm() {
   return (
     <form className="space-y-4">
       <div className="space-y-2">
@@ -87,7 +81,6 @@ function CreateFolderForm({ obraId }: CreateFolderFormProps) {
         />
       </div>
 
-      <input type="hidden" name="obra_id" value={obraId} />
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline">

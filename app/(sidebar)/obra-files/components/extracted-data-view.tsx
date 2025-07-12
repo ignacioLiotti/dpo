@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Database, Download, Filter, RefreshCw } from 'lucide-react';
 import type { ObraDocument, Folder } from '../types';
-import { getFolderExtractedData } from '../actions/folder-extraction-actions';
 
 interface ExtractedDataViewProps {
   documents: ObraDocument[];
   currentFolder: Folder | null;
+  extractedData?: any[];
 }
 
 interface ExtractedField {
@@ -23,52 +23,54 @@ interface ExtractedField {
   document_name: string;
 }
 
-export function ExtractedDataView({ documents, currentFolder }: ExtractedDataViewProps) {
-  const [extractedData, setExtractedData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function ExtractedDataView({ documents, currentFolder, extractedData = [] }: ExtractedDataViewProps) {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!currentFolder) {
-      setLoading(false);
-      return;
-    }
-
-    console.log('currentFolder', currentFolder);
+  const refreshData = () => {
     setLoading(true);
-    setError(null);
-
-    getFolderExtractedData(currentFolder.id)
-      .then((result) => {
-        console.log('folder data', result.data);
-        if (result.error) {
-          setError(result.error);
-        } else {
-          setExtractedData(result.data || []);
-        }
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error fetching folder extracted data:', error);
-        setError('Error loading extracted data');
-        setLoading(false);
-      });
-  }, [currentFolder]);
-
+    window.location.reload();
+  };
 
   // Transform the extracted data for display
   const transformedData = extractedData.flatMap(record => {
-    if (!record.extracted_data) return [];
+    let extractedFields = {};
+    let documentName = 'Unknown Document';
+    let documentId = '';
 
-    return Object.entries(record.extracted_data).map(([fieldName, value]) => ({
+    // Handle different data structures
+    if (record.extracted_data) {
+      // This is the fallback format from file_analysis
+      extractedFields = record.extracted_data;
+      documentName = record.files?.name || record.obra_documents?.name || 'Unknown Document';
+      documentId = record.document_id || record.files?.id || '';
+    } else if (record.extracted_value) {
+      // This is the new format from extracted_data table
+      try {
+        extractedFields = JSON.parse(record.extracted_value);
+        documentId = record.file_id;
+        // Find the document name from the documents prop
+        const matchingDoc = documents.find(doc => doc.id === record.file_id);
+        documentName = matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`;
+      } catch (error) {
+        console.error('Error parsing extracted_value:', error);
+        return [];
+      }
+    } else {
+      // Skip records without extractable data
+      return [];
+    }
+
+    // Convert the fields to the expected format
+    return Object.entries(extractedFields).map(([fieldName, value]) => ({
       field_name: fieldName,
       field_label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
       field_type: typeof value === 'number' ? 'number' :
         typeof value === 'boolean' ? 'boolean' :
           value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'date' : 'text',
       value,
-      document_id: record.document_id,
-      document_name: record.obra_documents?.name || 'Unknown Document'
+      document_id: documentId,
+      document_name: documentName
     }));
   });
 
@@ -124,9 +126,46 @@ export function ExtractedDataView({ documents, currentFolder }: ExtractedDataVie
   });
 
   // Group extracted data by document for table display
-  const documentsWithExtractedData = extractedData.filter(record =>
-    record.extracted_data && Object.keys(record.extracted_data).length > 0
-  );
+  const documentsWithExtractedData = extractedData.filter(record => {
+    if (record.extracted_data && Object.keys(record.extracted_data).length > 0) {
+      return true;
+    }
+    if (record.extracted_value) {
+      try {
+        const parsed = JSON.parse(record.extracted_value);
+        return Object.keys(parsed).length > 0;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  // Helper function to get extracted fields from a record
+  const getExtractedFields = (record: any) => {
+    if (record.extracted_data) {
+      return record.extracted_data;
+    }
+    if (record.extracted_value) {
+      try {
+        return JSON.parse(record.extracted_value);
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  };
+
+  // Helper function to get document name from a record
+  const getDocumentName = (record: any) => {
+    if (record.files?.name) return record.files.name;
+    if (record.obra_documents?.name) return record.obra_documents.name;
+    if (record.file_id) {
+      const matchingDoc = documents.find(doc => doc.id === record.file_id);
+      return matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`;
+    }
+    return 'Unknown Document';
+  };
 
   if (!currentFolder) {
     return (
@@ -168,8 +207,8 @@ export function ExtractedDataView({ documents, currentFolder }: ExtractedDataVie
         <div className="text-red-500 mb-4">⚠️</div>
         <h3 className="text-lg font-medium mb-2">Error</h3>
         <p className="text-muted-foreground mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
+        <Button onClick={refreshData} variant="outline" disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Reintentar
         </Button>
       </div>
@@ -191,21 +230,7 @@ export function ExtractedDataView({ documents, currentFolder }: ExtractedDataVie
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            Datos Extraídos
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {documentsWithExtractedData.length} documento{documentsWithExtractedData.length !== 1 ? 's' : ''} con datos extraídos
-          </p>
-        </div>
-        <Button onClick={exportData} variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
-          Exportar CSV
-        </Button>
-      </div>
+
 
       {/* Field Summary */}
       {/* <Card>
@@ -260,14 +285,15 @@ export function ExtractedDataView({ documents, currentFolder }: ExtractedDataVie
               </TableHeader>
               <TableBody>
                 {documentsWithExtractedData.map(record => (
-                  <TableRow key={record.document_id}>
+                  <TableRow key={record.document_id || record.file_id || record.id}>
                     <TableCell className="font-medium">
-                      <div className="max-w-[200px] truncate" title={record.obra_documents?.name}>
-                        {record.obra_documents?.name}
+                      <div className="max-w-[200px] truncate" title={getDocumentName(record)}>
+                        {getDocumentName(record)}
                       </div>
                     </TableCell>
                     {uniqueFields.map(fieldName => {
-                      const value = record.extracted_data?.[fieldName];
+                      const extractedFields = getExtractedFields(record);
+                      const value = extractedFields[fieldName];
                       return (
                         <TableCell key={fieldName}>
                           {value !== null && value !== undefined && value !== '' ? (
@@ -287,6 +313,18 @@ export function ExtractedDataView({ documents, currentFolder }: ExtractedDataVie
           </div>
         </CardContent>
       </Card>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <Button onClick={refreshData} variant="outline" size="sm" disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          <Button onClick={exportData} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Exportar CSV
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
