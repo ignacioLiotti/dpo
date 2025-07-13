@@ -67,7 +67,7 @@ export function TeamSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" className="animate-pulse">
+          <SidebarMenuButton size="lg" className="animate-pulse bg-red-500">
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted" />
             <div className="grid flex-1 text-left text-sm leading-tight">
               <div className="h-4 w-20 bg-muted rounded" />

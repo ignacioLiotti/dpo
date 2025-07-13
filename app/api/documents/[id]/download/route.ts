@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/supabase/server';
-import { getDocumentDownloadUrl } from '@/app/(sidebar)/obra-files/actions/document-actions';
+import { getDocumentDownloadUrl } from '@/app/(sidebar)/files/actions/document-actions';
 
 export async function GET(
   request: NextRequest,

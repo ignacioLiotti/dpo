@@ -27,12 +27,20 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
   const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
 
   // Load user's organizations and memberships
   const loadOrganizations = useCallback(async () => {
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error('⏱️ Organization loading timeout - setting loading to false');
+      setIsLoading(false);
+      setError('Loading organizations timed out. Please refresh the page.');
+    }, 30000); // 30 second timeout
+
     try {
       console.log('🔄 Starting loadOrganizations...');
       setIsLoading(true);
@@ -83,7 +91,12 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       console.log('🎯 Organizations set, count:', orgs.length);
 
       // Set current organization (prefer stored preference, fallback to first org)
-      const storedOrgId = localStorage.getItem('currentOrganizationId');
+      let storedOrgId: string | null = null;
+      try {
+        storedOrgId = localStorage.getItem('currentOrganizationId');
+      } catch (e) {
+        console.error('Failed to access localStorage:', e);
+      }
       let currentOrg = null;
 
       if (storedOrgId) {
@@ -102,9 +115,17 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       setCurrentOrganization(currentOrg);
 
       if (currentOrg) {
-        localStorage.setItem('currentOrganizationId', currentOrg.id);
+        try {
+          localStorage.setItem('currentOrganizationId', currentOrg.id);
+        } catch (e) {
+          console.error('Failed to save to localStorage:', e);
+        }
       } else {
-        localStorage.removeItem('currentOrganizationId');
+        try {
+          localStorage.removeItem('currentOrganizationId');
+        } catch (e) {
+          console.error('Failed to remove from localStorage:', e);
+        }
       }
 
       console.log('✅ loadOrganizations completed successfully');
@@ -127,6 +148,7 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       }
     } finally {
       console.log('🏁 Setting isLoading to false');
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   }, [supabase]);
@@ -139,7 +161,11 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
     }
 
     setCurrentOrganization(org);
-    localStorage.setItem('currentOrganizationId', organizationId);
+    try {
+      localStorage.setItem('currentOrganizationId', organizationId);
+    } catch (e) {
+      console.error('Failed to save to localStorage:', e);
+    }
 
     toast.success(`Switched to ${org.name}`);
 
@@ -345,34 +371,74 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
 
   // Load organizations on mount and when user changes
   useEffect(() => {
+    let mounted = true;
+    let loadingPromise: Promise<void> | null = null;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change event:', event, session?.user?.id);
 
+      // Prevent concurrent loads
+      if (loadingPromise) {
+        console.log('⏳ Load already in progress, skipping...');
+        return;
+      }
+
       if (event === 'SIGNED_IN' && session) {
         setUser(session.user);
-        await loadOrganizations();
+        if (mounted) {
+          loadingPromise = loadOrganizations();
+          await loadingPromise;
+          loadingPromise = null;
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setCurrentOrganization(null);
         setOrganizations([]);
         setMemberships([]);
-        localStorage.removeItem('currentOrganizationId');
+        try {
+          localStorage.removeItem('currentOrganizationId');
+        } catch (e) {
+          console.error('Failed to remove from localStorage:', e);
+        }
+        setIsInitialized(false);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         setUser(session.user);
         // Don't reload organizations on token refresh unless user changed
       } else if (event === 'INITIAL_SESSION' && session) {
-        setUser(session.user);
-        await loadOrganizations();
+        // Only load if not already initialized
+        if (!isInitialized && mounted) {
+          setUser(session.user);
+          loadingPromise = loadOrganizations();
+          await loadingPromise;
+          loadingPromise = null;
+          setIsInitialized(true);
+        }
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        // Handle initial load with no session
+        setIsLoading(false);
+        setIsInitialized(true);
       }
     });
 
-    // Load initial data - this will handle both authenticated and unauthenticated states
-    loadOrganizations();
+    // Load initial data only if not already initialized
+    if (!isInitialized && mounted) {
+      loadingPromise = loadOrganizations();
+      loadingPromise.then(() => {
+        if (mounted) {
+          setIsInitialized(true);
+        }
+        loadingPromise = null;
+      }).catch(() => {
+        // Error is already handled in loadOrganizations
+        loadingPromise = null;
+      });
+    }
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase, loadOrganizations]);
+  }, [supabase, isInitialized, loadOrganizations]); // Keep deps but use isInitialized to prevent loops
 
   const value: OrganizationContextType = {
     currentOrganization,

@@ -41,7 +41,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ObraFilesClientWrapper } from '@/app/(sidebar)/obra-files/components/client-wrapper';
+import { ObraFilesClientWrapper } from '@/app/(sidebar)/files/components/client-wrapper';
 import { cn } from '@/utils/utils';
 import { getObraDocumentsWithFolders, getObraFolders } from '@/lib/actions/document-actions';
 

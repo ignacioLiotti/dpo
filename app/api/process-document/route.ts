@@ -1,6 +1,6 @@
 import { createClient } from '@/supabase/server';
 import { NextResponse } from 'next/server';
-import { processDocument } from '@/app/(sidebar)/obra-files/services/document-processor';
+import { processDocument } from '@/app/(sidebar)/files/services/document-processor';
 
 export async function POST(request: Request) {
   try {

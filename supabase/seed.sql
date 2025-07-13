@@ -207,20 +207,24 @@ BEGIN
         ) ON CONFLICT (file_id) DO NOTHING;
     END IF;
 
-    -- Create sample folder extraction config
+    -- Create sample folder field definitions (using new consolidated table)
     IF sample_folder_id IS NOT NULL THEN
-        INSERT INTO public.folder_extraction_configs (
+        INSERT INTO public.folder_field_definitions (
             folder_id,
+            organization_id,
             user_id,
             field_name,
             field_label,
             field_type,
+            field_description,
+            extraction_method,
             extraction_pattern,
-            is_required
+            is_required,
+            sort_order
         ) VALUES 
-            (sample_folder_id, sample_user_id, 'numero_contrato', 'Número de Contrato', 'text', 'Extract contract number from document', true),
-            (sample_folder_id, sample_user_id, 'monto_contrato', 'Monto del Contrato', 'currency', 'Extract contract amount in currency format', true),
-            (sample_folder_id, sample_user_id, 'fecha_vencimiento', 'Fecha de Vencimiento', 'date', 'Extract expiration or completion date', false);
+            (sample_folder_id, sample_org_id, sample_user_id, 'numero_contrato', 'Número de Contrato', 'text', 'Número identificatorio del contrato', 'ai', 'Extract the contract number from the document', true, 1),
+            (sample_folder_id, sample_org_id, sample_user_id, 'monto_contrato', 'Monto del Contrato', 'currency', 'Valor monetario del contrato', 'ai', 'Extract the contract amount in currency format', true, 2),
+            (sample_folder_id, sample_org_id, sample_user_id, 'fecha_vencimiento', 'Fecha de Vencimiento', 'date', 'Fecha de vencimiento o finalización', 'ai', 'Extract expiration or completion date', false, 3);
     END IF;
 
 END $$;

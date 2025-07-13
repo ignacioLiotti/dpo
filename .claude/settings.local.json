@@ -23,7 +23,9 @@
       "Bash(mv:*)",
       "Bash(supabase db describe:*)",
       "Bash(psql:*)",
-      "Bash(PGPASSWORD=postgres psql:*)"
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_install"
     ],
     "deny": []
   },
