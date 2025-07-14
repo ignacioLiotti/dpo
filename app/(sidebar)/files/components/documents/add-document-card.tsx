@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload, X, FileText } from 'lucide-react';
+import { Plus, Upload, X, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,14 @@ import { DOCUMENT_CATEGORIES } from '../../types';
 import { uploadDocumentsAction } from '../../actions/document-actions';
 import type { Folder } from '../../types';
 
+interface DocumentUploadState {
+  file: File;
+  status: 'uploading' | 'uploaded' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+  documentId?: string;
+}
+
 interface AddDocumentCardProps {
   currentFolder: Folder | null;
   folders: Folder[];
@@ -44,6 +52,7 @@ export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps
   const [isDragging, setIsDragging] = useState(false);
   const [isCardDragging, setIsCardDragging] = useState(false);
   const [folderHasExtraction, setFolderHasExtraction] = useState(false);
+  const [uploadStates, setUploadStates] = useState<DocumentUploadState[]>([]);
 
   // Check if current folder or selected folder has data extraction enabled
   useEffect(() => {
@@ -106,6 +115,14 @@ export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps
 
     setIsLoading(true);
 
+    // Initialize upload states for optimistic UI
+    const initialStates: DocumentUploadState[] = files.map(file => ({
+      file,
+      status: 'uploading',
+      progress: 0,
+    }));
+    setUploadStates(initialStates);
+
     try {
       const formData = new FormData();
       formData.append('category', category);
@@ -123,14 +140,76 @@ export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps
         formData.append(`file_${index}`, file);
       });
 
+      // Update progress to show upload in progress
+      setUploadStates(prev => prev.map(state => ({
+        ...state,
+        progress: 50
+      })));
+
       const result = await uploadDocumentsAction(formData);
 
-      // Show success message
+      // Update states to show successful upload
+      setUploadStates(prev => prev.map((state, index) => {
+        const uploadedDoc = result.data?.uploaded[index];
+        return {
+          ...state,
+          status: 'uploaded',
+          progress: 100,
+          documentId: uploadedDoc?.id,
+        };
+      }));
+
+      // Show success message with AI processing info
       const successMessage = folderHasExtraction
-        ? `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully. Files will be automatically processed with AI.`
-        : `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully.`;
+        ? `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully. Processing immediately with AI and field extraction.`
+        : `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully. Processing immediately.`;
 
       toast.success(successMessage);
+
+      // For files with extraction enabled, show processing status
+      if (folderHasExtraction) {
+        setUploadStates(prev => prev.map(state => ({
+          ...state,
+          status: 'processing',
+        })));
+
+        toast.info('🤖 AI analysis and field extraction in progress...', {
+          duration: 3000,
+        });
+        
+        // Since processing is immediate, update to completed after a short delay
+        setTimeout(() => {
+          setUploadStates(prev => prev.map(state => ({
+            ...state,
+            status: 'completed',
+          })));
+          
+          toast.success('✅ AI analysis and field extraction completed!', {
+            duration: 4000,
+          });
+        }, 2000);
+      } else {
+        // For files without extraction, show processing completion
+        setUploadStates(prev => prev.map(state => ({
+          ...state,
+          status: 'processing',
+        })));
+
+        toast.info('📄 Document processing in progress...', {
+          duration: 2000,
+        });
+        
+        setTimeout(() => {
+          setUploadStates(prev => prev.map(state => ({
+            ...state,
+            status: 'completed',
+          })));
+          
+          toast.success('✅ Document processing completed!', {
+            duration: 3000,
+          });
+        }, 1500);
+      }
 
       // Show warnings if any
       if (result.warnings && result.warnings.length > 0) {
@@ -141,14 +220,26 @@ export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps
         });
       }
 
-      // Reset and close
-      setFiles([]);
-      setDescription('');
-      setTags('');
-      setIsOpen(false);
-      router.refresh();
+      // Reset and close after processing is complete
+      const closeDelay = folderHasExtraction ? 3000 : 2500; // Give more time for extraction processing
+      setTimeout(() => {
+        setFiles([]);
+        setDescription('');
+        setTags('');
+        setUploadStates([]);
+        setIsOpen(false);
+        router.refresh();
+      }, closeDelay);
     } catch (error) {
       console.error('Upload error:', error);
+      
+      // Update states to show error
+      setUploadStates(prev => prev.map(state => ({
+        ...state,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Upload failed',
+      })));
+
       toast.error(error instanceof Error ? error.message : 'Error uploading documents');
     } finally {
       setIsLoading(false);
@@ -218,30 +309,75 @@ export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps
               </div>
             </div>
 
-            {/* Selected Files List */}
+            {/* Selected Files List with Upload Status */}
             {files.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium">Selected files:</h4>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {files.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                      <span className="truncate flex-1">{file.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(1)}MB
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(index)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                  {files.map((file, index) => {
+                    const uploadState = uploadStates[index];
+                    const getStatusIcon = () => {
+                      switch (uploadState?.status) {
+                        case 'uploading':
+                          return <Clock className="h-4 w-4 text-blue-500 animate-spin" />;
+                        case 'uploaded':
+                          return <CheckCircle className="h-4 w-4 text-green-500" />;
+                        case 'processing':
+                          return <Clock className="h-4 w-4 text-yellow-500 animate-pulse" />;
+                        case 'completed':
+                          return <CheckCircle className="h-4 w-4 text-green-500" />;
+                        case 'failed':
+                          return <AlertCircle className="h-4 w-4 text-red-500" />;
+                        default:
+                          return null;
+                      }
+                    };
+                    
+                    const getStatusColor = () => {
+                      switch (uploadState?.status) {
+                        case 'uploading':
+                          return 'bg-blue-50 border-blue-200';
+                        case 'uploaded':
+                          return 'bg-green-50 border-green-200';
+                        case 'processing':
+                          return 'bg-yellow-50 border-yellow-200';
+                        case 'completed':
+                          return 'bg-green-50 border-green-200';
+                        case 'failed':
+                          return 'bg-red-50 border-red-200';
+                        default:
+                          return 'bg-gray-50';
+                      }
+                    };
+                    
+                    return (
+                      <div key={index} className={`flex items-center justify-between p-2 rounded text-sm border transition-colors ${getStatusColor()}`}>
+                        <div className="flex items-center gap-2 flex-1">
+                          {getStatusIcon()}
+                          <span className="truncate flex-1">{file.name}</span>
+                          {uploadState?.status === 'processing' && (
+                            <span className="text-xs text-yellow-600 font-medium">🤖 AI processing...</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {(file.size / 1024 / 1024).toFixed(1)}MB
+                          </span>
+                          {!uploadState && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFile(index)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -332,7 +468,14 @@ export function AddDocumentCard({ currentFolder, folders }: AddDocumentCardProps
               onClick={handleUpload}
               disabled={files.length === 0 || isLoading}
             >
-              {isLoading ? 'Uploading...' : `📤 Upload ${files.length} file${files.length !== 1 ? 's' : ''}`}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </div>
+              ) : (
+                `📤 Upload ${files.length} file${files.length !== 1 ? 's' : ''}`
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -23,7 +24,7 @@ export async function GET(
     const { data: document, error: docError } = await supabase
       .from('files')
       .select('id, name, storage_path, file_type, organization_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', orgId)
       .eq('is_active', true)
       .single();

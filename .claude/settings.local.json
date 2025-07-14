@@ -25,7 +25,8 @@
       "Bash(psql:*)",
       "Bash(PGPASSWORD=postgres psql:*)",
       "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_install"
+      "mcp__playwright__browser_install",
+      "Bash(supabase status:*)"
     ],
     "deny": []
   },
