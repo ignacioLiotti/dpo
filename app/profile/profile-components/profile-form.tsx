@@ -3,7 +3,9 @@
 import React from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useAction } from 'next-safe-action/hooks';
-import type { Profile } from '@/types/supabase';
+import type { Database } from '@/supabase.types';
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

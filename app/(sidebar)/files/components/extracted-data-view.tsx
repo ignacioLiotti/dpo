@@ -1,106 +1,184 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Database, Download, Filter, RefreshCw } from 'lucide-react';
-import type { ObraDocument, Folder } from '../types';
+import { Database, Download, Filter, RefreshCw, Loader2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import type { ObraDocument, Folder, FolderFieldDefinition } from '../types';
+import { getFolderExtractedData } from '../actions/folder-extraction-actions';
 
 interface ExtractedDataViewProps {
   documents: ObraDocument[];
   currentFolder: Folder | null;
   extractedData?: any[];
+  processingCount?: number; // Add this prop
 }
 
-interface ExtractedField {
-  field_name: string;
-  field_label: string;
-  field_type: string;
-  value: any;
-  document_id: string;
-  document_name: string;
+interface GroupedExtractedData {
+  [file_id: string]: {
+    document_name: string;
+    file_id: string;
+    fields: {
+      id: string;
+      value: any;
+      field_definition_id: string;
+      order: number;
+    }[];
+  };
 }
 
-export function ExtractedDataView({ documents, currentFolder, extractedData = [] }: ExtractedDataViewProps) {
+export function ExtractedDataView({
+  documents,
+  currentFolder,
+  extractedData = [],
+  processingCount = 0
+}: ExtractedDataViewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldDefinitions, setFieldDefinitions] = useState<FolderFieldDefinition[]>([]);
+  const [realtimeExtractedData, setRealtimeExtractedData] = useState<any[]>(extractedData);
+  const [lastProcessingCount, setLastProcessingCount] = useState(processingCount);
+  const [autoRefreshing, setAutoRefreshing] = useState(false);
 
-  const refreshData = () => {
-    setLoading(true);
-    window.location.reload();
+  // Auto-refresh when processing completes
+  useEffect(() => {
+    // If processing count decreased (documents finished processing)
+    if (processingCount < lastProcessingCount && lastProcessingCount > 0) {
+      console.log('Processing completed, auto-refreshing extracted data...');
+      setAutoRefreshing(true);
+      refreshData();
+    }
+    setLastProcessingCount(processingCount);
+  }, [processingCount, lastProcessingCount]);
+
+  // Also refresh when documents prop changes (especially processing_status)
+  useEffect(() => {
+    const hasNewlyCompleted = documents.some(doc => {
+      // Check if any document just completed processing
+      return doc.processing_status === 'completed' &&
+        doc.folder_id === currentFolder?.id &&
+        !realtimeExtractedData.some(data => data.file_id === doc.id);
+    });
+
+    if (hasNewlyCompleted) {
+      console.log('Newly completed documents detected, refreshing...');
+      refreshData();
+    }
+  }, [documents, currentFolder, realtimeExtractedData]);
+
+  const refreshData = async () => {
+    if (!currentFolder) return;
+
+    try {
+      const extractedResult = await getFolderExtractedData(currentFolder.id);
+      setRealtimeExtractedData(extractedResult.data || []);
+      console.log('Extracted data refreshed:', extractedResult.data?.length || 0, 'records');
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching extracted data:', error);
+      setError('Failed to load extracted data');
+    } finally {
+      setLoading(false);
+      setAutoRefreshing(false);
+    }
   };
 
-  // Transform the extracted data for display
-  const transformedData = extractedData.flatMap(record => {
-    let extractedFields = {};
-    let documentName = 'Unknown Document';
-    let documentId = '';
+  const manualRefresh = async () => {
+    setLoading(true);
+    await refreshData();
+  };
 
-    // Handle different data structures
-    if (record.extracted_data) {
-      // This is the fallback format from file_analysis
-      extractedFields = record.extracted_data;
-      documentName = record.files?.name || record.obra_documents?.name || 'Unknown Document';
-      documentId = record.document_id || record.files?.id || '';
-    } else if (record.extracted_value) {
-      // This is the new format from extracted_data table
-      try {
-        extractedFields = JSON.parse(record.extracted_value);
-        documentId = record.file_id;
-        // Find the document name from the documents prop
-        const matchingDoc = documents.find(doc => doc.id === record.file_id);
-        documentName = matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`;
-      } catch (error) {
-        console.error('Error parsing extracted_value:', error);
-        return [];
-      }
+  // Fetch field definitions when currentFolder changes
+  useEffect(() => {
+    if (currentFolder?.extract_data) {
+      fetchFieldDefinitions();
     } else {
-      // Skip records without extractable data
-      return [];
+      setFieldDefinitions([]);
+    }
+  }, [currentFolder]);
+
+  const fetchFieldDefinitions = async () => {
+    if (!currentFolder) return;
+
+    try {
+      const { getFolderFieldDefinitions } = await import('../actions/folder-extraction-actions');
+      const result = await getFolderFieldDefinitions(currentFolder.id);
+      if (result.fields) {
+        const sortedFields = result.fields.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        setFieldDefinitions(sortedFields);
+      }
+    } catch (error) {
+      console.error('Error fetching field definitions:', error);
+      setFieldDefinitions([]);
+    }
+  };
+
+  // Group extracted data by file_id
+  const groupedData: GroupedExtractedData = realtimeExtractedData.reduce((acc, record) => {
+    if (!record.file_id || !record.extracted_value) return acc;
+
+    let parsedValue;
+    try {
+      parsedValue = JSON.parse(record.extracted_value);
+    } catch (error) {
+      console.error('Error parsing extracted_value:', error);
+      parsedValue = record.extracted_value;
     }
 
-    // Convert the fields to the expected format
-    return Object.entries(extractedFields).map(([fieldName, value]) => ({
-      field_name: fieldName,
-      field_label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      field_type: typeof value === 'number' ? 'number' :
-        typeof value === 'boolean' ? 'boolean' :
-          value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'date' : 'text',
-      value,
-      document_id: documentId,
-      document_name: documentName
-    }));
-  });
+    if (!acc[record.file_id]) {
+      const matchingDoc = documents.find(doc => doc.id === record.file_id);
+      acc[record.file_id] = {
+        document_name: matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`,
+        file_id: record.file_id,
+        fields: []
+      };
+    }
+
+    acc[record.file_id].fields.push({
+      id: record.id,
+      value: parsedValue,
+      field_definition_id: record.field_definition_id,
+      order: acc[record.file_id].fields.length
+    });
+
+    return acc;
+  }, {} as GroupedExtractedData);
+
+  // Include ALL documents in the folder
+  const documentsWithExtractedData = documents
+    .filter(doc => doc.folder_id === currentFolder?.id)
+    .map(doc => {
+      const extractedDoc = groupedData[doc.id];
+      return {
+        document_name: doc.name,
+        file_id: doc.id,
+        processing_status: doc.processing_status || 'unknown',
+        fields: extractedDoc?.fields || []
+      };
+    });
+
+  // Get sorted field headers based on field definitions
+  const fieldHeaders = fieldDefinitions.map(field => ({
+    id: field.id,
+    label: field.field_label,
+    type: field.field_type
+  }));
 
   const exportData = () => {
-    if (!transformedData.length) return;
+    if (!documentsWithExtractedData.length) return;
 
-    // Group data by document
-    const groupedData = transformedData.reduce((acc, field) => {
-      if (!acc[field.document_id]) {
-        acc[field.document_id] = {
-          document_name: field.document_name,
-          data: {}
-        };
-      }
-      acc[field.document_id].data[field.field_name] = field.value;
-      return acc;
-    }, {} as Record<string, { document_name: string; data: Record<string, any> }>);
-
-    // Convert to CSV
-    const headers = ['Document', ...Array.from(new Set(transformedData.map(f => f.field_label)))];
-    const rows = Object.values(groupedData).map(doc => [
+    const headers = ['Documento', ...fieldHeaders.map(header => header.label)];
+    const rows = documentsWithExtractedData.map(doc => [
       doc.document_name,
-      ...headers.slice(1).map(header => {
-        const fieldName = header.toLowerCase().replace(/ /g, '_');
-        return doc.data[fieldName] || '';
+      ...fieldHeaders.map(header => {
+        const field = doc.fields.find(f => f.field_definition_id === header.id);
+        return field ? String(field.value) : '';
       })
     ]);
 
     const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -110,70 +188,22 @@ export function ExtractedDataView({ documents, currentFolder, extractedData = []
     URL.revokeObjectURL(url);
   };
 
-  // Get unique field names for summary
-  const uniqueFields = Array.from(new Set(transformedData.map(f => f.field_name)));
-  const fieldSummary = uniqueFields.map(fieldName => {
-    const fields = transformedData.filter(f => f.field_name === fieldName);
-    const nonEmptyValues = fields.filter(f => f.value !== null && f.value !== '').length;
-    return {
-      name: fieldName,
-      label: fields[0]?.field_label || fieldName,
-      type: fields[0]?.field_type || 'text',
-      totalDocuments: fields.length,
-      filledDocuments: nonEmptyValues,
-      completionRate: fields.length > 0 ? Math.round((nonEmptyValues / fields.length) * 100) : 0
-    };
-  });
+  // Calculate statistics
+  const processingDocsCount = documentsWithExtractedData.filter(
+    doc => doc.processing_status === 'pending' || doc.processing_status === 'processing'
+  ).length;
 
-  // Group extracted data by document for table display
-  const documentsWithExtractedData = extractedData.filter(record => {
-    if (record.extracted_data && Object.keys(record.extracted_data).length > 0) {
-      return true;
-    }
-    if (record.extracted_value) {
-      try {
-        const parsed = JSON.parse(record.extracted_value);
-        return Object.keys(parsed).length > 0;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
-
-  // Helper function to get extracted fields from a record
-  const getExtractedFields = (record: any) => {
-    if (record.extracted_data) {
-      return record.extracted_data;
-    }
-    if (record.extracted_value) {
-      try {
-        return JSON.parse(record.extracted_value);
-      } catch {
-        return {};
-      }
-    }
-    return {};
-  };
-
-  // Helper function to get document name from a record
-  const getDocumentName = (record: any) => {
-    if (record.files?.name) return record.files.name;
-    if (record.obra_documents?.name) return record.obra_documents.name;
-    if (record.file_id) {
-      const matchingDoc = documents.find(doc => doc.id === record.file_id);
-      return matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`;
-    }
-    return 'Unknown Document';
-  };
+  const completedDocsCount = documentsWithExtractedData.filter(
+    doc => doc.fields.length > 0
+  ).length;
 
   if (!currentFolder) {
     return (
       <div className="text-center py-12">
         <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">Selecciona una carpeta</h3>
+        <h3 className="text-lg font-medium mb-2">Select a folder</h3>
         <p className="text-muted-foreground">
-          Los datos extraídos solo están disponibles cuando estás dentro de una carpeta con extracción habilitada.
+          Extracted data is only available when viewing a folder with extraction enabled.
         </p>
       </div>
     );
@@ -183,20 +213,20 @@ export function ExtractedDataView({ documents, currentFolder, extractedData = []
     return (
       <div className="text-center py-12">
         <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">Extracción no habilitada</h3>
+        <h3 className="text-lg font-medium mb-2">Extraction not enabled</h3>
         <p className="text-muted-foreground">
-          Esta carpeta no tiene la extracción de datos habilitada.
-          Configura la extracción en la configuración de la carpeta.
+          This folder does not have data extraction enabled.
+          Configure extraction in the folder settings.
         </p>
       </div>
     );
   }
 
-  if (loading) {
+  if (loading && !autoRefreshing) {
     return (
       <div className="text-center py-12">
         <RefreshCw className="mx-auto h-8 w-8 text-muted-foreground animate-spin mb-4" />
-        <p className="text-muted-foreground">Cargando datos extraídos...</p>
+        <p className="text-muted-foreground">Loading extracted data...</p>
       </div>
     );
   }
@@ -207,9 +237,9 @@ export function ExtractedDataView({ documents, currentFolder, extractedData = []
         <div className="text-red-500 mb-4">⚠️</div>
         <h3 className="text-lg font-medium mb-2">Error</h3>
         <p className="text-muted-foreground mb-4">{error}</p>
-        <Button onClick={refreshData} variant="outline" disabled={loading}>
+        <Button onClick={manualRefresh} variant="outline" disabled={loading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Reintentar
+          Retry
         </Button>
       </div>
     );
@@ -219,9 +249,9 @@ export function ExtractedDataView({ documents, currentFolder, extractedData = []
     return (
       <div className="text-center py-12">
         <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">No hay datos extraídos</h3>
+        <h3 className="text-lg font-medium mb-2">No extracted data</h3>
         <p className="text-muted-foreground">
-          Los documentos en esta carpeta aún no han sido procesados o no contienen datos extraídos.
+          No documents in this folder yet. Upload documents to see extracted data here.
         </p>
       </div>
     );
@@ -229,77 +259,75 @@ export function ExtractedDataView({ documents, currentFolder, extractedData = []
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-
-
-      {/* Field Summary */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Resumen de Campos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {fieldSummary.map((field) => (
-              <div key={field.name} className="p-3 border rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-sm">{field.label}</h4>
-                  <Badge variant="secondary" className="text-xs">
-                    {field.type}
-                  </Badge>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {field.filledDocuments}/{field.totalDocuments} documentos
-                </div>
-                <div className="w-full bg-muted rounded-full h-2 mt-2">
-                  <div
-                    className="bg-primary h-2 rounded-full"
-                    style={{ width: `${field.completionRate}%` }}
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {field.completionRate}% completado
-                </div>
-              </div>
-            ))}
+      {/* Status Bar */}
+      {/* {(processingDocsCount > 0 || autoRefreshing) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            <span className="text-sm text-blue-800">
+              {autoRefreshing
+                ? 'Updating extracted data...'
+                : `${processingDocsCount} document${processingDocsCount !== 1 ? 's' : ''} still processing`
+              }
+            </span>
           </div>
-        </CardContent>
-      </Card> */}
+          {!autoRefreshing && (
+            <Badge variant="outline" className="text-xs">
+              Auto-refresh enabled
+            </Badge>
+          )}
+        </div>
+      )} */}
 
       {/* Data Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Datos por Documento</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Documento</TableHead>
-                  {uniqueFields.map(fieldName => (
-                    <TableHead key={fieldName}>
-                      {fieldName?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  <TableHead>Document</TableHead>
+                  {/* <TableHead>Status</TableHead> */}
+                  {fieldHeaders.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.label}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {documentsWithExtractedData.map(record => (
-                  <TableRow key={record.document_id || record.file_id || record.id}>
+                {documentsWithExtractedData.map((document, index) => (
+                  <TableRow key={document.file_id}>
                     <TableCell className="font-medium">
-                      <div className="max-w-[200px] truncate" title={getDocumentName(record)}>
-                        {getDocumentName(record)}
+                      <div className="max-w-[200px] truncate" title={document.document_name}>
+                        {document.document_name}
                       </div>
                     </TableCell>
-                    {uniqueFields.map(fieldName => {
-                      const extractedFields = getExtractedFields(record);
-                      const value = extractedFields[fieldName];
+                    {/* <TableCell>
+                      <ProcessingStatusIndicator status={document.processing_status} />
+                    </TableCell> */}
+                    {fieldHeaders.map((header) => {
+                      const field = document.fields.find(f => f.field_definition_id === header.id);
+
+                      // Show loading indicator if document is being processed
+                      if (document.processing_status === 'pending' || document.processing_status === 'processing') {
+                        return (
+                          <TableCell key={header.id} className='overflow-hidden max-w-[200px] py-0'>
+                            <div className='relative max-w-[180px] overflow-hidden h-[25px] rounded-md'>
+                              <div className="w-[800px] h-full ml-[-150px] bg-[repeating-linear-gradient(-60deg,#dbdbdb,#f9f9f9_90px,#dbdbdb_180px)] text-transparent animate-bg-pulse animate-bg-slide "> text</div>
+                            </div>
+                          </TableCell>
+                        );
+                      }
+
                       return (
-                        <TableCell key={fieldName}>
-                          {value !== null && value !== undefined && value !== '' ? (
+                        <TableCell key={header.id}>
+                          {field && field.value !== null && field.value !== undefined && field.value !== '' ? (
                             <span className="text-sm">
-                              {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : String(value)}
+                              {typeof field.value === 'boolean' ? (field.value ? 'Yes' : 'No') : String(field.value)}
                             </span>
+                          ) : document.processing_status === 'failed' ? (
+                            <span className="text-red-500 text-sm">Error</span>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
@@ -313,18 +341,68 @@ export function ExtractedDataView({ documents, currentFolder, extractedData = []
           </div>
         </CardContent>
       </Card>
+
+      {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          <Button onClick={refreshData} variant="outline" size="sm" disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
+          <Button
+            onClick={manualRefresh}
+            variant="outline"
+            size="sm"
+            disabled={loading || autoRefreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading || autoRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
           <Button onClick={exportData} variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
-            Exportar CSV
+            Export CSV
           </Button>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {completedDocsCount} of {documentsWithExtractedData.length} document{documentsWithExtractedData.length !== 1 ? 's' : ''} with extracted data
         </div>
       </div>
     </div>
   );
+}
+
+function ProcessingStatusIndicator({ status }: { status: string }) {
+  switch (status) {
+    case 'pending':
+      return (
+        <div className="flex items-center gap-2">
+          <Clock className="h-3 w-3 text-yellow-500" />
+          <span className="text-xs text-yellow-600">Queued</span>
+        </div>
+      );
+    case 'processing':
+      return (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+          <span className="text-xs text-blue-600">Processing</span>
+        </div>
+      );
+    case 'completed':
+      return (
+        <div className="flex items-center gap-2">
+          <CheckCircle className="h-3 w-3 text-green-500" />
+          <span className="text-xs text-green-600">Complete</span>
+        </div>
+      );
+    case 'failed':
+      return (
+        <div className="flex items-center gap-2">
+          <XCircle className="h-3 w-3 text-red-500" />
+          <span className="text-xs text-red-600">Failed</span>
+        </div>
+      );
+    default:
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-gray-400" />
+          <span className="text-xs text-gray-600">Unknown</span>
+        </div>
+      );
+  }
 }

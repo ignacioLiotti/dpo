@@ -6,10 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Enhanced logging function
+// Simple logging function
 function log(level: string, message: string, data?: any) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [${level}] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+  console.log(`[${level}] ${message}`, data);
 }
 
 interface DocumentProcessingRequest {
@@ -21,8 +20,6 @@ interface DocumentProcessingRequest {
 }
 
 async function processSingleDocument(supabase: any, document_id: string, processing_type: string, openaiApiKey: string) {
-  log('INFO', `Starting document processing`, { document_id, processing_type });
-
   // Get document from database with folder information
   const { data: document, error: docError } = await supabase
     .from('files')
@@ -42,7 +39,6 @@ async function processSingleDocument(supabase: any, document_id: string, process
     .single()
 
   if (docError || !document) {
-    log('ERROR', 'Document not found', { document_id, error: docError });
     throw new Error('Document not found')
   }
 
@@ -50,13 +46,6 @@ async function processSingleDocument(supabase: any, document_id: string, process
   const folderAssignment = document.file_folder_assignments?.[0];
   const folderData = folderAssignment?.folder;
   const hasExtraction = folderData?.extract_data || false;
-  
-  log('INFO', 'Document context', {
-    document_name: document.name,
-    folder_name: folderData?.name,
-    has_extraction: hasExtraction,
-    processing_type
-  });
 
   // Update status to processing
   await supabase
@@ -73,11 +62,8 @@ async function processSingleDocument(supabase: any, document_id: string, process
     .createSignedUrl(document.storage_path, 3600);
 
   if (urlError || !signedUrlData) {
-    log('ERROR', 'Failed to generate signed URL', { document_id, error: urlError });
     throw new Error('Failed to generate document URL');
   }
-
-  log('INFO', 'Generated signed URL for processing', { document_id, url_length: signedUrlData.signedUrl.length });
 
   let analysisResult = {
     ocr_text: '',
@@ -301,7 +287,7 @@ Field names: ${fieldDefinitions.map(f => f.field_name).join(', ')}`;
     }
 
     // Update document with AI results
-    await supabase
+    const { error: updateError } = await supabase
       .from('files')
       .update({
         description: analysisResult.ai_description,
@@ -311,6 +297,14 @@ Field names: ${fieldDefinitions.map(f => f.field_name).join(', ')}`;
         updated_at: new Date().toISOString()
       })
       .eq('id', document_id)
+
+    if (updateError) {
+      log('ERROR', 'Failed to update document status to completed', {
+        document_id,
+        error: updateError.message
+      });
+      throw new Error(`Failed to update document status: ${updateError.message}`);
+    }
 
     log('INFO', 'Document processing completed successfully', {
       document_id,
@@ -331,13 +325,20 @@ Field names: ${fieldDefinitions.map(f => f.field_name).join(', ')}`;
     });
     
     // Update status to failed
-    await supabase
+    const { error: failureUpdateError } = await supabase
       .from('files')
       .update({ 
         processing_status: 'failed',
         updated_at: new Date().toISOString()
       })
       .eq('id', document_id)
+
+    if (failureUpdateError) {
+      log('ERROR', 'Failed to update document status to failed', {
+        document_id,
+        error: failureUpdateError.message
+      });
+    }
 
     throw processingError
   }

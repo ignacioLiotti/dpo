@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createSafeActionClient } from "next-safe-action";
-import { createClient } from "@/supabase/server";
+import { createServerSupabaseClient } from "@/app/auth/server-utils";
 import type { User } from "@supabase/supabase-js"; // Import User type
 import type { UserWithRole } from "@/app/(admin)/users/user-components/user-role-manager"; // Adjust path if needed
 
@@ -19,7 +19,7 @@ export interface ActionResponse<T = undefined> {
 // Helper to check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
 	// Assuming createClient might be async and returns the client instance
-	const supabase = await createClient();
+	const supabase = await createServerSupabaseClient();
 	const { data: profile, error } = await supabase
 		.from("profiles")
 		.select("role")
@@ -41,7 +41,7 @@ export const getUsersWithRolesAndEmails = actionClient
 	.use(async ({ next }) => {
 		// Use middleware chaining
 		// Assuming createClient might be async and returns the client instance
-		const supabase = await createClient();
+		const supabase = await createServerSupabaseClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
@@ -61,7 +61,7 @@ export const getUsersWithRolesAndEmails = actionClient
 	.action(async (): Promise<ActionResponse<UserWithRole[]>> => {
 		try {
 			// Assuming createAdminClient/createClient return the client directly or are awaited
-			const supabase = await createClient();
+			const supabase = await createServerSupabaseClient();
 
 			// 1. Fetch profiles
 			const { data: profilesData, error: profilesError } = await supabase

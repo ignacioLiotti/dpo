@@ -1,12 +1,12 @@
 "use server";
 
-import { createClient } from "@/supabase/server";
+import { createServerSupabaseClient } from "@/app/auth/server-utils";
 import { revalidatePath } from "next/cache";
-import type { OrganizationInsert } from "@/types/organizations";
+import type { OrganizationInsert } from "@/app/auth/types";
 
 export async function createOrganizationAction(data: OrganizationInsert) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     
     // Verify authentication
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -28,10 +28,37 @@ export async function createOrganizationAction(data: OrganizationInsert) {
 
     console.log('Server: Creating organization for user:', user.id);
 
-    // Create the organization
+    // Generate slug from name if not provided
+    let slug = data.slug || data.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    // Ensure slug uniqueness by appending a number if needed
+    let slugSuffix = 0;
+    let finalSlug = slug;
+    
+    while (true) {
+      const { data: existing } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('slug', finalSlug)
+        .single();
+        
+      if (!existing) break;
+      
+      slugSuffix++;
+      finalSlug = `${slug}-${slugSuffix}`;
+    }
+
+    // Create the organization with generated slug
     const { data: newOrg, error } = await supabase
       .from('organizations')
-      .insert(data)
+      .insert({
+        ...data,
+        slug: finalSlug,
+      })
       .select()
       .single();
 

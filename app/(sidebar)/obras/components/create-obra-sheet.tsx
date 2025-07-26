@@ -39,7 +39,7 @@ import { cn } from '@/utils/utils';
 import { CustomDateField } from './custom-date-field';
 import { AnimatedTextarea } from '@/components/ui/animated-textarea';
 import { Separator } from '@/components/ui/separator';
-import { useCurrentOrganization } from '@/hooks/useCurrentOrganization';
+import { useCurrentOrganization } from '@/app/auth';
 
 interface CreateObraSheetProps {
   isOpen: boolean;
@@ -47,7 +47,8 @@ interface CreateObraSheetProps {
 }
 
 export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
-  const { organizationId, hasOrganization } = useCurrentOrganization();
+  const { organization, organizationId } = useCurrentOrganization();
+  const hasOrganization = !!organization;
   
   // Initialize form first
   const form = useForm({
@@ -58,8 +59,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       calle: 'Calle Falsa 123',
       ubicacion_google_maps: 'https://maps.google.com/?q=-31.4135,-64.181',
       presupuesto: 1000000,
-      // TODO: Replace with actual user ID logic
-      user_id: '00000000-0000-0000-0000-000000000000',
+      // user_id is automatically set by the server action
       descripcion: 'Esta es una descripción de prueba para la obra generada automáticamente.',
       fecha_inicio: new Date(),
       // Calculate fecha_fin based on fecha_inicio and duracion for consistency
@@ -67,7 +67,7 @@ export function CreateObraSheet({ isOpen, onClose }: CreateObraSheetProps) {
       fecha_fin: null as Date | null,
       estado: Constants.public.Enums.obra_estado[0], // Default to first state (PLANIFICADA)
       reparticion_id: REPARTICIONES_ARRAY[0]?.id || 1,
-      area_id: 1, // Setting to a valid area_id
+      area_id: AREAS_ARRAY[0]?.id || 1,
       tipo_obra_id: TIPOS_OBRA_ARRAY[0]?.id || 1,
       presupuesto_oficial: 1200000,
       fecha_basico: new Date(),

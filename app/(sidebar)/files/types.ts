@@ -6,9 +6,12 @@ export interface ObraDocument {
   updated_at: string;
   organization_id: string;
   name: string;
-  type: string;
+  type?: string; // For backward compatibility
+  file_type?: string; // Primary file type property from database
   size: number;
+  file_size?: number; // Alternative size property from database
   path: string[];
+  storage_path?: string; // Storage path from database
   url?: string;
   description?: string;
   category?: string;
@@ -18,6 +21,9 @@ export interface ObraDocument {
   checksum?: string;
   user_id: string;
   folder_id?: string;
+  folder_name?: string;
+  folder_color?: string;
+  folder_icon?: string;
   ocr_content?: string;
   extracted_data?: Record<string, any>;
   processing_status?: 'pending' | 'processing' | 'completed' | 'failed';

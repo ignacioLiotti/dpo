@@ -1,4 +1,4 @@
-import { createClient } from "@/supabase/server";
+import { createServerSupabaseClient, getUserOrganization } from "@/app/auth/server-utils";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -11,8 +11,16 @@ export async function GET(request: Request) {
 	const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
 
 	if (code) {
-		const supabase = await createClient();
+		const supabase = await createServerSupabaseClient();
 		await supabase.auth.exchangeCodeForSession(code);
+		
+		// Check if user needs organization setup
+		const { user, organizationId } = await getUserOrganization(supabase);
+		
+		// If user is authenticated but has no organization, redirect to setup
+		if (user && !organizationId && !redirectTo) {
+			return NextResponse.redirect(`${origin}/organization-setup`);
+		}
 	}
 
 	if (redirectTo) {

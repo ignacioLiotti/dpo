@@ -120,6 +120,34 @@ CREATE TABLE public.tipos_obra (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Seed data for areas
+INSERT INTO public.areas (id, name) VALUES
+  (1, 'Construcciones'),
+  (2, 'Proyectos'),
+  (3, 'Inspecciones'),
+  (4, 'Administración');
+
+-- Seed data for reparticiones
+INSERT INTO public.reparticiones (id, name) VALUES
+  (1, 'Dirección de Arquitectura'),
+  (2, 'Dirección de Vivienda'),
+  (3, 'Dirección de Vialidad'),
+  (4, 'Dirección de Hidráulica');
+
+-- Seed data for tipos_obra
+INSERT INTO public.tipos_obra (id, name) VALUES
+  (1, 'Obra Nueva'),
+  (2, 'Refacción'),
+  (3, 'Ampliación'),
+  (4, 'Restauración'),
+  (5, 'Infraestructura Vial'),
+  (6, 'Infraestructura Hidráulica');
+
+-- Reset sequences to start after our seeded values
+SELECT setval('areas_id_seq', 4);
+SELECT setval('reparticiones_id_seq', 4);
+SELECT setval('tipos_obra_id_seq', 6);
+
 -- Main obras table
 CREATE TYPE obra_estado AS ENUM ('PLANIFICADA', 'EN_EJECUCION', 'FINALIZADA', 'SUSPENDIDA', 'CANCELADA');
 CREATE TYPE obra_etapa AS ENUM ('LICITACION', 'CONTRATACION', 'EJECUCION', 'FINALIZACION');
@@ -270,6 +298,45 @@ CREATE INDEX profiles_organization_id_idx ON public.profiles(organization_id);
 CREATE INDEX document_examples_organization_id_idx ON public.document_examples(organization_id);
 CREATE INDEX document_examples_user_id_idx ON public.document_examples(user_id);
 
+-- Example Documents table for CRUD demonstration
+CREATE TABLE IF NOT EXISTS public.example_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    title TEXT NOT NULL,
+    description TEXT,
+    content TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+    category TEXT NOT NULL,
+    tags TEXT[] DEFAULT '{}',
+    author_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+    due_date TIMESTAMPTZ,
+    metadata JSONB DEFAULT '{}'::JSONB
+);
+
+-- Enable RLS for example_documents
+ALTER TABLE public.example_documents ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for example_documents
+CREATE POLICY "Anyone can view example documents" ON public.example_documents
+    FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own example documents" ON public.example_documents
+    FOR INSERT WITH CHECK (auth.uid() = author_id);
+
+CREATE POLICY "Users can update their own example documents" ON public.example_documents
+    FOR UPDATE USING (auth.uid() = author_id);
+
+CREATE POLICY "Users can delete their own example documents" ON public.example_documents
+    FOR DELETE USING (auth.uid() = author_id);
+
+-- Indexes for example_documents
+CREATE INDEX example_documents_author_id_idx ON public.example_documents(author_id);
+CREATE INDEX example_documents_status_idx ON public.example_documents(status);
+CREATE INDEX example_documents_category_idx ON public.example_documents(category);
+CREATE INDEX example_documents_created_at_idx ON public.example_documents(created_at);
+
 -- Obras
 CREATE INDEX obras_organization_id_idx ON public.obras(organization_id);
 CREATE INDEX obras_user_id_idx ON public.obras(user_id);
@@ -296,6 +363,10 @@ CREATE INDEX extracted_data_folder_id_idx ON public.extracted_data(folder_id);
 
 CREATE TRIGGER update_organizations_updated_at
     BEFORE UPDATE ON public.organizations
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER update_example_documents_updated_at
+    BEFORE UPDATE ON public.example_documents
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 CREATE TRIGGER update_organization_memberships_updated_at

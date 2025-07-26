@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { useUserRole } from '@/hooks/useUserRole';
-import { RoleGuard } from '@/components/auth/role-guard';
+import { useUserRole } from '@/app/auth';
+import { RoleGuard } from '@/app/auth/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

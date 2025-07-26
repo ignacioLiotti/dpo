@@ -2,7 +2,7 @@ import { z } from "zod";
 // Assuming obraEstadoEnum will be available from this path after schema an obra file is created/updated
 // If lib/schemas/obra-schemas.ts is not created yet, this might cause a temporary issue.
 import { obraEstadoEnum } from "./schema";
-import type { Database } from "@/types/supabase";
+import type { Database } from "@/supabase.types";
 
 export type Obra = Database["public"]["Tables"]["obras"]["Row"];
 export type ObraInsert = Database["public"]["Tables"]["obras"]["Insert"];

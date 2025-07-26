@@ -1,20 +1,10 @@
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/server-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's organization
-    const { data: orgId, error: orgError } = await supabase.rpc('get_user_organization_id');
-    if (orgError || !orgId) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-    }
+    const supabase = await createServerSupabaseClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     // Check processing queue
     const { data: queueData, error: queueError } = await supabase
@@ -34,7 +24,7 @@ export async function GET(request: NextRequest) {
           processing_status
         )
       `)
-      .eq('organization_id', orgId)
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -47,7 +37,7 @@ export async function GET(request: NextRequest) {
     const { data: filesData, error: filesError } = await supabase
       .from('files')
       .select('id, name, processing_status, created_at')
-      .eq('organization_id', orgId)
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -70,7 +60,7 @@ export async function GET(request: NextRequest) {
         queue: queueData || [],
         recentFiles: filesData || [],
         pendingJobs: pendingJobs || [],
-        organization_id: orgId,
+        organization_id: organizationId,
         user_id: user.id
       }
     });
@@ -86,18 +76,8 @@ export async function POST(request: NextRequest) {
   try {
     const { documentId, processingType = 'basic' } = await request.json();
     
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's organization
-    const { data: orgId, error: orgError } = await supabase.rpc('get_user_organization_id');
-    if (orgError || !orgId) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-    }
+    const supabase = await createServerSupabaseClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     if (!documentId) {
       return NextResponse.json({ error: 'Document ID required' }, { status: 400 });

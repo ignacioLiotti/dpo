@@ -20,6 +20,7 @@
 import type { Obra } from './types';
 import { ObrasDashboard } from './components/obras-page-client';
 import { getAllObrasAction } from './actions/get-obra-action';
+import { ObraErrorBoundary } from '@/components/error-boundary';
 import { Suspense } from 'react';
 
 // Loading component for the dashboard
@@ -53,9 +54,11 @@ function DashboardSkeleton() {
 // This page remains a Server Component  
 export default async function ObrasPage() {
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <ObrasDashboard initialObras={[]} />
-    </Suspense>
+    <ObraErrorBoundary>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <ObrasDashboard initialObras={[]} />
+      </Suspense>
+    </ObraErrorBoundary>
   );
 }
 

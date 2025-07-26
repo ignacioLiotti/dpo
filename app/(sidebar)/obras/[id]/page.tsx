@@ -43,7 +43,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ObraFilesClientWrapper } from '@/app/(sidebar)/files/components/client-wrapper';
 import { cn } from '@/utils/utils';
-import { getObraDocumentsWithFolders, getObraFolders } from '@/lib/actions/document-actions';
+import { getObraDocumentsWithFolders, getObraFolders } from '@/app/(sidebar)/files/actions/document-actions';
 
 interface ObraDetailsPageProps {
   params: Promise<{ id: string }>;

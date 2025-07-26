@@ -1,9 +1,9 @@
 'use server';
 
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient } from '@/app/auth/server-utils';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { extractStructuredData } from '../services/document-processor';
+// Removed import - extractStructuredData is now defined below
 
 // Default field definitions for invoice/document extraction
 const DEFAULT_FIELD_DEFINITIONS = [
@@ -84,7 +84,7 @@ const extractDocumentDataSchema = z.object({
 // Create default field definitions for a folder
 export async function createDefaultFieldDefinitions(folderId: string) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -165,7 +165,7 @@ export async function createDefaultFieldDefinitions(folderId: string) {
 // Get field definitions for a folder
 export async function getFolderFieldDefinitions(folderId: string) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -194,7 +194,7 @@ export async function getFolderFieldDefinitions(folderId: string) {
 // Create field definition for folder
 export async function createFolderFieldDefinition(formData: FormData) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -258,7 +258,7 @@ export async function createFolderFieldDefinition(formData: FormData) {
 // Toggle extraction feature for folder
 export async function toggleFolderExtraction(formData: FormData) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -301,7 +301,7 @@ export async function toggleFolderExtraction(formData: FormData) {
 // Extract structured data from document
 export async function extractDocumentData(formData: FormData) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -385,7 +385,7 @@ export async function extractDocumentData(formData: FormData) {
 // Apply template to folder (predefined field sets)
 export async function applyExtractionTemplate(formData: FormData) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -574,7 +574,7 @@ export async function applyExtractionTemplate(formData: FormData) {
 // Get extracted data for documents in a folder
 export async function getFolderExtractedData(folderId: string) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -683,3 +683,382 @@ export async function getFolderExtractedData(folderId: string) {
     return { data: [], error: 'Failed to fetch extracted data' };
   }
 }
+
+// Update field definition
+export async function updateFolderFieldDefinition(formData: FormData) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const fieldId = formData.get('field_id') as string;
+    const folderId = formData.get('folder_id') as string;
+    const fieldName = formData.get('field_name') as string;
+    const fieldType = formData.get('field_type') as string;
+    const fieldLabel = formData.get('field_label') as string;
+    const fieldDescription = formData.get('field_description') as string;
+    const extractionMethod = formData.get('extraction_method') as string;
+    const extractionPattern = formData.get('extraction_pattern') as string;
+    const isRequired = formData.get('is_required') === 'true';
+    const defaultValue = formData.get('default_value') as string;
+
+    // Validate the data
+    const validatedData = createFieldDefinitionSchema.parse({
+      folder_id: folderId,
+      field_name: fieldName,
+      field_type: fieldType,
+      field_label: fieldLabel,
+      field_description: fieldDescription || undefined,
+      extraction_method: extractionMethod,
+      extraction_pattern: extractionPattern,
+      is_required: isRequired,
+      default_value: defaultValue || undefined,
+    });
+
+    // Check if field exists and user owns it
+    const { data: existingField, error: checkError } = await supabase
+      .from('folder_field_definitions')
+      .select('id, folder_id, folders!inner(user_id)')
+      .eq('id', fieldId)
+      .eq('folders.user_id', user.id)
+      .single();
+
+    if (checkError || !existingField) {
+      throw new Error('Field not found or access denied');
+    }
+
+    // Update field definition
+    const { data: updatedField, error: updateError } = await supabase
+      .from('folder_field_definitions')
+      .update({
+        field_name: validatedData.field_name,
+        field_type: validatedData.field_type,
+        field_label: validatedData.field_label,
+        field_description: validatedData.field_description,
+        extraction_method: validatedData.extraction_method,
+        extraction_pattern: validatedData.extraction_pattern,
+        is_required: validatedData.is_required,
+        default_value: validatedData.default_value,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', fieldId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating field definition:', updateError);
+      throw new Error('Failed to update field definition');
+    }
+
+    revalidatePath('/files');
+    return { field: updatedField, error: null };
+  } catch (error) {
+    console.error('Error in updateFolderFieldDefinition:', error);
+    return { field: null, error: error instanceof Error ? error.message : 'Failed to update field definition' };
+  }
+}
+
+// Delete field definition
+export async function deleteFolderFieldDefinition(fieldId: string) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check if field exists and user owns it
+    const { data: existingField, error: checkError } = await supabase
+      .from('folder_field_definitions')
+      .select('id, folder_id, folders!inner(user_id)')
+      .eq('id', fieldId)
+      .eq('folders.user_id', user.id)
+      .single();
+
+    if (checkError || !existingField) {
+      throw new Error('Field not found or access denied');
+    }
+
+    // Delete field definition
+    const { error: deleteError } = await supabase
+      .from('folder_field_definitions')
+      .delete()
+      .eq('id', fieldId);
+
+    if (deleteError) {
+      console.error('Error deleting field definition:', deleteError);
+      throw new Error('Failed to delete field definition');
+    }
+
+    revalidatePath('/files');
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error in deleteFolderFieldDefinition:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete field definition' };
+  }
+}
+
+// Trigger background processing for all documents in a folder
+export async function triggerBackgroundProcessing(folderId: string) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get all documents in the folder
+    const { data: folderAssignments, error: documentsError } = await supabase
+      .from('file_folder_assignments')
+      .select('file_id, files!inner(id, name)')
+      .eq('folder_id', folderId)
+      .eq('files.user_id', user.id);
+
+    if (documentsError) {
+      console.error('Error fetching folder documents:', documentsError);
+      return { success: false, error: 'Failed to fetch folder documents' };
+    }
+
+    if (!folderAssignments || folderAssignments.length === 0) {
+      return { success: true, message: 'No documents to process' };
+    }
+
+    // Update processing status to pending for all documents in the folder
+    const documentIds = folderAssignments.map(assignment => assignment.file_id);
+    
+    const { error: updateError } = await supabase
+      .from('files')
+      .update({ 
+        processing_status: 'pending',
+        processing_metadata: { 
+          queued_at: new Date().toISOString(),
+          trigger: 'field_definition_change'
+        }
+      })
+      .in('id', documentIds);
+
+    if (updateError) {
+      console.error('Error updating document processing status:', updateError);
+      return { success: false, error: 'Failed to queue documents for processing' };
+    }
+
+    // Call the webhook/background processing endpoint
+    try {
+      const response = await fetch('/api/debug/process-all-pending', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ folderId })
+      });
+
+      if (!response.ok) {
+        console.warn('Background processing endpoint returned error, but documents are queued');
+      }
+    } catch (webhookError) {
+      console.warn('Failed to trigger immediate processing, but documents are queued:', webhookError);
+    }
+
+    revalidatePath('/files');
+    return { 
+      success: true, 
+      message: `Queued ${documentIds.length} documents for background processing` 
+    };
+  } catch (error) {
+    console.error('Error in triggerBackgroundProcessing:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to trigger background processing' };
+  }
+}
+
+// ============================================================================
+// DOCUMENT PROCESSING FUNCTIONS (Moved from document-processor.ts)
+// ============================================================================
+
+type FieldDefinition = {
+  field_name: string;
+  field_type: string;
+  field_label: string;
+  extraction_method: string;
+  extraction_pattern: string;
+  default_value?: any;
+  is_required?: boolean;
+};
+
+async function extractStructuredData(
+  ocrText: string,
+  fieldDefinitions: FieldDefinition[],
+  fileName: string,
+  fileType: string,
+  documentUrl?: string
+): Promise<Record<string, any>> {
+  // Removed specialized invoice processor - using regular AI extraction for all documents
+
+  // Use AI extraction if we have OCR text, otherwise use regex
+  console.log('ocrText', ocrText);
+
+  return ocrText && ocrText.length > 10
+    ? await extractStructuredDataWithAI(ocrText, fieldDefinitions, fileName)
+    : await extractStructuredDataWithRegex(fileName, fieldDefinitions);
+}
+
+async function extractStructuredDataWithAI(
+  ocrText: string,
+  fieldDefinitions: FieldDefinition[],
+  fileName: string
+): Promise<Record<string, any>> {
+  const fieldsDescription = fieldDefinitions.map(field => 
+    `"${field.field_name}" (${field.field_type}): ${field.field_label} - ${field.extraction_pattern}`
+  ).join('\n');
+
+  console.log('fieldsDescription', fieldsDescription);
+  
+  const prompt = `Extract specific data fields from this document content.
+
+  Document: ${fileName}
+  Content:
+  ${ocrText.substring(0, 3000)}
+
+  Extract these fields:
+  ${fieldsDescription}
+
+  Respond with a JSON object containing only the extracted values. Use null for fields that cannot be found. For dates, use YYYY-MM-DD format. For numbers, use numeric values without currency symbols.
+
+  Example format:
+  {
+    "field_name1": "extracted_value",
+    "field_name2": 123.45,
+    "field_name3": "2024-01-15",
+    "field_name4": null
+  }`;
+
+  try {
+    const { openai } = await import('@ai-sdk/openai');
+    const { generateText } = await import('ai');
+    
+    const { text } = await generateText({
+      model: openai('gpt-4o-mini'),
+      prompt,
+      temperature: 0.1,
+    });
+
+    const cleanedText = text.replace(/```json\s*|\s*```/g, '').trim();
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    const finalText = jsonMatch ? jsonMatch[0] : cleanedText;
+    
+    const aiExtracted = JSON.parse(finalText);
+    const extractedData: Record<string, any> = {};
+    
+    for (const field of fieldDefinitions) {
+      let value = aiExtracted[field.field_name];
+      
+      if (value === null || value === undefined) {
+        value = field.default_value || null;
+      }
+      
+      // Type conversion
+      if (value !== null) {
+        switch (field.field_type) {
+          case 'number':
+          case 'currency':
+            value = parseFloat(value) || null;
+            break;
+          case 'boolean':
+            value = Boolean(value);
+            break;
+          case 'date':
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+              value = value;
+            } else {
+              value = null;
+            }
+            break;
+          default:
+            value = String(value);
+        }
+      }
+      
+      extractedData[field.field_name] = value;
+    }
+    
+    return extractedData;
+  } catch (error) {
+    // Return default values on failure
+    const extractedData: Record<string, any> = {};
+    for (const field of fieldDefinitions) {
+      extractedData[field.field_name] = field.default_value || null;
+    }
+    return extractedData;
+  }
+}
+
+async function extractStructuredDataWithRegex(
+  fileName: string,
+  fieldDefinitions: FieldDefinition[]
+): Promise<Record<string, any>> {
+  const extractedData: Record<string, any> = {};
+  const baseName = fileName.replace(/\.[^/.]+$/, '');
+  
+  for (const field of fieldDefinitions) {
+    let value = null;
+    
+    if (field.extraction_method === 'regex' || field.extraction_method === 'hybrid') {
+      try {
+        const regex = new RegExp(field.extraction_pattern, 'gi');
+        const matches = baseName.match(regex);
+        
+        if (matches && matches.length > 0) {
+          let match = matches[0];
+          
+          switch (field.field_type) {
+            case 'number':
+            case 'currency':
+              const numberMatch = match.match(/[\d.,]+/);
+              value = numberMatch ? parseFloat(numberMatch[0].replace(',', '.')) : null;
+              break;
+            case 'date':
+              const datePatterns = [
+                /(\d{4}[-_]\d{2}[-_]\d{2})/,
+                /(\d{2}[-_]\d{2}[-_]\d{4})/,
+              ];
+              for (const pattern of datePatterns) {
+                const dateMatch = match.match(pattern);
+                if (dateMatch) {
+                  const datePart = dateMatch[1];
+                  if (datePart.match(/^\d{2}[-_]\d{2}[-_]\d{4}$/)) {
+                    const parts = datePart.split(/[-_]/);
+                    value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                  } else {
+                    value = datePart.replace('_', '-');
+                  }
+                  break;
+                }
+              }
+              break;
+            case 'boolean':
+              value = /true|si|yes|1/gi.test(match);
+              break;
+            default:
+              value = match.trim();
+          }
+        }
+      } catch (error) {
+        // Continue with default value
+      }
+    }
+    
+    if (value === null && field.default_value) {
+      value = field.default_value;
+    }
+    
+    extractedData[field.field_name] = value;
+  }
+  
+  return extractedData;
+}
+
+// Removed invoice-specific helper functions - using regular AI extraction

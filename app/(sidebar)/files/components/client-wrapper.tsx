@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createBrowserSupabaseClient } from '@/app/auth/utils';
+
+const supabase = createBrowserSupabaseClient();
 import { DocumentTableView } from './document-table-view';
 import { FolderGrid } from './folders/folder-grid';
 import { DocumentGrid } from './documents/document-grid';
 import { DocumentTreeView } from './document-tree-view';
 import { ViewToggle } from './view-toggle';
 import { ExtractedDataView } from './extracted-data-view';
-import { Search, ArrowLeft, FileText, FolderOpen, Home, ChevronRight, Bot, Settings } from 'lucide-react';
+import { Search, ArrowLeft, FileText, FolderOpen, Home, ChevronRight, Bot, Settings, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +21,7 @@ import type { ObraDocument, Folder } from '../types';
 import FolderFront from '@/components/ui/FolderFront';
 import { cn } from '@/utils/utils';
 import { FolderSettingsDialog } from './folders/folder-settings-dialog';
+import { useDocumentStatusPolling } from '../hooks/use-document-status-polling';
 
 interface ObraFilesClientWrapperProps {
   searchParams: {
@@ -44,6 +48,13 @@ export function ObraFilesClientWrapper({
   const [folderFieldCount, setFolderFieldCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const baseUrl = '/files';
+
+  // Use the polling hook
+  const { refreshAll, processingCount } = useDocumentStatusPolling({
+    documents,
+    currentFolder,
+    pollingInterval: 3000 // Check every 3 seconds
+  });
 
   // Build query params helper
   const buildQuery = (updates: Record<string, string | undefined>) => {
@@ -162,6 +173,12 @@ export function ObraFilesClientWrapper({
                       AI Enabled
                     </Badge>
                   )}
+                  {processingCount > 0 && (
+                    <Badge variant="outline" className="text-xs animate-pulse">
+                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                      {processingCount} processing
+                    </Badge>
+                  )}
 
                   <FolderSettingsDialog folder={currentFolder} isOpen={showSettings} onClose={() => setShowSettings(false)} onUpdate={() => { }} />
                 </div>
@@ -190,19 +207,13 @@ export function ObraFilesClientWrapper({
 
           <Separator />
 
-          {/* Folder Field Setup / Extraction Preview / Debug Panel */}
-          {currentFolder && (
-            <>
-
-            </>
-          )}
-
           {/* Document Tree View */}
           <div>
             <DocumentTreeView
               folders={folders}
               documents={documents}
               currentFolder={currentFolder}
+              folderCounts={folderCounts}
               searchParams={searchParams}
             />
           </div>
@@ -245,7 +256,12 @@ export function ObraFilesClientWrapper({
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <ExtractedDataView documents={documents} currentFolder={currentFolder} extractedData={extractedData} />
+                <ExtractedDataView
+                  documents={documents}
+                  currentFolder={currentFolder}
+                  extractedData={extractedData}
+                  processingCount={processingCount}
+                />
               </motion.div>
             ) : (
               <div className="space-y-6">

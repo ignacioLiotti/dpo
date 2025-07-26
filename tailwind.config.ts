@@ -89,8 +89,18 @@ const config = {
 					from: { height: "var(--radix-accordion-content-height)" },
 					to: { height: "0" },
 				},
+				slide: {
+					'0%':   { transform: 'translateX(-100px)' },
+					'100%': { transform: 'translateX(100px)'   },
+				},
+				pulsebg: {
+					'0%, 100%': { opacity: '0.7' },
+					'50%':      { opacity: '1'   },
+				},
 			},
 			animation: {
+				'bg-slide': 'slide 3s ease-in-out infinite alternate',
+				'bg-pulse': 'pulsebg 2s ease-in-out infinite',
 				"accordion-down": "accordion-down 0.2s ease-out",
 				"accordion-up": "accordion-up 0.2s ease-out",
 			},

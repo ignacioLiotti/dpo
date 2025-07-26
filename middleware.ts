@@ -1,7 +1,7 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { ROLE_HIERARCHY, hasRole } from "@/app/auth/utils";
 
 export async function middleware(req: NextRequest) {
 	// Create a Supabase client configured to use cookies
@@ -67,15 +67,8 @@ export async function middleware(req: NextRequest) {
 		const userRole = profile?.role || "user";
 		const requiredRole = matchedPath.requiredRole;
 
-		// Define role hierarchy (higher number = higher privilege)
-		const roleHierarchy: Record<string, number> = {
-			user: 1,
-			super_user: 2,
-			admin: 3,
-		};
-
-		// Check if user's role has sufficient privileges
-		if (roleHierarchy[userRole] >= roleHierarchy[requiredRole]) {
+		// Check if user's role has sufficient privileges using centralized function
+		if (hasRole(userRole as any, requiredRole as any)) {
 			// User has required role, proceed
 			return res;
 		} else {

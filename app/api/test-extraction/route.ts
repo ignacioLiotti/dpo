@@ -1,22 +1,20 @@
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/server-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
     const { folderId } = await request.json();
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Get current user and organization
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     // Get folder
     const { data: folder, error: folderError } = await supabase
       .from('folders')
       .select('*')
       .eq('id', folderId)
+      .eq('organization_id', organizationId)
       .single();
 
     if (folderError || !folder) {

@@ -95,7 +95,7 @@ export const createObraSchema = z.object({
     .min(0, "La duración no puede ser negativa")
     .optional()
     .nullable(),
-  user_id: uuidSchema.optional().nullable(),
+  // user_id is automatically set by the server from authenticated user
   organization_id: uuidSchema.optional().nullable(),
 });
 

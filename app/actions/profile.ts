@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createSafeActionClient } from "next-safe-action";
-import { createClient } from "@/supabase/server";
+import { createServerSupabaseClient } from "@/app/auth/server-utils";
 import { revalidatePath } from "next/cache";
 
 // Define a type for our response
@@ -30,7 +30,7 @@ const actionClient = createSafeActionClient();
 // Create the update profile action
 export const updateProfile = actionClient
 	.use(async ({ next }) => {
-		const supabase = await createClient();
+		const supabase = await createServerSupabaseClient();
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
@@ -44,7 +44,7 @@ export const updateProfile = actionClient
 	.schema(profileUpdateSchema)
 	.action(async ({ parsedInput, ctx }) => {
 		try {
-			const supabase = await createClient();
+			const supabase = await createServerSupabaseClient();
 			const userId = ctx.userId as string;
 
 			// Update the profile in the database

@@ -107,7 +107,7 @@ function DocumentTableRow({ document, folders }: DocumentTableRowProps) {
     <TableRow className="group hover:bg-muted/50 cursor-pointer">
       <TableCell>
         <div className="text-2xl">
-          {document.type.startsWith('image/') ? '🖼️' : '📄'}
+          {document.type?.startsWith('image/') ? '🖼️' : '📄'}
         </div>
       </TableCell>
       <TableCell>

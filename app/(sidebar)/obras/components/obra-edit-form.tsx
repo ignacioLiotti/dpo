@@ -9,9 +9,7 @@ import type { Database } from '@/supabase.types';
 import { updateObraSchema, type UpdateObraFormValues } from '../schema';
 import { updateObraAction } from '../actions/update-obra-action';
 
-// Import processor functionality
-import { ObraStateManager } from '@/lib/processors/state/obra-state-manager';
-import type { ProcessorContext } from '@/lib/processors/index';
+// Removed unused processor imports
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

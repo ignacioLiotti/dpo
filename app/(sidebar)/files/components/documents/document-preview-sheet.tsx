@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Download, X, ExternalLink, Brain, Loader2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { createBrowserSupabaseClient } from '@/app/auth/utils';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,7 +100,7 @@ export function DocumentPreviewSheet({ document, isOpen, onClose }: DocumentPrev
                 <div className="flex items-center justify-between">
                   <SheetTitle className="flex items-center gap-2 text-lg">
                     <span className="text-2xl">
-                      {document.type.startsWith('image/') ? '🖼️' : '📄'}
+                      {(document.file_type || document.type || '').startsWith('image/') ? '🖼️' : '📄'}
                     </span>
                     {document.name}
                   </SheetTitle>
@@ -242,7 +243,8 @@ function DocumentPreview({ document, previewUrl, loading, error }: DocumentPrevi
   }
 
   // Image preview
-  if (document.type.startsWith('image/')) {
+  const fileType = document.file_type || document.type || '';
+  if (fileType.startsWith('image/')) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -259,7 +261,7 @@ function DocumentPreview({ document, previewUrl, loading, error }: DocumentPrevi
   }
 
   // PDF preview
-  if (document.type === 'application/pdf') {
+  if (fileType === 'application/pdf') {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -276,10 +278,10 @@ function DocumentPreview({ document, previewUrl, loading, error }: DocumentPrevi
   }
 
   // Office documents preview
-  if (document.type.includes('word') ||
-    document.type.includes('excel') ||
-    document.type.includes('powerpoint') ||
-    document.type.includes('openxmlformats')) {
+  if (fileType.includes('word') ||
+    fileType.includes('excel') ||
+    fileType.includes('powerpoint') ||
+    fileType.includes('openxmlformats')) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -330,12 +332,12 @@ function DocumentMetadata({ document }: { document: ObraDocument }) {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground">Tamaño</label>
-            <p className="text-sm">{Math.round(document.size / 1024)} KB</p>
+            <p className="text-sm">{Math.round((document.file_size || document.size || 0) / 1024)} KB</p>
           </div>
 
           <div>
             <label className="text-sm font-medium text-muted-foreground">Tipo</label>
-            <p className="text-sm">{document.type}</p>
+            <p className="text-sm">{document.file_type || document.type || 'Unknown'}</p>
           </div>
 
           <div>
@@ -387,6 +389,9 @@ function DocumentMetadata({ document }: { document: ObraDocument }) {
               </span>
             </div>
           </div>
+
+          {/* Extracted Data Section */}
+          <ExtractedDataSection document={document} />
         </div>
       </div>
 
@@ -408,6 +413,159 @@ function DocumentMetadata({ document }: { document: ObraDocument }) {
             ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function ExtractedDataSection({ document }: { document: ObraDocument }) {
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [fieldDefinitions, setFieldDefinitions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadExtractedData = async () => {
+    if (!document.folder_id) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      
+      // Fetch field definitions for the folder
+      const { data: fields, error: fieldsError } = await supabase
+        .from('folder_field_definitions')
+        .select('*')
+        .eq('folder_id', document.folder_id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (!fieldsError && fields) {
+        setFieldDefinitions(fields);
+      }
+
+      // Fetch extracted data for this document
+      const { data: extractedDataRecords, error: dataError } = await supabase
+        .from('extracted_data')
+        .select('*')
+        .eq('file_id', document.id)
+        .single();
+
+      if (!dataError && extractedDataRecords) {
+        setExtractedData(extractedDataRecords.extracted_data);
+      }
+    } catch (error) {
+      console.error('Error loading extracted data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadExtractedData();
+  }, [document.id, document.folder_id, document.processing_status]); // Add processing_status to deps
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    
+    // Set up real-time subscription for this document's extracted data
+    const subscription = supabase
+      .channel(`document-${document.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'extracted_data',
+          filter: `file_id=eq.${document.id}`,
+        },
+        (payload) => {
+          console.log('Extracted data updated:', payload);
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            setExtractedData(payload.new.extracted_data);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'files',
+          filter: `id=eq.${document.id}`,
+        },
+        (payload) => {
+          console.log('Document status updated:', payload);
+          // If processing completed, refresh extracted data
+          if (payload.new.processing_status === 'completed' && payload.old?.processing_status !== 'completed') {
+            console.log('Document processing completed, refreshing extracted data in preview...');
+            // Reload extracted data
+            loadExtractedData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [document.id, document.folder_id]);
+
+  if (!document.folder_id) {
+    return null;
+  }
+
+  return (
+    <div>
+      <label className="text-sm font-medium text-muted-foreground">Datos Extraídos</label>
+      
+      {document.processing_status === 'pending' && (
+        <div className="flex items-center gap-2 mt-1">
+          <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
+          <span className="text-xs text-yellow-600">En cola para procesamiento...</span>
+        </div>
+      )}
+      
+      {document.processing_status === 'processing' && (
+        <div className="flex items-center gap-2 mt-1">
+          <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+          <span className="text-xs text-blue-600">Extrayendo datos...</span>
+        </div>
+      )}
+
+      {document.processing_status === 'failed' && (
+        <div className="flex items-center gap-2 mt-1">
+          <X className="h-3 w-3 text-red-500" />
+          <span className="text-xs text-red-600">Error en el procesamiento</span>
+        </div>
+      )}
+
+      {document.processing_status === 'completed' && (
+        <>
+          {loading ? (
+            <div className="flex items-center gap-2 mt-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="text-xs text-muted-foreground">Cargando datos extraídos...</span>
+            </div>
+          ) : fieldDefinitions.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">No hay campos definidos para esta carpeta</p>
+          ) : extractedData && Object.keys(extractedData).length > 0 ? (
+            <div className="mt-2 space-y-2">
+              {fieldDefinitions.map((field) => (
+                <div key={field.id} className="bg-muted/30 p-2 rounded text-xs">
+                  <div className="font-medium text-muted-foreground">{field.field_label}</div>
+                  <div className="text-sm">
+                    {extractedData[field.field_name] !== undefined && extractedData[field.field_name] !== null 
+                      ? String(extractedData[field.field_name])
+                      : 'No extraído'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">Datos no disponibles</p>
+          )}
+        </>
       )}
     </div>
   );

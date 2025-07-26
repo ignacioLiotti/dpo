@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient } from '@/app/auth/server-utils';
 import { getDocumentDownloadUrl } from '@/app/(sidebar)/files/actions/document-actions';
 
 export async function GET(

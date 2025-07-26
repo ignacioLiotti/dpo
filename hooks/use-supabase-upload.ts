@@ -1,4 +1,4 @@
-import { supabase } from '@/supabase/client'
+import { createBrowserSupabaseClient } from '@/app/auth/utils'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type FileError, type FileRejection, useDropzone } from 'react-dropzone'
 
@@ -111,6 +111,8 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
   const onUpload = useCallback(async () => {
     setLoading(true)
 
+    const supabase = createBrowserSupabaseClient()
+
     // [Joshen] This is to support handling partial successes
     // If any files didn't upload for any reason, hitting "Upload" again will only upload the files that had errors
     const filesWithErrors = errors.map((x) => x.name)
@@ -149,7 +151,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
     setSuccesses(newSuccesses)
 
     setLoading(false)
-  }, [files, path, bucketName, errors, successes])
+  }, [files, path, bucketName, errors, successes, cacheControl, upsert])
 
   useEffect(() => {
     if (files.length === 0) {

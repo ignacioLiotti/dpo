@@ -8,7 +8,8 @@ interface DocumentThumbnailProps {
   document: {
     id: string;
     name: string;
-    type: string;
+    file_type?: string;
+    type?: string;
     storage_path: string;
   };
   className?: string;
@@ -20,10 +21,10 @@ const FILE_TYPE_ICONS = {
   'image/png': { icon: Image, color: 'text-green-500' },
   'image/webp': { icon: Image, color: 'text-green-500' },
   'image/gif': { icon: Image, color: 'text-green-500' },
-  
+
   // PDFs
   'application/pdf': { icon: FileText, color: 'text-red-500' },
-  
+
   // Office documents
   'application/msword': { icon: FileType, color: 'text-blue-500' },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { icon: FileType, color: 'text-blue-500' },
@@ -31,15 +32,15 @@ const FILE_TYPE_ICONS = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { icon: FileType, color: 'text-green-600' },
   'application/vnd.ms-powerpoint': { icon: FileType, color: 'text-orange-500' },
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': { icon: FileType, color: 'text-orange-500' },
-  
+
   // Text files
   'text/plain': { icon: Code, color: 'text-gray-500' },
   'text/csv': { icon: Code, color: 'text-gray-500' },
-  
+
   // Archives
   'application/zip': { icon: Archive, color: 'text-purple-500' },
   'application/x-rar-compressed': { icon: Archive, color: 'text-purple-500' },
-  
+
   // CAD files
   'application/dwg': { icon: FileType, color: 'text-cyan-500' },
   'application/dxf': { icon: FileType, color: 'text-cyan-500' },
@@ -50,8 +51,11 @@ export function DocumentThumbnail({ document, className = '' }: DocumentThumbnai
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const isImage = document.type.startsWith('image/');
-  const fileTypeConfig = FILE_TYPE_ICONS[document.type as keyof typeof FILE_TYPE_ICONS] || 
+  // Handle both file_type and type properties with null safety
+  const fileType = document.file_type || document.type || '';
+  console.log('fileType', fileType, typeof fileType);
+  const isImage = fileType.startsWith('image')
+  const fileTypeConfig = FILE_TYPE_ICONS[fileType as keyof typeof FILE_TYPE_ICONS] ||
     { icon: FileText, color: 'text-gray-400' };
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export function DocumentThumbnail({ document, className = '' }: DocumentThumbnai
 
   const loadThumbnail = async () => {
     if (loading || thumbnailUrl || error) return;
-    
+
     setLoading(true);
     setError(false);
 
@@ -125,7 +129,7 @@ export function DocumentThumbnail({ document, className = '' }: DocumentThumbnai
 
   // Fallback to file type icon
   const IconComponent = fileTypeConfig.icon;
-  
+
   return (
     <div className={`bg-gray-50 border border-gray-200 flex items-center justify-center ${className}`}>
       <IconComponent className={`w-12 h-12 ${fileTypeConfig.color}`} />

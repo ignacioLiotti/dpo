@@ -116,7 +116,7 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
                 <div className="noise-bg  border border-t-0 border-r-0 !absolute !top-0 !right-0 !w-full !h-full -z-[100]" />
                 <div className="content-[''] absolute top-0 right-0 w-full h-full  border-t-0 border-l-0 border-[#fefefe_#ffffff00] border-[23px] z-[100]" />
               </span>
-              <DocumentThumbnail 
+              <DocumentThumbnail
                 document={document}
                 className="w-full h-24 rounded-md mb-2"
               />
@@ -133,40 +133,6 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
                 })}
               </span>
 
-              {/* Document Actions */}
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="pointer-events-auto">
-                    <DropdownMenuItem onClick={handlePreview}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Preview
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleDownload}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit3 className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
             </div>
           </div>
         </ContextMenuTrigger>
@@ -178,10 +144,6 @@ export function DocumentCardClient({ document, folders }: DocumentCardClientProp
           <ContextMenuItem onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download
-          </ContextMenuItem>
-          <ContextMenuItem>
-            <Edit3 className="h-4 w-4 mr-2" />
-            Edit
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem

@@ -1,21 +1,5 @@
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/server-utils';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Helper function to get user's organization
-async function getUserOrganization(supabase: any) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    throw new Error('User not authenticated');
-  }
-
-  // Get user's organization
-  const { data: orgId } = await supabase.rpc('get_user_organization_id');
-  if (!orgId) {
-    throw new Error('User is not a member of any organization');
-  }
-
-  return { user, organizationId: orgId };
-}
 
 export async function POST(
   request: NextRequest,
@@ -25,7 +9,7 @@ export async function POST(
     const { id: documentId } = await params;
     const { provider = 'gpt' } = await request.json();
     
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
     const { user, organizationId } = await getUserOrganization(supabase);
 
     // Get file details with folder information

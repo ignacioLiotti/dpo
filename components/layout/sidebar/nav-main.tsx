@@ -165,7 +165,7 @@ export function NavMain({
               <SidebarMenuButton
                 asChild
                 tooltip={item.title}
-                className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary transition-colors ${item.url === pathname ? "bg-white text-primary shadow" : ""
+                className={`flex items-center px-4 py-2 rounded-lg hover:bg-white/70 hover:text-primary transition-colors ${item.url === pathname ? "bg-white text-primary shadow outline outline-outline outline-1" : ""
                   }`}
               >
                 <Link href={item.url}>

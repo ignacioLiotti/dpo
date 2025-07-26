@@ -4,32 +4,34 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { InvoiceForm } from "./invoice-form"
-import { useOrganization } from "@/contexts/organization-context"
-import { CreateOrganizationDialog } from "@/components/organizations/create-organization-dialog"
+import { useAuth, useOrganizations } from "@/app/auth"
+import { CreateOrganizationDialog } from "@/app/auth/components"
 
 export default function Header() {
   const [showCreateOrg, setShowCreateOrg] = useState(false)
-  const { user, currentOrganization, organizations, isLoading } = useOrganization()
+  const { user, isLoading } = useAuth()
+  const { currentOrganization, organizations } = useOrganizations()
 
   useEffect(() => {
-    console.log('=== Hero Component State ===')
-    console.log('user:', user?.id || 'null')
-    console.log('user email:', user?.email || 'null')
-    console.log('isLoading:', isLoading)
-    console.log('organizations length:', organizations.length)
-    console.log('currentOrganization:', currentOrganization?.id || 'null')
-    console.log('showCreateOrg condition:', user && !isLoading && organizations.length === 0)
-    console.log('================================')
+    console.log('🏠 HERO DEBUG: State check:', {
+      user: !!user,
+      userId: user?.id,
+      isLoading,
+      organizationsCount: organizations.length,
+      currentOrganization: currentOrganization?.name,
+      currentOrgId: currentOrganization?.id,
+      showCreateOrg
+    });
 
     // Show create org dialog if user is authenticated, loading is complete, and no organizations exist
-    if (user && !isLoading && organizations.length < 2) {
-      console.log('✅ Setting showCreateOrg to true')
+    if (user && !isLoading && organizations.length < 1) {
+      console.log('✅ HERO DEBUG: Setting showCreateOrg to true');
       setShowCreateOrg(true)
     } else {
-      console.log('❌ Not showing create org dialog')
+      console.log('❌ HERO DEBUG: Not showing create org dialog - conditions not met');
       setShowCreateOrg(false)
     }
-  }, [user, isLoading, organizations, currentOrganization])
+  }, [user, isLoading, organizations, currentOrganization, showCreateOrg])
 
   if (showCreateOrg) {
     return (

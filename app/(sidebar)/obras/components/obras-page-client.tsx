@@ -23,7 +23,7 @@ import { ObrasDataTable } from './obras-data-table';
 import { CreateObraSheet } from './create-obra-sheet';
 import { format, isAfter, isBefore, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useCurrentOrganization } from '@/hooks/useCurrentOrganization';
+import { useCurrentOrganization, useAuth } from '@/app/auth';
 import { getAllObrasAction } from '../actions/get-obra-action';
 
 interface ObrasDashboardProps {
@@ -34,7 +34,9 @@ export function ObrasDashboard({ initialObras }: ObrasDashboardProps) {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [obras, setObras] = useState<Obra[]>(initialObras);
   const [isLoading, setIsLoading] = useState(false);
-  const { organizationId, hasOrganization, isLoading: orgLoading } = useCurrentOrganization();
+  const { organization, organizationId } = useCurrentOrganization();
+  const { isLoading: orgLoading } = useAuth();
+  const hasOrganization = !!organization;
 
   const handleOpenCreateSheet = () => setIsCreateSheetOpen(true);
   const handleCloseCreateSheet = () => setIsCreateSheetOpen(false);

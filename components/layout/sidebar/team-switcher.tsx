@@ -20,18 +20,20 @@ import {
 } from "@/components/layout/sidebar/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { useOrganization } from "@/contexts/organization-context"
-import { CreateOrganizationDialog } from "@/components/organizations/create-organization-dialog"
+import { useOrganizations, useAuthLoading } from "@/app/auth"
+import { CreateOrganizationDialog } from "@/app/auth/components"
+import { User } from "@supabase/supabase-js"
 
-export function TeamSwitcher() {
+export function TeamSwitcher({ user }: { user: User }) {
   const { isMobile } = useSidebar()
   const {
     currentOrganization,
     organizations,
     memberships,
-    isLoading,
     switchOrganization
-  } = useOrganization()
+  } = useOrganizations()
+
+  const { isLoading } = useAuthLoading();
 
   const handleSelect = async (organizationId: string) => {
     if (organizationId === currentOrganization?.id) return;
@@ -121,7 +123,7 @@ export function TeamSwitcher() {
                       src={currentOrganization.logo_url || undefined}
                       alt={currentOrganization.name}
                     />
-                    <AvatarFallback className="bg-[#ff5800] text-primary-foreground outline outline-2 outline-outline border-2">
+                    <AvatarFallback className="border-[#ff5800] border-[3px] bg-white text-primary font-semibold outline outline-2 outline-outline">
                       {currentOrganization.name.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

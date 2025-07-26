@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileErrorBoundary } from '@/components/error-boundary';
 import { ObraFilesClientWrapper } from './components/client-wrapper';
 import { getOrganizationDocumentsWithFolders, getOrganizationFolders } from './actions/document-actions';
 import { getFolderExtractedData } from './actions/folder-extraction-actions';
@@ -96,28 +97,30 @@ export default async function ObraFilesPage({ searchParams }: ObraFilesPageProps
   }
 
   return (
-    <Suspense fallback={<ObraFilesPageSkeleton />}>
-      {documentsResult.error || foldersResult.error ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Error al cargar documentos</h3>
-              <p className="text-muted-foreground">
-                {documentsResult.error || foldersResult.error}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <ObraFilesClientWrapper
-          searchParams={params}
-          documents={filteredDocuments}
-          folders={folders}
-          currentFolder={currentFolder}
-          folderCounts={folderCounts}
-          extractedData={extractedData}
-        />
-      )}
-    </Suspense>
+    <FileErrorBoundary>
+      <Suspense fallback={<ObraFilesPageSkeleton />}>
+        {documentsResult.error || foldersResult.error ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center">
+                <h3 className="text-lg font-medium mb-2">Error al cargar documentos</h3>
+                <p className="text-muted-foreground">
+                  {documentsResult.error || foldersResult.error}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <ObraFilesClientWrapper
+            searchParams={params}
+            documents={filteredDocuments}
+            folders={folders}
+            currentFolder={currentFolder}
+            folderCounts={folderCounts}
+            extractedData={extractedData}
+          />
+        )}
+      </Suspense>
+    </FileErrorBoundary>
   );
 }

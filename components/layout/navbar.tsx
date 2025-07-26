@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/button';
 import { UserProfileDropdown } from '@/components/layout/user-profile-dropdown';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth, useUserRole } from '@/app/auth';
 import { UserIcon, HomeIcon, Settings, Users, BellIcon, BookIcon, BookOpenIcon } from 'lucide-react';
-import { signOutAction } from '@/app/actions/sign';
+import { signOutAction } from '@/app/auth/actions';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SidebarTrigger } from './sidebar/sidebar';
@@ -17,82 +15,19 @@ import { toast } from 'sonner';
 import { Breadcrumbs } from '../ui/Breadcrumbs';
 import { Input } from '../ui/input';
 
-export function Navbar({ session }: { session: any }) {
+export function Navbar() {
   const pathname = usePathname();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { role, isLoading: isRoleLoading } = useUserRole();
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const router = useRouter();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
 
-  useEffect(() => {
-    if (!session) {
-      setUserName(null);
-      setUserEmail(null);
-      setUserAvatar(null);
-      setIsLoadingUser(false);
-      return;
-    }
+  // Get user information from auth context
+  const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || null;
+  const userEmail = user?.email || null;
+  const userAvatar = user?.user_metadata?.avatar_url || null;
+  const isLoadingUser = isLoading;
 
-    let isMounted = true;
-    async function getUserData() {
-      if (isMounted) setIsLoadingUser(true);
-      try {
-        const user = session.user;
-        if (!user?.id) {
-          if (isMounted) {
-            setUserName(null);
-            setUserEmail(null);
-            setUserAvatar(null);
-            setIsLoadingUser(false);
-          }
-          return;
-        }
-
-        if (isMounted) setUserEmail(user.email || null);
-
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('username, full_name, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116' && isMounted) {
-          console.error('Error fetching profile:', error);
-        }
-
-        if (isMounted) {
-          if (profile) {
-            setUserName(profile.full_name || profile.username);
-            setUserAvatar(profile.avatar_url);
-          } else {
-            setUserName(user.user_metadata?.full_name || user.user_metadata?.name || null);
-            setUserAvatar(null);
-          }
-        }
-      } catch (error) {
-        if (isMounted) console.error('Error fetching user data:', error);
-        if (isMounted) {
-          setUserName(null);
-          setUserAvatar(null);
-          setUserEmail(session?.user?.email || null);
-        }
-      } finally {
-        if (isMounted) setIsLoadingUser(false);
-      }
-    }
-
-    getUserData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [supabase, session]);
+  // User data is now handled by the auth context, no need for manual data fetching
 
   const baseNavLinks = [
     { href: '/', label: 'Home', icon: HomeIcon },
@@ -100,7 +35,7 @@ export function Navbar({ session }: { session: any }) {
   ];
 
   const navLinks = (() => {
-    if (isRoleLoading || !session) {
+    if (isRoleLoading || !isAuthenticated) {
       return baseNavLinks;
     }
 
@@ -121,6 +56,7 @@ export function Navbar({ session }: { session: any }) {
     await signOutAction();
     router.refresh();
   };
+
 
   return (
     <header className="sticky top-0 w-full pb-1 z-20">
@@ -146,30 +82,23 @@ export function Navbar({ session }: { session: any }) {
 
             <Separator className=" bg-outline w-[2px] h-6" />
 
-            {session ? (
-              isLoadingUser ? (
-                <div className="flex items-center gap-2">
-                  <Skeleton className="rounded-full h-8 w-8" />
-                  <Skeleton className="h-4 w-24 rounded" >
-                    <span className="text-sm font-medium opacity-0">
-                      {session.user.email.split('@')[0]}
-                    </span>
-                  </Skeleton>
-                </div>
-              ) : (
-                <UserProfileDropdown
-                  userName={userName}
-                  userEmail={userEmail}
-                  userAvatarUrl={userAvatar}
-                  handleSignOut={handleSignOut}
-                />
-              )
+            {isLoadingUser ? (
+              <div className="flex items-center gap-2">
+                <Skeleton className="rounded-full h-8 w-8" />
+                <Skeleton className="h-4 w-24 rounded" >
+                  <span className="text-sm font-medium opacity-0">
+                    Loading...
+                  </span>
+                </Skeleton>
+              </div>
+            ) : isAuthenticated ? (
+              <UserProfileDropdown
+                handleSignOut={handleSignOut}
+              />
             ) : (
-              !isLoadingUser && (
-                <Button asChild variant="outline">
-                  <Link href="/sign-in">Login</Link>
-                </Button>
-              )
+              <Button asChild variant="outline">
+                <Link href="/sign-in">Login</Link>
+              </Button>
             )}
           </div>
         </div>

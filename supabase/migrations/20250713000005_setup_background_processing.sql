@@ -235,23 +235,21 @@ GRANT EXECUTE ON FUNCTION public.update_processing_job_status(UUID, TEXT, TEXT) 
 -- Note: The following cron job needs to be set up manually or via Supabase Dashboard
 -- This is because pg_cron requires superuser privileges
 
-/*
--- Enable pg_cron extension (if not already enabled)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- Schedule background processing job to run every 2 minutes
-SELECT cron.schedule(
-  'process-documents-ai',
-  '*/2 * * * *', -- Every 2 minutes
-  $$
-  SELECT net.http_post(
-    url := 'https://your-project.supabase.co/functions/v1/process-document-ai',
-    headers := '{"Authorization": "Bearer YOUR_SERVICE_ROLE_KEY", "Content-Type": "application/json"}'::jsonb,
-    body := '{"batch_process": true}'::jsonb
-  );
-  $$
-);
-*/
+-- To set up the cron job, run the following commands in the Supabase SQL Editor:
+-- 
+-- CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- 
+-- SELECT cron.schedule(
+--   'process-documents-ai',
+--   '*/2 * * * *',  -- Every 2 minutes
+--   $$
+--   SELECT net.http_post(
+--     url := 'https://your-project.supabase.co/functions/v1/process-document-ai',
+--     headers := '{"Authorization": "Bearer YOUR_SERVICE_ROLE_KEY", "Content-Type": "application/json"}'::jsonb,
+--     body := '{"batch_process": true}'::jsonb
+--   );
+--   $$
+-- );
 
 -- =============================================================================
 -- COMMENTS AND DOCUMENTATION

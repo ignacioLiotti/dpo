@@ -4,6 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +39,10 @@ import {
   getFolderFieldDefinitions,
   applyExtractionTemplate,
   createFolderFieldDefinition,
-  getFolderExtractedData
+  updateFolderFieldDefinition,
+  deleteFolderFieldDefinition,
+  getFolderExtractedData,
+  triggerBackgroundProcessing
 } from '../../actions/folder-extraction-actions';
 import { deleteFolderAction } from '../../actions/document-actions';
 import type { Folder, FolderFieldDefinition } from '../../types';
@@ -63,6 +76,8 @@ export function FolderSettingsDialog({
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('settings');
+  const [isAddingField, setIsAddingField] = useState(false);
+  const [editingField, setEditingField] = useState<FolderFieldDefinition | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -117,7 +132,24 @@ export function FolderSettingsDialog({
   const handleToggleExtraction = async (enabled: boolean) => {
     if (!folder) return;
 
-    setLoading(true);
+    // Optimistic update
+    setExtractionEnabled(enabled);
+    toast.success(
+      enabled
+        ? 'Extracción de datos habilitada'
+        : 'Extracción de datos deshabilitada'
+    );
+    
+    if (enabled) {
+      toast.info('Configurando extracción en segundo plano...');
+    } else {
+      setExtractedData([]);
+    }
+
+    onUpdate?.();
+    router.refresh();
+
+    // Process in background
     try {
       const formData = new FormData();
       formData.append('folder_id', folder.id);
@@ -125,47 +157,59 @@ export function FolderSettingsDialog({
 
       await toggleFolderExtraction(formData);
 
-      setExtractionEnabled(enabled);
-      toast.success(
-        enabled
-          ? 'Extracción de datos habilitada'
-          : 'Extracción de datos deshabilitada'
-      );
       if (enabled) {
         await loadExtractedData();
-      } else {
-        setExtractedData([]);
+        await triggerBackgroundProcessing(folder.id);
       }
-      onUpdate?.();
-      router.refresh();
     } catch (error) {
       console.error('Error toggling extraction:', error);
+      // Revert optimistic update on error
+      setExtractionEnabled(!enabled);
       toast.error('Error al cambiar configuración');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleApplyTemplate = async (templateName: string) => {
     if (!folder) return;
 
-    setLoading(true);
+    // Optimistic update
+    toast.success('Plantilla aplicada correctamente');
+    toast.info('Procesando documentos en segundo plano...');
+    setExtractionEnabled(true);
+    onUpdate?.();
+    router.refresh();
+
+    // Process in background
     try {
       const formData = new FormData();
       formData.append('folder_id', folder.id);
       formData.append('template_name', templateName);
 
       await applyExtractionTemplate(formData);
-
-      toast.success('Plantilla aplicada correctamente');
-      setExtractionEnabled(true);
       await loadFieldDefinitions();
       await loadExtractedData();
-      onUpdate?.();
-      router.refresh();
+      await triggerBackgroundProcessing(folder.id);
     } catch (error) {
       console.error('Error applying template:', error);
       toast.error('Error al aplicar plantilla');
+    }
+  };
+
+  const handleDeleteField = async (fieldId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este campo?')) return;
+    
+    setLoading(true);
+    try {
+      const { success, error } = await deleteFolderFieldDefinition(fieldId);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success('Campo eliminado correctamente');
+        await loadFieldDefinitions();
+      }
+    } catch (error) {
+      console.error('Error deleting field:', error);
+      toast.error('Error al eliminar campo');
     } finally {
       setLoading(false);
     }
@@ -293,36 +337,83 @@ export function FolderSettingsDialog({
                 <div className="text-center py-8">
                   <p>Cargando campos...</p>
                 </div>
-              ) : fieldDefinitions.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <div className="text-4xl mb-2">📋</div>
-                    <p className="text-lg font-medium mb-1">No hay campos definidos</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Aplica una plantilla o define campos personalizados para comenzar
-                    </p>
-                    <Button
-                      onClick={() => setActiveTab('templates')}
-                      variant="outline"
-                    >
-                      Ver Plantillas
-                    </Button>
-                  </CardContent>
-                </Card>
               ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Campos Definidos</CardTitle>
-                    <CardDescription>
-                      Define los campos que quieres extraer de los documentos de esta carpeta.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {fieldDefinitions.map((field) => (
-                      <FieldDefinitionCard key={field.id} field={field} />
-                    ))}
-                  </CardContent>
-                </Card>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Campos Definidos</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Define los campos que quieres extraer de los documentos de esta carpeta.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setIsAddingField(true)}
+                      disabled={isAddingField || editingField !== null}
+                    >
+                      Agregar Campo
+                    </Button>
+                  </div>
+
+                  {isAddingField && (
+                    <FieldDefinitionForm
+                      folder={folder}
+                      onCancel={() => setIsAddingField(false)}
+                      onSuccess={() => {
+                        setIsAddingField(false);
+                        loadFieldDefinitions();
+                      }}
+                    />
+                  )}
+
+                  {editingField && (
+                    <FieldDefinitionForm
+                      folder={folder}
+                      field={editingField}
+                      onCancel={() => setEditingField(null)}
+                      onSuccess={() => {
+                        setEditingField(null);
+                        loadFieldDefinitions();
+                      }}
+                    />
+                  )}
+
+                  {fieldDefinitions.length === 0 && !isAddingField ? (
+                    <Card>
+                      <CardContent className="text-center py-8">
+                        <div className="text-4xl mb-2">📋</div>
+                        <p className="text-lg font-medium mb-1">No hay campos definidos</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Aplica una plantilla o define campos personalizados para comenzar
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            onClick={() => setIsAddingField(true)}
+                            variant="default"
+                          >
+                            Agregar Campo
+                          </Button>
+                          <Button
+                            onClick={() => setActiveTab('templates')}
+                            variant="outline"
+                          >
+                            Ver Plantillas
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {fieldDefinitions.map((field) => (
+                        <FieldDefinitionCard 
+                          key={field.id} 
+                          field={field} 
+                          onEdit={() => setEditingField(field)}
+                          onDelete={() => handleDeleteField(field.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </TabsContent>
 
@@ -408,7 +499,15 @@ export function FolderSettingsDialog({
   );
 }
 
-function FieldDefinitionCard({ field }: { field: FolderFieldDefinition }) {
+function FieldDefinitionCard({ 
+  field, 
+  onEdit, 
+  onDelete 
+}: { 
+  field: FolderFieldDefinition; 
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const getTypeIcon = (type: string) => {
     const icons = {
       text: '📝',
@@ -445,9 +544,29 @@ function FieldDefinitionCard({ field }: { field: FolderFieldDefinition }) {
               </p>
             </div>
           </div>
-          <Badge variant={getMethodBadge(field.extraction_method)}>
-            {field.extraction_method}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={getMethodBadge(field.extraction_method)}>
+              {field.extraction_method}
+            </Badge>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onEdit}
+                className="h-8 w-8 p-0"
+              >
+                ✏️
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onDelete}
+                className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+              >
+                🗑️
+              </Button>
+            </div>
+          </div>
         </div>
 
         {field.field_description && (
@@ -457,6 +576,174 @@ function FieldDefinitionCard({ field }: { field: FolderFieldDefinition }) {
         <div className="mt-3 p-2 bg-muted rounded text-sm font-mono">
           {field.extraction_pattern}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FieldDefinitionForm({
+  folder,
+  field,
+  onCancel,
+  onSuccess
+}: {
+  folder: Folder;
+  field?: FolderFieldDefinition;
+  onCancel: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    field_label: field?.field_label || '',
+    field_type: field?.field_type || 'text',
+    extraction_pattern: field?.extraction_pattern || ''
+  });
+  
+  const [saving, setSaving] = useState(false);
+
+  const generateFieldName = (label: string) => {
+    return label
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '')
+      .replace(/_{2,}/g, '_')
+      .replace(/^_|_$/g, '');
+  };
+
+  const handleInputChange = (key: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.field_label || !formData.extraction_pattern) {
+      toast.error('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    const generatedFieldName = generateFieldName(formData.field_label);
+    if (!generatedFieldName) {
+      toast.error('El nombre del campo no puede estar vacío');
+      return;
+    }
+
+    // Optimistic update: immediately show success and close form
+    toast.success(field ? 'Campo actualizado correctamente' : 'Campo creado correctamente');
+    toast.info('Procesando documentos en segundo plano...');
+    onSuccess();
+
+    // Process in background
+    try {
+      const submitData = new FormData();
+      submitData.append('folder_id', folder.id);
+      submitData.append('field_name', generatedFieldName);
+      submitData.append('field_type', formData.field_type);
+      submitData.append('field_label', formData.field_label);
+      submitData.append('field_description', '');
+      submitData.append('extraction_method', 'ai');
+      submitData.append('extraction_pattern', formData.extraction_pattern);
+      submitData.append('is_required', 'false');
+      submitData.append('default_value', '');
+      
+      if (field) {
+        submitData.append('field_id', field.id);
+        const { field: updatedField, error } = await updateFolderFieldDefinition(submitData);
+        if (error) {
+          toast.error('Error al actualizar campo: ' + error);
+          return;
+        }
+      } else {
+        const { field: createdField, error } = await createFolderFieldDefinition(submitData);
+        if (error) {
+          toast.error('Error al crear campo: ' + error);
+          return;
+        }
+      }
+      
+      // Trigger background processing for existing documents
+      await triggerBackgroundProcessing(folder.id);
+      
+    } catch (error) {
+      console.error('Error saving field:', error);
+      toast.error('Error al procesar campo');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{field ? 'Editar Campo' : 'Nuevo Campo'}</CardTitle>
+        <CardDescription>
+          Define el nombre, tipo y patrón de extracción para el campo
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="field_label">Nombre del Campo *</Label>
+              <Input
+                id="field_label"
+                value={formData.field_label}
+                onChange={(e) => handleInputChange('field_label', e.target.value)}
+                placeholder="ej: Número de Factura"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Se generará automáticamente: {formData.field_label ? generateFieldName(formData.field_label) : 'campo_ejemplo'}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="field_type">Tipo de Campo</Label>
+              <Select
+                value={formData.field_type}
+                onValueChange={(value) => handleInputChange('field_type', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">📝 Texto</SelectItem>
+                  <SelectItem value="number">🔢 Número</SelectItem>
+                  <SelectItem value="date">📅 Fecha</SelectItem>
+                  <SelectItem value="currency">💰 Moneda</SelectItem>
+                  <SelectItem value="boolean">☑️ Booleano</SelectItem>
+                  <SelectItem value="email">📧 Email</SelectItem>
+                  <SelectItem value="phone">📞 Teléfono</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="extraction_pattern">Patrón de Extracción *</Label>
+            <Textarea
+              id="extraction_pattern"
+              value={formData.extraction_pattern}
+              onChange={(e) => handleInputChange('extraction_pattern', e.target.value)}
+              placeholder="Describe cómo extraer este campo. Ej: 'Busca el número de factura que normalmente aparece después de la palabra Factura N°'"
+              rows={3}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Descripción que se pasará a la IA para extraer el campo. Sé específico y claro.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Guardando...' : (field ? 'Actualizar' : 'Crear')}
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );

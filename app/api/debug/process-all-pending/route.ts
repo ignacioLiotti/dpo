@@ -1,22 +1,12 @@
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/server-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's organization
-    const { data: orgId, error: orgError } = await supabase.rpc('get_user_organization_id');
-    if (orgError || !orgId) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-    }
-
-    console.log('[process-all-pending] Starting batch processing for org:', orgId);
+    console.log('[process-all-pending] Starting batch processing for org:', organizationId);
 
     // Get all pending jobs
     const { data: pendingJobs, error: pendingError } = await supabase
@@ -36,7 +26,7 @@ export async function POST(request: NextRequest) {
           storage_path
         )
       `)
-      .eq('organization_id', orgId)
+      .eq('organization_id', organizationId)
       .eq('status', 'pending')
       .lt('attempts', 3) // max_attempts
       .lte('scheduled_at', new Date().toISOString())
@@ -92,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Process the document using our manual processing logic
-        const processResult = await processDocument(supabase, job.file_id, user.id, orgId);
+        const processResult = await processDocument(supabase, job.file_id, user.id, organizationId);
 
         if (processResult.success) {
           // Update queue status to completed
@@ -191,7 +181,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to process a single document
-async function processDocument(supabase: any, documentId: string, userId: string, orgId: string) {
+async function processDocument(supabase: any, documentId: string, userId: string, organizationId: string) {
   try {
     // Get document details
     const { data: document, error: docError } = await supabase
@@ -208,7 +198,7 @@ async function processDocument(supabase: any, documentId: string, userId: string
         )
       `)
       .eq('id', documentId)
-      .eq('organization_id', orgId)
+      .eq('organization_id', organizationId)
       .eq('is_active', true)
       .single();
 

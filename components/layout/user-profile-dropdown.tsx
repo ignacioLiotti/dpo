@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth, useUserRole } from '@/app/auth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,27 +36,45 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { signOutAction } from '@/app/actions/sign';
+import { signOutAction } from '@/app/auth/actions';
 import { GradientAvatar } from '../ui/gradient-avatar';
 import { cn } from '@/utils/utils';
 
 interface UserProfileDropdownProps {
-  userName?: string | null;
-  userEmail?: string | null;
-  userAvatarUrl?: string | null;
   handleSignOut?: () => void;
 }
 
 export function UserProfileDropdown({
-  userName,
-  userEmail,
-  userAvatarUrl,
   handleSignOut
 }: UserProfileDropdownProps) {
   const router = useRouter();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { role, isLoading: isRoleLoading, hasRole } = useUserRole();
+  
+  // Get user information from auth context
+  const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || null;
+  const userEmail = user?.email || null;
+  const userAvatarUrl = user?.user_metadata?.avatar_url || null;
+  
 
-  // Render Sign In button if user is not logged in (no email provided)
-  if (!userEmail) {
+  // Show loading state while auth is loading
+  if (isLoading || isRoleLoading) {
+    return (
+      <Button variant="input" className="flex items-center gap-2 px-2 rounded-full hover:bg-accent transition-colors border shadow">
+        <div className="relative">
+          <Avatar className="h-8 w-8 border-2 p-0.5">
+            <AvatarFallback>L</AvatarFallback>
+          </Avatar>
+        </div>
+        <div className="flex text-left">
+          <span className="text-sm font-medium">Loading...</span>
+        </div>
+      </Button>
+    );
+  }
+
+  // Early return for unauthenticated users
+  if (!isAuthenticated || !user || !userEmail) {
     return (
       <Button variant="outline" onClick={() => router.push('/sign-in')}>
         <LogIn className="mr-2 h-4 w-4" />
@@ -66,9 +84,7 @@ export function UserProfileDropdown({
   }
 
   // --- Logic for Logged-In User ---
-  const { role, isLoading: isRoleLoading, hasRole } = useUserRole(); // Renamed isLoading to avoid conflict if needed later
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
-  const [isImpersonating, setIsImpersonating] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
 
   // Create Supabase client
@@ -76,27 +92,6 @@ export function UserProfileDropdown({
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   );
-
-  // Check if user is a developer on component mount
-  useEffect(() => {
-    const checkDeveloperStatus = async () => {
-      if (!userEmail) return; // Should not happen due to the check above, but good practice
-
-      const { data, error } = await supabase
-        .from('developer_emails')
-        .select('email')
-        .eq('email', userEmail)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // Ignore 'PGRST116' (No rows found)
-        console.error('Error checking developer status:', error);
-      }
-
-      setIsDeveloper(!!data);
-    };
-
-    checkDeveloperStatus();
-  }, [userEmail, supabase]);
 
   // Get initials for avatar fallback
   const getInitials = () => {
@@ -111,17 +106,10 @@ export function UserProfileDropdown({
 
   // Function to update the user's own role
   const handleRoleChange = async (newRole: string) => {
-    if (isUpdatingRole || newRole === role) return;
+    if (isUpdatingRole || newRole === role || !user) return;
     setIsUpdatingRole(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast.error('You must be logged in to change your role');
-        return;
-      }
-
       // Get current session for auth header
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -171,25 +159,7 @@ export function UserProfileDropdown({
     }
   };
 
-  // Show loading state specifically for role fetching
-  if (isRoleLoading) {
-    return (
-      <Button variant="input" className="flex items-center gap-2 px-2 rounded-full  hover:bg-accent transition-colors border shadow">
-        <div className="relative">
-          <Avatar className="h-8 w-8 border-2 p-0.5">
-            <AvatarImage src={userAvatarUrl || undefined} alt={userName || 'User'} />
-            <AvatarFallback className="p-2 overflow-hidden"><GradientAvatar username={userName || 'User'} /></AvatarFallback>
-          </Avatar>
-        </div>
-        <div className="flex flex-col text-left">
-          <span className="text-sm font-medium flex items-center gap-1">
-            {userName || userEmail?.split('@')[0] || 'User'}
-            <ChevronDown className="h-4 w-4 opacity-50" />
-          </span>
-        </div>
-      </Button>
-    );
-  }
+
 
   // Render the dropdown for logged-in users
   return (

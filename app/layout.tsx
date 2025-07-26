@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
-import { createClient } from "@/supabase/server";
 import { SidebarInset, SidebarProvider } from "@/components/layout/sidebar/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "sonner";
 import { Providers } from './providers';
 
@@ -28,13 +28,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
 
   const mapped = [
     {
@@ -62,10 +60,16 @@ export default async function RootLayout({
       "items": []
     },
     {
-      "title": "OCR Playground",
-      "url": "/playground",
-      "iconKey": "BrainCogIcon",
-      "items": []
+      "title": "Organization",
+      "url": "#",
+      "iconKey": "Building2",
+      "items": [
+        {
+          "title": "Members",
+          "url": "/organization/members",
+          "iconKey": "Users"
+        }
+      ]
     },
     {
       "title": "Auth",
@@ -110,15 +114,17 @@ export default async function RootLayout({
           <div className="noise-bg -z-10" />
           <Toaster />
           <SidebarProvider defaultOpen={false}>
-            <AppSidebar mappedData={mapped as any} user={session?.user || null} />
+            <AppSidebar mappedData={mapped as any} />
             <SidebarInset className="flex flex-col pl-0 w-full pr-4 pb-4 pt-1">
               <main className="min-h-full flex flex-col items-cente max-h-[80vh]">
                 <div className="flex-1 w-full h-full flex flex-col items-center">
-                  <Navbar session={session} />
+                  <Navbar />
 
                   <div className="flex-1 w-full h-full flex flex-col items-center bg-transparent rounded-none max-h-[92vh] outline outline-outline outline-1 shadow z-10 relative" >
-                    {children}
-                    <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-4 bg-white max-h-[10vh]">
+                    <ErrorBoundary>
+                      {children}
+                    </ErrorBoundary>
+                    {/* <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-4 bg-white max-h-[10vh]">
                       <p>
                         Powered by{" "}
                         <a
@@ -130,7 +136,7 @@ export default async function RootLayout({
                           Supabase
                         </a>
                       </p>
-                    </footer>
+                    </footer> */}
                   </div>
 
                 </div>

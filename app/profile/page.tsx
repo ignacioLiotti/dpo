@@ -1,4 +1,3 @@
-import { createClient } from "@/supabase/server";
 import { InfoIcon, UserCircle } from "lucide-react";
 import { redirect } from "next/navigation";
 import {
@@ -11,10 +10,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileForm } from "@/app/profile/profile-components/profile-form";
 import { GradientAvatar } from "@/components/ui/gradient-avatar";
-import type { Profile } from "@/types/supabase";
+import { createServerSupabaseClient } from "../auth/server-utils";
 
 export default async function ProfilePage() {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   const {
     data: { user },

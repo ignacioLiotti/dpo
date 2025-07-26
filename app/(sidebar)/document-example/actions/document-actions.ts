@@ -1,8 +1,8 @@
 'use server';
 
-import { createClient } from '@/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { authActionClient, ActionError, revalidateHelpers } from '@/app/auth/safe-action';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 import { 
   createExampleDocumentSchema, 
   updateExampleDocumentSchema, 
@@ -12,188 +12,122 @@ import {
 import type { ExampleDocument } from '../types';
 
 // Get all documents
-export async function getAllExampleDocuments(): Promise<ExampleDocument[]> {
-  const supabase = await createClient();
-  
-  const { data, error } = await supabase
-    .from('example_documents')
-    .select('*')
-    .order('created_at', { ascending: false });
+export const getAllExampleDocuments = authActionClient
+  .schema(z.object({}))
+  .action(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
+      .from('example_documents')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching documents:', error);
-    return [];
-  }
+    if (error) {
+      if (error.code === '42P01') {
+        return [];
+      }
+      throw new ActionError('Failed to fetch documents', 'FETCH_ERROR');
+    }
 
-  return data || [];
-}
+    return data || [];
+  });
 
 // Get document by ID
-export async function getExampleDocumentById(id: string): Promise<ExampleDocument | null> {
-  const supabase = await createClient();
-  
-  // Validate input
-  const validatedInput = getExampleDocumentSchema.parse({ id });
-  
-  const { data, error } = await supabase
-    .from('example_documents')
-    .select('*')
-    .eq('id', validatedInput.id)
-    .single();
+export const getExampleDocumentById = authActionClient
+  .schema(getExampleDocumentSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { data, error } = await ctx.supabase
+      .from('example_documents')
+      .select('*')
+      .eq('id', parsedInput.id)
+      .single();
 
-  if (error) {
-    console.error('Error fetching document:', error);
-    return null;
-  }
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw new ActionError('Failed to fetch document', 'FETCH_ERROR');
+    }
 
-  return data;
-}
+    return data;
+  });
 
 // Create new document
-export async function createExampleDocument(formData: FormData) {
-  const supabase = await createClient();
-  
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  
-  if (userError || !user) {
-    throw new Error('User not authenticated');
-  }
+export const createExampleDocument = authActionClient
+  .schema(createExampleDocumentSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { data, error } = await ctx.supabase
+      .from('example_documents')
+      .insert({
+        ...parsedInput,
+        author_id: ctx.user.id
+      })
+      .select()
+      .single();
 
+    if (error) {
+      throw new ActionError('Failed to create document', 'CREATE_ERROR');
+    }
 
-  // Parse form data
-  const dueDateValue = formData.get('due_date') as string;
-  const rawData = {
-    title: formData.get('title') as string,
-    description: formData.get('description') as string || undefined,
-    content: formData.get('content') as string || undefined,
-    status: formData.get('status') as 'draft' | 'published' | 'archived',
-    category: formData.get('category') as string,
-    priority: formData.get('priority') as 'low' | 'medium' | 'high',
-    due_date: dueDateValue && dueDateValue.trim() ? dueDateValue : undefined,
-    tags: formData.get('tags') ? (formData.get('tags') as string).split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : undefined
-  };
-
-  // Validate input
-  const validatedData = createExampleDocumentSchema.parse(rawData);
-
-  // Insert document
-  const { data, error } = await supabase
-    .from('example_documents')
-    .insert({
-      ...validatedData,
-      author_id: user.id
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating document:', error);
-    throw new Error(`Failed to create document: ${error.message}`);
-  }
-
-  revalidatePath('/document-example');
-  redirect(`/document-example/${data.id}`);
-}
+    revalidateHelpers.all();
+    redirect(`/document-example/${data.id}`);
+  });
 
 // Update document
-export async function updateExampleDocument(formData: FormData) {
-  const supabase = await createClient();
-  
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  
-  if (userError || !user) {
-    throw new Error('User not authenticated');
-  }
+export const updateExampleDocument = authActionClient
+  .schema(updateExampleDocumentSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { error } = await ctx.supabase
+      .from('example_documents')
+      .update(parsedInput)
+      .eq('id', parsedInput.id)
+      .eq('author_id', ctx.user.id);
 
-  // Parse form data
-  const dueDateValue = formData.get('due_date') as string;
-  const rawData = {
-    id: formData.get('id') as string,
-    title: formData.get('title') as string,
-    description: formData.get('description') as string || undefined,
-    content: formData.get('content') as string || undefined,
-    status: formData.get('status') as 'draft' | 'published' | 'archived',
-    category: formData.get('category') as string,
-    priority: formData.get('priority') as 'low' | 'medium' | 'high',
-    due_date: dueDateValue && dueDateValue.trim() ? dueDateValue : undefined,
-    tags: formData.get('tags') ? (formData.get('tags') as string).split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : undefined
-  };
+    if (error) {
+      throw new ActionError('Failed to update document', 'UPDATE_ERROR');
+    }
 
-  // Validate input
-  const validatedData = updateExampleDocumentSchema.parse(rawData);
-
-  // Update document
-  const { error } = await supabase
-    .from('example_documents')
-    .update(validatedData)
-    .eq('id', validatedData.id)
-    .eq('author_id', user.id); // Ensure user owns the document
-
-  if (error) {
-    console.error('Error updating document:', error);
-    throw new Error('Failed to update document');
-  }
-
-  revalidatePath('/document-example');
-  revalidatePath(`/document-example/${validatedData.id}`);
-  redirect(`/document-example/${validatedData.id}`);
-}
+    revalidateHelpers.all();
+    redirect(`/document-example/${parsedInput.id}`);
+  });
 
 // Delete document
-export async function deleteExampleDocument(formData: FormData) {
-  const supabase = await createClient();
-  
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  
-  if (userError || !user) {
-    throw new Error('User not authenticated');
-  }
+export const deleteExampleDocument = authActionClient
+  .schema(deleteExampleDocumentSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { error } = await ctx.supabase
+      .from('example_documents')
+      .delete()
+      .eq('id', parsedInput.id)
+      .eq('author_id', ctx.user.id);
 
-  // Parse form data
-  const rawData = {
-    id: formData.get('id') as string
-  };
+    if (error) {
+      throw new ActionError('Failed to delete document', 'DELETE_ERROR');
+    }
 
-  // Validate input
-  const validatedData = deleteExampleDocumentSchema.parse(rawData);
-
-  // Delete document
-  const { error } = await supabase
-    .from('example_documents')
-    .delete()
-    .eq('id', validatedData.id)
-    .eq('author_id', user.id); // Ensure user owns the document
-
-  if (error) {
-    console.error('Error deleting document:', error);
-    throw new Error('Failed to delete document');
-  }
-
-  revalidatePath('/document-example');
-  redirect('/document-example');
-}
+    revalidateHelpers.all();
+    redirect('/document-example');
+  });
 
 // Search documents
-export async function searchExampleDocuments(query: string): Promise<ExampleDocument[]> {
-  const supabase = await createClient();
-  
-  if (!query.trim()) {
-    return getAllExampleDocuments();
-  }
+export const searchExampleDocuments = authActionClient
+  .schema(z.object({ query: z.string() }))
+  .action(async ({ parsedInput, ctx }) => {
+    if (!parsedInput.query.trim()) {
+      const result = await getAllExampleDocuments({});
+      return result?.data || [];
+    }
 
-  const { data, error } = await supabase
-    .from('example_documents')
-    .select('*')
-    .or(`title.ilike.%${query}%,description.ilike.%${query}%,content.ilike.%${query}%`)
-    .order('created_at', { ascending: false });
+    const { data, error } = await ctx.supabase
+      .from('example_documents')
+      .select('*')
+      .or(`title.ilike.%${parsedInput.query}%,description.ilike.%${parsedInput.query}%,content.ilike.%${parsedInput.query}%`)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error searching documents:', error);
-    return [];
-  }
+    if (error) {
+      if (error.code === '42P01') {
+        return [];
+      }
+      throw new ActionError('Failed to search documents', 'SEARCH_ERROR');
+    }
 
-  return data || [];
-}
+    return data || [];
+  });

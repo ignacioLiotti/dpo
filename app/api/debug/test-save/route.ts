@@ -1,22 +1,12 @@
-import { createClient } from '@/supabase/server';
+import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/server-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
     const { documentId } = await request.json();
     
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's organization
-    const { data: orgId, error: orgError } = await supabase.rpc('get_user_organization_id');
-    if (orgError || !orgId) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-    }
+    const supabase = await createServerSupabaseClient();
+    const { user, organizationId } = await getUserOrganization(supabase);
 
     if (!documentId) {
       return NextResponse.json({ error: 'Document ID required' }, { status: 400 });
@@ -29,7 +19,7 @@ export async function POST(request: NextRequest) {
       .from('files')
       .select('*')
       .eq('id', documentId)
-      .eq('organization_id', orgId)
+      .eq('organization_id', organizationId)
       .single();
 
     if (docError || !document) {
@@ -228,7 +218,7 @@ export async function POST(request: NextRequest) {
       },
       debug: {
         userId: user.id,
-        orgId: orgId,
+        organizationId: organizationId,
         documentExists: !!document,
         hasFolder: !!folderAssignment,
         folderHasExtraction: !!folderAssignment?.folder?.extract_data

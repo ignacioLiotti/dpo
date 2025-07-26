@@ -3,7 +3,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { OrganizationProvider } from '@/contexts/organization-context';
+import { AuthProviderWrapper } from '@/app/auth/components';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -40,9 +40,9 @@ export function Providers({ children }: ProvidersProps) {
         enableSystem
         disableTransitionOnChange
       >
-        <OrganizationProvider>
+        <AuthProviderWrapper>
           {children}
-        </OrganizationProvider>
+        </AuthProviderWrapper>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -11,6 +11,7 @@ interface DocumentTreeViewProps {
   folders: Folder[];
   documents: ObraDocument[];
   currentFolder: Folder | null;
+  folderCounts: Record<string, number>;
   searchParams: {
     search?: string;
     category?: string;
@@ -31,6 +32,7 @@ export function DocumentTreeView({
   folders,
   documents,
   currentFolder,
+  folderCounts,
   searchParams
 }: DocumentTreeViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
@@ -129,7 +131,7 @@ export function DocumentTreeView({
               )}
               <span className="truncate">{node.name}</span>
               <span className="text-xs text-muted-foreground ml-auto">
-                {node.children?.length || 0}
+                {folderCounts[node.id] || 0}
               </span>
             </Link>
           </div>
@@ -172,7 +174,7 @@ export function DocumentTreeView({
         </Link>
       </div>
 
-      <div className="max-h-96 overflow-y-auto space-y-1 flex flex-col flex-col-reverse">
+      <div className="max-h-96 overflow-y-auto space-y-1 flex flex-col">
         {treeNodes.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             <FolderIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
