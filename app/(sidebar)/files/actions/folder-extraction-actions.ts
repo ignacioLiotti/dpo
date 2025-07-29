@@ -3,7 +3,8 @@
 import { createServerSupabaseClient } from '@/app/auth/server-utils';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-// Removed import - extractStructuredData is now defined below
+import { extractStructuredFields } from '../lib/ai-helpers';
+import type { FieldDefinition } from '../schemas/ai-schemas';
 
 // Default field definitions for invoice/document extraction
 const DEFAULT_FIELD_DEFINITIONS = [
@@ -587,10 +588,10 @@ export async function getFolderExtractedData(folderId: string) {
       throw new Error('User is not a member of any organization');
     }
 
-    console.log('[getFolderExtractedData] folderId:', folderId);
-    console.log('[getFolderExtractedData] orgId:', orgId);
+    // console.log('[getFolderExtractedData] folderId:', folderId);
+    // console.log('[getFolderExtractedData] orgId:', orgId);
 
-    console.log(`[getFolderExtractedData] → filtering for folder_id=[${folderId}] (length ${folderId.length}, type ${typeof folderId})`);
+    // console.log(`[getFolderExtractedData] → filtering for folder_id=[${folderId}] (length ${folderId.length}, type ${typeof folderId})`);
 
 
     // First try to get structured extracted data
@@ -609,7 +610,7 @@ export async function getFolderExtractedData(folderId: string) {
       .eq('folder_id', folderId)
       .order('updated_at', { ascending: false });
 
-    console.log('[getFolderExtractedData] extractedData:', extractedData);
+    // console.log('[getFolderExtractedData] extractedData:', extractedData);
 
     // If we have structured extracted data, return it
     if (extractedData && extractedData.length > 0) {
@@ -937,20 +938,18 @@ async function extractStructuredDataWithAI(
   }`;
 
   try {
-    const { openai } = await import('@ai-sdk/openai');
-    const { generateText } = await import('ai');
-    
-    const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
-      prompt,
-      temperature: 0.1,
-    });
+    // Convert local FieldDefinition to the schema format
+    const schemaFieldDefs: FieldDefinition[] = fieldDefinitions.map(field => ({
+      id: field.field_name, // Use field_name as id
+      field_name: field.field_name,
+      field_label: field.field_label,
+      field_type: field.field_type as any, // Type assertion for compatibility
+      extraction_pattern: field.extraction_pattern,
+      is_required: field.is_required || false,
+    }));
 
-    const cleanedText = text.replace(/```json\s*|\s*```/g, '').trim();
-    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-    const finalText = jsonMatch ? jsonMatch[0] : cleanedText;
-    
-    const aiExtracted = JSON.parse(finalText);
+    // Use the new structured extraction helper
+    const aiExtracted = await extractStructuredFields(ocrText, schemaFieldDefs, fileName);
     const extractedData: Record<string, any> = {};
     
     for (const field of fieldDefinitions) {

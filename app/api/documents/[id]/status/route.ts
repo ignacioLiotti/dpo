@@ -4,12 +4,12 @@ import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/serv
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();
     const { user, organizationId } = await getUserOrganization(supabase);
-    const documentId = params.id;
+    const { id: documentId } = await params;
 
     // Get document with extracted data count
     const { data: document, error } = await supabase

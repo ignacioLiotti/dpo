@@ -66,7 +66,7 @@ export function ExtractedDataView({
       console.log('Newly completed documents detected, refreshing...');
       refreshData();
     }
-  }, [documents, currentFolder, realtimeExtractedData]);
+  }, [documents, currentFolder]);
 
   const refreshData = async () => {
     if (!currentFolder) return;

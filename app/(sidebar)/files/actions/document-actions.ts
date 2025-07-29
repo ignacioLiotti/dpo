@@ -4,6 +4,25 @@ import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/serv
 import { authActionClient, orgActionClient, ActionError, revalidateHelpers } from '@/app/auth/safe-action';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { 
+  validateFile, 
+  streamingFileUpload, 
+  cleanupFailedUpload,
+  withTransaction,
+  retryWithBackoff,
+  trackProcessingJob,
+  updateProcessingJob,
+  clearProcessingJob
+} from '../lib/upload-utils';
+import {
+  extractAndAnalyzeDocument,
+  analyzeWithMistral,
+  extractStructuredFields,
+  processDocumentWithAI,
+  extractTextWithAI,
+  analyzeDocument,
+} from '../lib/ai-helpers';
+import type { FieldDefinition } from '../schemas/ai-schemas';
 
 // Schemas
 const uploadDocumentsSchema = z.object({
@@ -48,17 +67,8 @@ interface ProcessingResult {
   provider: string;
 }
 
-interface FieldDefinition {
-  id: string;
-  field_name: string;
-  field_label: string;
-  field_type: string;
-  extraction_pattern?: string;
-  is_required: boolean;
-}
 
-
-// Main document upload action with immediate processing
+// Main document upload action with improved error handling and transaction safety
 export async function uploadDocumentsAction(formData: FormData) {
   const supabase = await createServerSupabaseClient();
   const { user, organizationId } = await getUserOrganization(supabase);
@@ -72,75 +82,112 @@ export async function uploadDocumentsAction(formData: FormData) {
       throw new Error('No files provided');
     }
 
+    // Validate all files before processing
+    for (const file of files) {
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        throw new Error(`File '${file.name}' validation failed: ${validation.error}`);
+      }
+    }
+
     const results = [];
     const errors = [];
 
     for (const file of files) {
+      let storagePath: string | null = null;
+      let fileRecord: any = null;
+
       try {
-        // 1. Upload file to storage
+        // 1. Generate storage path
         const timestamp = Date.now();
         const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const storagePath = `${organizationId}/${timestamp}_${sanitizedName}`;
-        
-        const arrayBuffer = await file.arrayBuffer();
-        const { error: uploadError } = await supabase.storage
-          .from('organization-files')
-          .upload(storagePath, new Uint8Array(arrayBuffer), {
-            contentType: file.type,
-            upsert: false,
-          });
+        storagePath = `${organizationId}/${timestamp}_${sanitizedName}`;
 
-        if (uploadError) throw uploadError;
+        // 2. Use transaction-like pattern for file upload + DB operations
+        fileRecord = await withTransaction(
+          async () => {
+            // Upload file using streaming to avoid memory issues
+            const uploadResult = await streamingFileUpload(file, storagePath!, organizationId);
+            if (!uploadResult.success) {
+              throw uploadResult.error || new Error('File upload failed');
+            }
 
-        // 2. Create file record with 'pending' status for optimistic UI
-        const { data: fileRecord, error: fileError } = await supabase
-          .from('files')
-          .insert({
-            name: file.name,
-            original_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            storage_path: storagePath,
-            organization_id: organizationId,
-            user_id: user.id,
-            processing_status: 'pending' // Start as pending instead of processing
-          })
-          .select()
-          .single();
+            // Create file record with 'pending' status
+            const { data: dbRecord, error: fileError } = await supabase
+              .from('files')
+              .insert({
+                name: file.name,
+                original_name: file.name,
+                file_type: file.type,
+                file_size: file.size,
+                storage_path: storagePath,
+                organization_id: organizationId,
+                user_id: user.id,
+                processing_status: 'pending'
+              })
+              .select()
+              .single();
 
-        if (fileError) {
-          await supabase.storage.from('organization-files').remove([storagePath]);
-          throw fileError;
-        }
+            if (fileError) throw fileError;
 
-        // 3. Create folder assignment if needed
-        if (folderId && fileRecord) {
-          await supabase
-            .from('file_folder_assignments')
-            .insert({
-              file_id: fileRecord.id,
-              folder_id: folderId,
-              user_id: user.id,
-              sort_order: 0,
-            });
-        }
+            // Create folder assignment if needed
+            if (folderId && dbRecord) {
+              const { error: assignError } = await supabase
+                .from('file_folder_assignments')
+                .insert({
+                  file_id: dbRecord.id,
+                  folder_id: folderId,
+                  user_id: user.id,
+                  sort_order: 0,
+                });
 
-        // 4. Add to results immediately (optimistic response)
+              if (assignError) {
+                console.warn('Failed to assign file to folder:', assignError);
+                // Non-critical error, continue processing
+              }
+            }
+
+            return dbRecord;
+          },
+          async () => {
+            // Rollback: Clean up uploaded file if DB operations fail
+            if (storagePath) {
+              await cleanupFailedUpload(storagePath);
+            }
+          }
+        );
+
+        // 3. Add to results
         results.push({
           file: fileRecord,
-          processing: null // No processing result yet
+          processing: null
         });
 
-        console.log('[Processing] File uploaded and results added:', fileRecord.id);
-
-        // 5. Trigger background processing
-        // This happens asynchronously - we don't wait for it
-        triggerBackgroundProcessingForDocument(fileRecord.id).catch(error => {
-          console.error(`Background processing failed for ${fileRecord.id}:`, error);
+        console.log('[Upload] File uploaded successfully:', {
+          id: fileRecord.id,
+          name: fileRecord.name,
+          size: fileRecord.file_size
         });
+
+        // 4. Trigger background processing with proper error handling
+        triggerBackgroundProcessingWithRetry(fileRecord.id)
+          .catch(error => {
+            console.error('[Processing] Background processing failed:', {
+              fileId: fileRecord.id,
+              error: error.message,
+              stack: error.stack
+            });
+            // Don't throw - processing failure shouldn't fail the upload
+          });
 
       } catch (error) {
-        console.error(`Error processing file ${file.name}:`, error);
+        console.error(`[Upload] Error processing file ${file.name}:`, error);
+        
+        // Clean up any partial uploads
+        if (storagePath && !fileRecord) {
+          await cleanupFailedUpload(storagePath);
+        }
+
         errors.push({ 
           file: file.name, 
           error: error instanceof Error ? error.message : 'Unknown error' 
@@ -150,7 +197,11 @@ export async function uploadDocumentsAction(formData: FormData) {
 
     revalidatePath('/files');
     
-    console.log(`Upload completed: ${results.length} success, ${errors.length} errors`);
+    console.log(`[Upload] Batch completed:`, {
+      total: files.length,
+      success: results.length,
+      errors: errors.length
+    });
     
     return {
       success: results.length > 0,
@@ -164,7 +215,7 @@ export async function uploadDocumentsAction(formData: FormData) {
     };
 
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('[Upload] Critical error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'
@@ -172,26 +223,56 @@ export async function uploadDocumentsAction(formData: FormData) {
   }
 }
 
-// Trigger background processing for a single document
-async function triggerBackgroundProcessingForDocument(documentId: string) {
+// Trigger background processing with retry mechanism
+async function triggerBackgroundProcessingWithRetry(documentId: string) {
+  const job = trackProcessingJob(documentId);
+  
   try {
+    console.log('[Processing] Starting background processing:', {
+      documentId,
+      attempt: job.attempts + 1
+    });
+
     // Update status to processing
     const supabase = await createServerSupabaseClient();
     await supabase
       .from('files')
       .update({ 
-        processing_status: 'processing'
+        processing_status: 'processing',
+        updated_at: new Date().toISOString()
       })
       .eq('id', documentId);
 
-    // Process the document
-    await processDocument(documentId);
+    // Process with retry logic
+    await retryWithBackoff(
+      async () => processDocument(documentId),
+      {
+        maxAttempts: 3,
+        initialDelay: 2000,
+        maxDelay: 10000,
+        backoffMultiplier: 2
+      }
+    );
     
-    // The processDocument function already updates the status to 'completed'
-    // No need to update it again here
+    // Success - clear job tracking
+    clearProcessingJob(documentId);
+    console.log('[Processing] Document processed successfully:', documentId);
     
   } catch (error) {
-    console.error(`Error processing document ${documentId}:`, error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Update job tracking
+    updateProcessingJob(documentId, {
+      attempts: job.attempts + 1,
+      lastError: errorMessage,
+      nextRetryAt: new Date(Date.now() + 60000) // Retry after 1 minute
+    });
+    
+    console.error('[Processing] Document processing failed after retries:', {
+      documentId,
+      attempts: job.attempts + 1,
+      error: errorMessage
+    });
     
     // Update status to failed
     const supabase = await createServerSupabaseClient();
@@ -199,25 +280,73 @@ async function triggerBackgroundProcessingForDocument(documentId: string) {
       .from('files')
       .update({ 
         processing_status: 'failed',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        processing_error: errorMessage // Store error for debugging
       })
       .eq('id', documentId);
     
     if (statusError) {
-      console.error('[Process] Error updating status to failed:', statusError);
-    } else {
-      console.log(`[Process] Successfully updated status to failed for ${documentId}`);
+      console.error('[Processing] Error updating status to failed:', statusError);
     }
+    
+    throw error; // Re-throw for caller to handle
   }
 }
 
-// Main document processing function with smart provider switching
+// Legacy function for backward compatibility
+async function triggerBackgroundProcessingForDocument(documentId: string) {
+  return triggerBackgroundProcessingWithRetry(documentId);
+}
+
+// Main document processing function with improved error handling
 export async function processDocument(documentId: string): Promise<ProcessingResult> {
   const supabase = await createServerSupabaseClient();
   const { user, organizationId } = await getUserOrganization(supabase);
 
   console.log(`[Process] Starting processing for document: ${documentId}`);
 
+  // Add timeout for the entire processing operation
+  const PROCESSING_TIMEOUT = 120000; // 2 minutes
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Processing timeout exceeded')), PROCESSING_TIMEOUT);
+  });
+
+  try {
+    return await Promise.race([
+      processDocumentInternal(documentId, supabase, user, organizationId),
+      timeoutPromise
+    ]);
+  } catch (error) {
+    console.error('[Process] Document processing error:', {
+      documentId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Ensure status is updated to failed
+    try {
+      await supabase
+        .from('files')
+        .update({ 
+          processing_status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+    } catch (updateError) {
+      console.error('[Process] Failed to update document status:', updateError);
+    }
+    
+    throw error;
+  }
+}
+
+// Internal processing function with all the logic
+async function processDocumentInternal(
+  documentId: string,
+  supabase: any,
+  user: any,
+  organizationId: string
+): Promise<ProcessingResult> {
   try {
     // 1. Get document with existing analysis and folder info
     const { data: document, error: docError } = await supabase
@@ -244,7 +373,7 @@ export async function processDocument(documentId: string): Promise<ProcessingRes
       .single();
 
     if (docError || !document) {
-      throw new Error('Document not found');
+      throw new Error('Document not found or access denied');
     }
 
     // 2. Check if we already have OCR text
@@ -347,21 +476,11 @@ export async function processDocument(documentId: string): Promise<ProcessingRes
 
   } catch (error) {
     console.error('[Process] Error:', error);
-    
-    // Update status to failed
-    await supabase
-      .from('files')
-      .update({ 
-        processing_status: 'failed',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', documentId);
-
-    throw error;
+    throw error; // Status update handled in parent function
   }
 }
 
-// Perform OCR with automatic provider fallback
+// Perform OCR with automatic provider fallback and timeout handling
 async function performOCRWithProviderFallback(
   documentUrl: string,
   fileName: string,
@@ -369,27 +488,57 @@ async function performOCRWithProviderFallback(
 ): Promise<ProcessingResult> {
   console.log('[OCR] Starting OCR with provider fallback');
 
+  const OCR_TIMEOUT = 30000; // 30 seconds per provider
+  
+  // Helper to add timeout to promises
+  const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, providerName: string): Promise<T> => {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`${providerName} OCR timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+    return Promise.race([promise, timeoutPromise]);
+  };
+
   // Try OpenAI first (best for images)
   if (fileType.includes('image') || fileType.includes('png') || fileType.includes('jpg')) {
     try {
       console.log('[OCR] Trying OpenAI for image processing');
-      return await processWithOpenAI(documentUrl, fileName, fileType);
+      return await withTimeout(
+        processWithOpenAI(documentUrl, fileName, fileType),
+        OCR_TIMEOUT,
+        'OpenAI'
+      );
     } catch (error) {
-      console.error('[OCR] OpenAI failed:', error);
+      console.error('[OCR] OpenAI failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fileName
+      });
     }
   }
 
   // Try Mistral (good general purpose)
   try {
     console.log('[OCR] Trying Mistral');
-    return await processWithMistral(documentUrl, fileName, fileType);
+    return await withTimeout(
+      processWithMistral(documentUrl, fileName, fileType),
+      OCR_TIMEOUT,
+      'Mistral'
+    );
   } catch (error) {
-    console.error('[OCR] Mistral failed:', error);
+    console.error('[OCR] Mistral failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      fileName
+    });
   }
 
   // Fallback: Basic extraction
-  console.log('[OCR] All providers failed, using basic extraction');
-  throw new Error('All OCR providers failed');
+  console.log('[OCR] All providers failed, returning basic result');
+  return {
+    ocrText: `Unable to extract text from ${fileName}. OCR providers unavailable.`,
+    description: `Document: ${fileName}`,
+    tags: ['ocr-failed', 'needs-manual-review'],
+    confidence: 0.1,
+    provider: 'fallback'
+  };
 }
 
 // URL-based OCR functions (moved from url-ocr-functions.ts)
@@ -446,30 +595,9 @@ async function extractTextWithOpenAIUrl(
   fileName: string
 ): Promise<string> {
   try {
-    const { openai } = await import('@ai-sdk/openai');
-    const { generateText } = await import('ai');
-
-    const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
-      messages: [
-        {
-          role: 'user' as const,
-          content: [
-            {
-              type: 'text',
-              text: 'Extract all text from this image. Return only the text content, preserving structure and formatting. Focus on readable text, numbers, and important details.'
-            },
-            {
-              type: 'image',
-              image: documentUrl
-            }
-          ]
-        }
-      ],
-      temperature: 0.1
-    });
-
-    return text.trim();
+    // Use the new structured extraction
+    const result = await extractTextWithAI(documentUrl, fileName);
+    return result.extractedText;
   } catch (error) {
     throw new Error(
       `OpenAI URL OCR failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -477,133 +605,46 @@ async function extractTextWithOpenAIUrl(
   }
 }
 
-// OpenAI processing (real implementation)
+// OpenAI processing with structured output
 async function processWithOpenAI(
   documentUrl: string,
   fileName: string,
   fileType: string
 ): Promise<ProcessingResult> {
-  const { openai } = await import('@ai-sdk/openai');
-  const { generateText } = await import('ai');
-
-  // Download and convert to base64
-  const response = await fetch(documentUrl);
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const base64 = buffer.toString('base64');
-  
-  // Determine MIME type
-  let mimeType = fileType || 'image/png';
-  if (fileType === 'application/octet-stream') {
-    const ext = fileName.toLowerCase().split('.').pop();
-    mimeType = ext === 'pdf' ? 'application/pdf' : `image/${ext}`;
+  try {
+    // Use the new AI helper that handles structured output
+    return await processDocumentWithAI(documentUrl, fileName, fileType, 'openai');
+  } catch (error) {
+    console.error('[Process] OpenAI processing failed:', error);
+    throw error;
   }
-
-  // Skip PDFs as OpenAI can't process them
-  if (mimeType === 'application/pdf') {
-    throw new Error('OpenAI cannot process PDF files directly');
-  }
-
-  const dataUrl = `data:${mimeType};base64,${base64}`;
-
-  const { text } = await generateText({
-    model: openai('gpt-4o-mini'),
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Extract and analyze this document:
-1. Extract ALL text content exactly as it appears
-2. Generate a search-optimized description (focus on keywords someone might search for)
-3. Generate search tags (lowercase, relevant terms)
-
-Format your response EXACTLY as:
-===OCR_TEXT===
-[all extracted text]
-===DESCRIPTION===
-[search-optimized description]
-===TAGS===
-[tag1, tag2, tag3, ...]`
-          },
-          {
-            type: 'image',
-            image: dataUrl
-          }
-        ]
-      }
-    ],
-    temperature: 0.1
-  });
-
-  // Parse response
-  const ocrMatch = text.match(/===OCR_TEXT===\n([\s\S]*?)(?=\n===DESCRIPTION===|$)/);
-  const descMatch = text.match(/===DESCRIPTION===\n([\s\S]*?)(?=\n===TAGS===|$)/);
-  const tagsMatch = text.match(/===TAGS===\n([\s\S]*?)$/);
-
-  const ocrText = ocrMatch?.[1]?.trim() || text;
-  const description = descMatch?.[1]?.trim() || `Document analysis of ${fileName}`;
-  const tagsText = tagsMatch?.[1]?.trim() || '';
-  const tags = tagsText.split(',').map(t => t.trim()).filter(Boolean);
-
-  return {
-    ocrText,
-    description,
-    tags: tags.length > 0 ? tags : ['document', 'openai-processed'],
-    confidence: 0.9,
-    provider: 'openai-gpt4-vision'
-  };
 }
 
-// Mistral processing (real implementation)
+// Mistral processing with structured output
 async function processWithMistral(
   documentUrl: string,
   fileName: string,
   fileType: string
 ): Promise<ProcessingResult> {
-  // Use Mistral's OCR capability directly
-  const ocrText = await extractTextWithMistralUrl(documentUrl, fileName);
-  const { mistral } = await import('@ai-sdk/mistral');
-  const { generateText } = await import('ai');
-
-  // Generate description and tags
-  const { text } = await generateText({
-    model: mistral("mistral-small-latest"),
-    messages: [
-      {
-        role: "user",
-        content: `Given this document text, generate:
-1. A search-optimized description (what would someone search to find this?)
-2. Relevant search tags (lowercase, specific terms)
-
-Text: ${ocrText.substring(0, 3000)}...
-
-Format response as:
-DESCRIPTION: [description]
-TAGS: [tag1, tag2, tag3, ...]`,
-      },
-    ],
-    temperature: 0.1,
-  });
-
-  // Parse response
-  const descMatch = text.match(/DESCRIPTION:\s*(.+?)(?=\nTAGS:|$)/s);
-  const tagsMatch = text.match(/TAGS:\s*(.+)$/s);
-
-  const description = descMatch?.[1]?.trim() || `Document: ${fileName}`;
-  const tagsText = tagsMatch?.[1]?.trim() || '';
-  const tags = tagsText.split(',').map(t => t.trim()).filter(Boolean);
-
-  return {
-    ocrText,
-    description,
-    tags: tags.length > 0 ? tags : ['document', 'mistral-processed'],
-    confidence: 0.85,
-    provider: 'mistral-large'
-  };
+  try {
+    // First extract text using Mistral OCR
+    const ocrText = await extractTextWithMistralUrl(documentUrl, fileName);
+    
+    // Then analyze with structured output
+    const result = await analyzeWithMistral(ocrText, fileName);
+    
+    // Ensure we have the OCR text in the result
+    return {
+      ...result,
+      ocrText: ocrText, // Use the actual OCR text, not the one from analysis
+    };
+  } catch (error) {
+    console.error('[Process] Mistral processing failed:', error);
+    throw error;
+  }
 }
 
-// Extract fields from text using AI
+// Extract fields from text using structured AI output
 async function extractFieldsFromText(
   ocrText: string,
   fieldDefinitions: FieldDefinition[],
@@ -613,43 +654,11 @@ async function extractFieldsFromText(
     return {};
   }
 
-  const { openai } = await import('@ai-sdk/openai');
-  const { generateText } = await import('ai');
-
-  // Build field extraction prompt
-  const fieldPrompt = fieldDefinitions.map(field => 
-    `- ${field.field_label} (${field.field_name}): type=${field.field_type}, required=${field.is_required}`
-  ).join('\n');
-
-  const { text } = await generateText({
-    model: openai('gpt-4o-mini'),
-    messages: [
-      {
-        role: 'user',
-        content: `Extract the following fields from this document text.
-Return ONLY a JSON object with the field names as keys.
-
-Fields to extract:
-${fieldPrompt}
-
-Document text:
-${ocrText.substring(0, 4000)}
-
-Return JSON only, no explanation:`
-      }
-    ],
-    temperature: 0.1
-  });
-
   try {
-    // Clean and parse JSON response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return {};
+    // Use the new structured extraction helper
+    return await extractStructuredFields(ocrText, fieldDefinitions, fileName);
   } catch (error) {
-    console.error('[Extract] Failed to parse extraction result:', error);
+    console.error('[Extract] Field extraction failed:', error);
     return {};
   }
 }
