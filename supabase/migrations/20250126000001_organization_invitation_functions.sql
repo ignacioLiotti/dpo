@@ -97,6 +97,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to accept an organization invitation
+-- Drop existing function first to avoid return type conflicts
+DROP FUNCTION IF EXISTS public.accept_organization_invitation(UUID);
+
 CREATE OR REPLACE FUNCTION public.accept_organization_invitation(
     p_token UUID
 )

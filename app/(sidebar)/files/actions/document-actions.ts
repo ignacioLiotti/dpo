@@ -21,8 +21,11 @@ import {
   processDocumentWithAI,
   extractTextWithAI,
   analyzeDocument,
+  extractAndAnalyzeTabularDocument,
+  processTabularDocumentWithMistral,
 } from '../lib/ai-helpers';
-import type { FieldDefinition } from '../schemas/ai-schemas';
+import { supabasePool, withPooledClient } from '../lib/supabase-pool';
+import type { FieldDefinition, TabularFieldDefinition } from '../schemas/ai-schemas';
 
 // Schemas
 const uploadDocumentsSchema = z.object({
@@ -170,15 +173,18 @@ export async function uploadDocumentsAction(formData: FormData) {
         });
 
         // 4. Trigger background processing with proper error handling
-        triggerBackgroundProcessingWithRetry(fileRecord.id)
-          .catch(error => {
-            console.error('[Processing] Background processing failed:', {
-              fileId: fileRecord.id,
-              error: error.message,
-              stack: error.stack
+        // Add small delay to ensure database transaction is committed
+        setTimeout(() => {
+          triggerBackgroundProcessingWithRetry(fileRecord.id)
+            .catch(error => {
+              console.error('[Processing] Background processing failed:', {
+                fileId: fileRecord.id,
+                error: error.message,
+                stack: error.stack
+              });
+              // Don't throw - processing failure shouldn't fail the upload
             });
-            // Don't throw - processing failure shouldn't fail the upload
-          });
+        }, 100); // 100ms delay
 
       } catch (error) {
         console.error(`[Upload] Error processing file ${file.name}:`, error);
@@ -233,15 +239,16 @@ async function triggerBackgroundProcessingWithRetry(documentId: string) {
       attempt: job.attempts + 1
     });
 
-    // Update status to processing
-    const supabase = await createServerSupabaseClient();
-    await supabase
-      .from('files')
-      .update({ 
-        processing_status: 'processing',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', documentId);
+    // Update status to processing using pooled connection
+    await withPooledClient(async (supabase) => {
+      await supabase
+        .from('files')
+        .update({ 
+          processing_status: 'processing',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+    });
 
     // Process with retry logic
     await retryWithBackoff(
@@ -274,19 +281,24 @@ async function triggerBackgroundProcessingWithRetry(documentId: string) {
       error: errorMessage
     });
     
-    // Update status to failed
-    const supabase = await createServerSupabaseClient();
-    const { error: statusError } = await supabase
-      .from('files')
-      .update({ 
-        processing_status: 'failed',
-        updated_at: new Date().toISOString(),
-        processing_error: errorMessage // Store error for debugging
-      })
-      .eq('id', documentId);
-    
-    if (statusError) {
-      console.error('[Processing] Error updating status to failed:', statusError);
+    // Update status to failed using pooled connection
+    try {
+      await withPooledClient(async (supabase) => {
+        const { error: statusError } = await supabase
+          .from('files')
+          .update({ 
+            processing_status: 'failed',
+            updated_at: new Date().toISOString()
+            // Note: processing_error column needs to be added via migration
+          })
+          .eq('id', documentId);
+        
+        if (statusError) {
+          console.error('[Processing] Error updating status to failed:', statusError);
+        }
+      });
+    } catch (poolError) {
+      console.error('[Processing] Failed to get pooled connection:', poolError);
     }
     
     throw error; // Re-throw for caller to handle
@@ -298,11 +310,8 @@ async function triggerBackgroundProcessingForDocument(documentId: string) {
   return triggerBackgroundProcessingWithRetry(documentId);
 }
 
-// Main document processing function with improved error handling
+// Main document processing function with improved error handling and connection pooling
 export async function processDocument(documentId: string): Promise<ProcessingResult> {
-  const supabase = await createServerSupabaseClient();
-  const { user, organizationId } = await getUserOrganization(supabase);
-
   console.log(`[Process] Starting processing for document: ${documentId}`);
 
   // Add timeout for the entire processing operation
@@ -312,8 +321,50 @@ export async function processDocument(documentId: string): Promise<ProcessingRes
   });
 
   try {
+    // Use connection pooling for better performance
     return await Promise.race([
-      processDocumentInternal(documentId, supabase, user, organizationId),
+      withPooledClient(async (supabase) => {
+        // For background processing, we need to get the document's organization directly
+        // since we don't have a user session
+        console.log('[Process] Fetching document with service role:', documentId);
+        
+        // First, let's try a simple query to test service role access
+        const { data: testQuery, error: testError } = await supabase
+          .from('files')
+          .select('id, name')
+          .limit(1);
+          
+        console.log('[Process] Service role test query:', { count: testQuery?.length, error: testError });
+        
+        const { data: document, error: docError } = await supabase
+          .from('files')
+          .select('organization_id, user_id, name, processing_status, is_active')
+          .eq('id', documentId)
+          .single();
+          
+        console.log('[Process] Document query result:', { document, error: docError });
+          
+        if (docError) {
+          console.error('[Process] Database error fetching document:', docError);
+          throw new Error(`Database error: ${docError.message}`);
+        }
+        
+        if (!document) {
+          throw new Error('Document not found in database');
+        }
+        
+        if (!document.is_active) {
+          throw new Error('Document is inactive');
+        }
+        
+        const organizationId = document.organization_id;
+        const userId = document.user_id;
+        
+        // Create a minimal user object for background processing
+        const user = { id: userId };
+        
+        return processDocumentInternal(documentId, supabase, user, organizationId);
+      }),
       timeoutPromise
     ]);
   } catch (error) {
@@ -325,13 +376,15 @@ export async function processDocument(documentId: string): Promise<ProcessingRes
     
     // Ensure status is updated to failed
     try {
-      await supabase
-        .from('files')
-        .update({ 
-          processing_status: 'failed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', documentId);
+      await withPooledClient(async (supabase) => {
+        await supabase
+          .from('files')
+          .update({ 
+            processing_status: 'failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', documentId);
+      });
     } catch (updateError) {
       console.error('[Process] Failed to update document status:', updateError);
     }
@@ -364,7 +417,9 @@ async function processDocumentInternal(
           folder:folders (
             id,
             name,
-            extract_data
+            extract_data,
+            extraction_type,
+            max_rows
           )
         )
       `)
@@ -380,11 +435,13 @@ async function processDocumentInternal(
     const existingAnalysis = document.file_analysis?.[0];
     const hasOcrText = existingAnalysis?.ocr_text && existingAnalysis.ocr_text.length > 0;
     
-    // 3. Determine if we need field extraction
+    // 3. Determine processing type
     const folder = document.file_folder_assignments?.[0]?.folder;
     const needsFieldExtraction = folder?.extract_data === true;
+    const isTabularExtraction = folder?.extraction_type === 'tabular';
+    const maxRows = folder?.max_rows || 100;
 
-    console.log(`[Process] Document state: hasOCR=${hasOcrText}, needsExtraction=${needsFieldExtraction}`);
+    console.log(`[Process] Document state: hasOCR=${hasOcrText}, needsExtraction=${needsFieldExtraction}, isTabular=${isTabularExtraction}`);
 
     let processingResult: ProcessingResult;
 
@@ -397,8 +454,66 @@ async function processDocumentInternal(
       throw new Error('Failed to generate document URL');
     }
 
-    // 5. Process based on current state
-    if (hasOcrText && !needsFieldExtraction) {
+    // 5. Process based on current state and extraction type
+    if (isTabularExtraction) {
+      // Case: Tabular extraction (always requires fresh processing for best results)
+      console.log('[Process] Performing tabular OCR processing');
+      const fieldDefinitions = await getTabularFieldDefinitions(supabase, folder.id);
+      
+      if (fieldDefinitions.length === 0) {
+        console.warn('[Process] No field definitions found for tabular folder, falling back to regular processing');
+        processingResult = await performOCRWithProviderFallback(
+          signedUrlData.signedUrl,
+          document.name,
+          document.file_type
+        );
+      } else {
+        // Check if it's a PDF - PDFs need different handling for tabular extraction
+        const isPDF = document.file_type === 'application/pdf' || document.name.toLowerCase().endsWith('.pdf');
+        
+        if (isPDF) {
+          console.log('[Process] PDF detected for tabular extraction, using text-based approach');
+          
+          // For PDFs, first extract text with regular OCR, then process as tabular
+          const ocrResult = await performOCRWithProviderFallback(
+            signedUrlData.signedUrl,
+            document.name,
+            document.file_type
+          );
+          
+          processingResult = await processTabularDocumentWithMistral(
+            ocrResult.ocrText,
+            document.name,
+            fieldDefinitions
+          );
+        } else {
+          // For images, try direct tabular extraction
+          try {
+            processingResult = await extractAndAnalyzeTabularDocument(
+              signedUrlData.signedUrl,
+              document.name,
+              document.file_type,
+              fieldDefinitions
+            );
+          } catch (error) {
+            console.error('[Process] Tabular extraction failed, trying text-based fallback:', error);
+            
+            // Fallback: get OCR first, then process with Mistral
+            const ocrResult = await performOCRWithProviderFallback(
+              signedUrlData.signedUrl,
+              document.name,
+              document.file_type
+            );
+            
+            processingResult = await processTabularDocumentWithMistral(
+              ocrResult.ocrText,
+              document.name,
+              fieldDefinitions
+            );
+          }
+        }
+      }
+    } else if (hasOcrText && !needsFieldExtraction) {
       // Case 1: Already has OCR and doesn't need extraction - we're done
       console.log('[Process] Using existing OCR data');
       processingResult = {
@@ -409,7 +524,7 @@ async function processDocumentInternal(
         provider: 'cached'
       };
     } else if (hasOcrText && needsFieldExtraction) {
-      // Case 2: Has OCR but needs field extraction
+      // Case 2: Has OCR but needs regular field extraction
       console.log('[Process] Extracting fields from existing OCR');
       const fieldDefinitions = await getFieldDefinitions(supabase, folder.id);
       const extractedData = await extractFieldsFromText(
@@ -427,7 +542,7 @@ async function processDocumentInternal(
         provider: 'field-extraction'
       };
     } else {
-      // Case 3: Needs full OCR processing
+      // Case 3: Needs full OCR processing (regular single extraction)
       console.log('[Process] Performing full OCR processing');
       processingResult = await performOCRWithProviderFallback(
         signedUrlData.signedUrl,
@@ -435,7 +550,7 @@ async function processDocumentInternal(
         document.file_type
       );
 
-      // If extraction is needed, do it now
+      // If regular field extraction is needed, do it now
       if (needsFieldExtraction) {
         console.log('[Process] Extracting fields from new OCR');
         const fieldDefinitions = await getFieldDefinitions(supabase, folder.id);
@@ -683,6 +798,36 @@ async function getFieldDefinitions(
   return data || [];
 }
 
+// Get tabular field definitions for a folder (includes column_index and is_row_identifier)
+async function getTabularFieldDefinitions(
+  supabase: any,
+  folderId: string
+): Promise<TabularFieldDefinition[]> {
+  const { data, error } = await supabase
+    .from('folder_field_definitions')
+    .select('*')
+    .eq('folder_id', folderId)
+    .eq('is_active', true)
+    .order('column_index', { nullsLast: true });
+
+  if (error) {
+    console.error('[Fields] Error fetching tabular field definitions:', error);
+    return [];
+  }
+
+  // Transform to TabularFieldDefinition format (keeping the id for database operations)
+  return (data || []).map(field => ({
+    id: field.id, // Keep the database ID
+    field_name: field.field_name,
+    field_type: field.field_type,
+    field_label: field.field_label,
+    extraction_pattern: field.extraction_pattern,
+    is_required: field.is_required,
+    column_index: field.column_index,
+    is_row_identifier: field.is_row_identifier || false,
+  }));
+}
+
 // Save processing results to database
 async function saveProcessingResults(
   supabase: any,
@@ -717,14 +862,94 @@ async function saveProcessingResults(
 
   // Save extracted data if available
   if (result.extractedData && folderId) {
-    // Get field definitions to properly save each field
-    const fieldDefs = await getFieldDefinitions(supabase, folderId);
-    
-    for (const [fieldName, value] of Object.entries(result.extractedData)) {
-      const fieldDef = fieldDefs.find(f => f.field_name === fieldName);
-      if (!fieldDef) continue;
+    // Check if this is tabular data
+    if (result.extractedData.tabularData && Array.isArray(result.extractedData.tabularData)) {
+      await saveTabularResults(supabase, documentId, userId, result, folderId);
+    } else {
+      // Regular single extraction - OPTIMIZED BATCH OPERATION
+      const fieldDefs = await getFieldDefinitions(supabase, folderId);
+      
+      // Build batch of records instead of individual inserts
+      const batchRecords = [];
+      
+      for (const [fieldName, value] of Object.entries(result.extractedData)) {
+        const fieldDef = fieldDefs.find(f => f.field_name === fieldName);
+        if (!fieldDef) continue;
 
-      const extractedRecord = {
+        batchRecords.push({
+          file_id: documentId,
+          folder_id: folderId,
+          field_definition_id: fieldDef.id,
+          user_id: userId,
+          extracted_value: JSON.stringify(value),
+          confidence_score: result.confidence,
+          is_verified: false,
+          row_index: 0,
+          is_tabular: false,
+          extraction_metadata: {
+            provider: result.provider,
+            field_name: fieldName,
+            extracted_at: new Date().toISOString()
+          }
+        });
+      }
+      
+      // Single batch insert instead of N queries
+      if (batchRecords.length > 0) {
+        const { error: batchError } = await supabase
+          .from('extracted_data')
+          .upsert(batchRecords, {
+            onConflict: 'file_id,field_definition_id,row_index'
+          });
+          
+        if (batchError) {
+          console.error('[Save] Failed to save extracted data batch:', batchError);
+        } else {
+          console.log(`[Save] Saved ${batchRecords.length} extracted fields in single batch`);
+        }
+      }
+    }
+  }
+}
+
+// Save tabular extraction results to database
+async function saveTabularResults(
+  supabase: any,
+  documentId: string,
+  userId: string,
+  result: ProcessingResult,
+  folderId: string
+) {
+  console.log('[Save] Saving tabular results');
+  
+  const tabularData = result.extractedData?.tabularData;
+  const tableMetadata = result.extractedData?.tableMetadata;
+  
+  if (!tabularData || !Array.isArray(tabularData)) {
+    console.warn('[Save] No tabular data found in result');
+    return;
+  }
+  
+  // Get field definitions
+  const fieldDefs = await getTabularFieldDefinitions(supabase, folderId);
+  if (fieldDefs.length === 0) {
+    console.warn('[Save] No field definitions found for tabular folder');
+    return;
+  }
+  
+  // Build batch records for all rows
+  const batchRecords = [];
+  
+  tabularData.forEach((rowData, rowIndex) => {
+    // Process each field in the row
+    Object.entries(rowData).forEach(([fieldName, value]) => {
+      const fieldDef = fieldDefs.find(f => f.field_name === fieldName);
+      if (!fieldDef) {
+        console.warn(`[Save] Field definition not found for: ${fieldName}`);
+        return;
+      }
+      
+      batchRecords.push({
         file_id: documentId,
         folder_id: folderId,
         field_definition_id: fieldDef.id,
@@ -732,18 +957,51 @@ async function saveProcessingResults(
         extracted_value: JSON.stringify(value),
         confidence_score: result.confidence,
         is_verified: false,
+        row_index: rowIndex,
+        is_tabular: true,
         extraction_metadata: {
           provider: result.provider,
           field_name: fieldName,
+          row_index: rowIndex,
+          table_metadata: tableMetadata,
           extracted_at: new Date().toISOString()
         }
-      };
-
-      await supabase
-        .from('extracted_data')
-        .upsert(extractedRecord, {
-          onConflict: 'file_id,field_definition_id'
-        });
+      });
+    });
+  });
+  
+  console.log(`[Save] Prepared ${batchRecords.length} tabular records from ${tabularData.length} rows`);
+  
+  // Clear existing tabular data for this file AND folder combination
+  // This ensures we only clear data that would conflict with new data
+  const { error: deleteError } = await supabase
+    .from('extracted_data')
+    .delete()
+    .eq('file_id', documentId)
+    .eq('folder_id', folderId)
+    .eq('is_tabular', true);
+    
+  if (deleteError) {
+    console.error('[Save] Failed to clear existing tabular data:', deleteError);
+    throw new Error(`Failed to clear existing tabular data: ${deleteError.message}`);
+  }
+  
+  console.log('[Save] Successfully cleared existing tabular data');
+  
+  // Use upsert instead of insert to handle any remaining conflicts
+  if (batchRecords.length > 0) {
+    const { error: batchError } = await supabase
+      .from('extracted_data')
+      .upsert(batchRecords, { 
+        onConflict: 'file_id,field_definition_id,row_index',
+        ignoreDuplicates: false 
+      });
+      
+    if (batchError) {
+      console.error('[Save] Failed to save tabular data batch:', batchError);
+      throw new Error(`Failed to save tabular data: ${batchError.message}`);
+    } else {
+      console.log(`[Save] Successfully saved ${batchRecords.length} tabular records`);
     }
   }
 }

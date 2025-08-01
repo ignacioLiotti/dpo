@@ -4,16 +4,19 @@ import { createServerSupabaseClient, getUserOrganization } from '@/app/auth/serv
 
 export default async function OrganizationSetupPage() {
   const supabase = await createServerSupabaseClient();
-  const { user, organizationId } = await getUserOrganization(supabase);
-
-  // If user already has an organization, redirect them
-  if (organizationId) {
-    redirect('/files');
+  
+  // Check if user is authenticated first
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  // If not authenticated, redirect to sign in
+  if (userError || !user) {
+    redirect('/sign-in');
   }
 
-  // If not authenticated, redirect to sign in
-  if (!user) {
-    redirect('/sign-in');
+  // Check if user already has an organization
+  const { data: orgId } = await supabase.rpc('get_user_organization_id');
+  if (orgId) {
+    redirect('/files');
   }
 
   return (

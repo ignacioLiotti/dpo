@@ -68,12 +68,16 @@ const createFieldDefinitionSchema = z.object({
   is_required: z.boolean().default(false),
   default_value: z.string().optional(),
   sort_order: z.number().default(0),
+  column_index: z.number().min(0).max(50).optional(),
+  is_row_identifier: z.boolean().default(false),
 });
 
 // Schema for enabling extraction on folder
 const toggleFolderExtractionSchema = z.object({
   folder_id: z.string().uuid(),
   enable_extraction: z.boolean(),
+  extraction_type: z.enum(['single', 'tabular']).optional(),
+  max_rows: z.number().min(1).max(1000).optional(),
 });
 
 // Schema for extracting data from document
@@ -215,6 +219,8 @@ export async function createFolderFieldDefinition(formData: FormData) {
       is_required: formData.get('is_required') === 'true',
       default_value: formData.get('default_value') as string || undefined,
       sort_order: parseInt(formData.get('sort_order') as string) || 0,
+      column_index: formData.get('column_index') ? parseInt(formData.get('column_index') as string) : undefined,
+      is_row_identifier: formData.get('is_row_identifier') === 'true',
     };
 
     const validatedData = createFieldDefinitionSchema.parse(rawData);
@@ -269,17 +275,29 @@ export async function toggleFolderExtraction(formData: FormData) {
     const rawData = {
       folder_id: formData.get('folder_id') as string,
       enable_extraction: formData.get('enable_extraction') === 'true',
+      extraction_type: formData.get('extraction_type') as 'single' | 'tabular' || 'single',
+      max_rows: parseInt(formData.get('max_rows') as string) || 100,
     };
 
     const validatedData = toggleFolderExtractionSchema.parse(rawData);
 
     // Update folder extraction setting
+    const updateData: any = {
+      extract_data: validatedData.enable_extraction,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only update extraction_type and max_rows if provided
+    if (validatedData.extraction_type) {
+      updateData.extraction_type = validatedData.extraction_type;
+    }
+    if (validatedData.max_rows) {
+      updateData.max_rows = validatedData.max_rows;
+    }
+
     const { data, error } = await supabase
       .from('folders')
-      .update({
-        extract_data: validatedData.enable_extraction,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', validatedData.folder_id)
       .eq('user_id', user.id)
       .select()
@@ -520,6 +538,145 @@ export async function applyExtractionTemplate(formData: FormData) {
           sort_order: 4,
         },
       ],
+      // Tabular templates
+      bank_statement: [
+        {
+          field_name: 'transaction_date',
+          field_type: 'date',
+          field_label: 'Fecha',
+          extraction_method: 'ai',
+          extraction_pattern: 'Date in DD/MM/YYYY, MM/DD/YYYY, or YYYY-MM-DD format',
+          is_required: true,
+          sort_order: 0,
+          column_index: 0,
+          is_row_identifier: true,
+        },
+        {
+          field_name: 'description',
+          field_type: 'text',
+          field_label: 'Descripción',
+          extraction_method: 'ai',
+          extraction_pattern: 'Transaction description, merchant name, or transfer details',
+          is_required: true,
+          sort_order: 1,
+          column_index: 1,
+          is_row_identifier: false,
+        },
+        {
+          field_name: 'amount',
+          field_type: 'currency',
+          field_label: 'Monto',
+          extraction_method: 'ai',
+          extraction_pattern: 'Amount as positive number, extract numeric value only',
+          is_required: true,
+          sort_order: 2,
+          column_index: 2,
+          is_row_identifier: false,
+        },
+        {
+          field_name: 'transaction_type',
+          field_type: 'text',
+          field_label: 'Tipo de Transacción',
+          extraction_method: 'ai',
+          extraction_pattern: 'Transaction type: credit, debit, transfer, withdrawal, deposit',
+          is_required: true,
+          sort_order: 3,
+          column_index: 3,
+          is_row_identifier: false,
+        },
+      ],
+      price_list: [
+        {
+          field_name: 'product_code',
+          field_type: 'text',
+          field_label: 'Código',
+          extraction_method: 'ai',
+          extraction_pattern: 'Product code or SKU',
+          is_required: true,
+          sort_order: 0,
+          column_index: 0,
+          is_row_identifier: true,
+        },
+        {
+          field_name: 'product_description',
+          field_type: 'text',
+          field_label: 'Descripción',
+          extraction_method: 'ai',
+          extraction_pattern: 'Product name or description',
+          is_required: true,
+          sort_order: 1,
+          column_index: 1,
+          is_row_identifier: false,
+        },
+        {
+          field_name: 'price',
+          field_type: 'currency',
+          field_label: 'Precio',
+          extraction_method: 'ai',
+          extraction_pattern: 'Product price or unit cost',
+          is_required: true,
+          sort_order: 2,
+          column_index: 2,
+          is_row_identifier: false,
+        },
+        {
+          field_name: 'category',
+          field_type: 'text',
+          field_label: 'Categoría',
+          extraction_method: 'ai',
+          extraction_pattern: 'Product category or classification',
+          is_required: false,
+          sort_order: 3,
+          column_index: 3,
+          is_row_identifier: false,
+        },
+      ],
+      inventory: [
+        {
+          field_name: 'item_code',
+          field_type: 'text',
+          field_label: 'Código',
+          extraction_method: 'ai',
+          extraction_pattern: 'Item code or SKU',
+          is_required: true,
+          sort_order: 0,
+          column_index: 0,
+          is_row_identifier: true,
+        },
+        {
+          field_name: 'item_name',
+          field_type: 'text',
+          field_label: 'Nombre',
+          extraction_method: 'ai',
+          extraction_pattern: 'Item name or description',
+          is_required: true,
+          sort_order: 1,
+          column_index: 1,
+          is_row_identifier: false,
+        },
+        {
+          field_name: 'quantity',
+          field_type: 'number',
+          field_label: 'Cantidad',
+          extraction_method: 'ai',
+          extraction_pattern: 'Quantity on hand or stock level',
+          is_required: true,
+          sort_order: 2,
+          column_index: 2,
+          is_row_identifier: false,
+        },
+        {
+          field_name: 'location',
+          field_type: 'text',
+          field_label: 'Ubicación',
+          extraction_method: 'ai',
+          extraction_pattern: 'Storage location, warehouse, or shelf',
+          is_required: false,
+          sort_order: 3,
+          column_index: 3,
+          is_row_identifier: false,
+        },
+      ],
     };
 
     const template = templates[templateName as keyof typeof templates];
@@ -557,10 +714,15 @@ export async function applyExtractionTemplate(formData: FormData) {
       throw new Error(`Failed to apply template: ${error.message}`);
     }
 
-    // Enable extraction for the folder
+    // Enable extraction for the folder and set extraction type
+    const isTabular = ['bank_statement', 'price_list', 'inventory'].includes(templateName);
     await supabase
       .from('folders')
-      .update({ extract_data: true })
+      .update({ 
+        extract_data: true,
+        extraction_type: isTabular ? 'tabular' : 'single',
+        max_rows: isTabular ? 100 : null
+      })
       .eq('id', folderId);
 
     revalidatePath(`/files`);

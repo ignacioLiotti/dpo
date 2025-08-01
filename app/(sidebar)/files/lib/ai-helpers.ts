@@ -8,6 +8,8 @@ import {
   ocrWithAnalysisSchema,
   createFieldExtractionSchema,
   batchExtractionResultSchema,
+  tabularExtractionSchema,
+  createTabularExtractionSchema,
   generateFallbackResult,
   validateTags,
   type FieldDefinition,
@@ -15,6 +17,8 @@ import {
   type OCRExtraction,
   type DocumentAnalysis,
   type OCRWithAnalysis,
+  type TabularFieldDefinition,
+  type TabularExtractionResult,
 } from '../schemas/ai-schemas';
 import { retryWithBackoff } from './upload-utils';
 
@@ -48,6 +52,11 @@ async function withTimeout<T>(
 // Helper to convert image URL to base64 data URL for OpenAI
 async function convertImageUrlToBase64(imageUrl: string, fileType?: string): Promise<string> {
   try {
+    // Check if it's a PDF before attempting conversion
+    if (fileType === 'application/pdf' || imageUrl.toLowerCase().includes('.pdf')) {
+      throw new Error('PDF files cannot be converted to base64 images. Use text extraction instead.');
+    }
+    
     console.log('[AI] Converting image URL to base64:', { imageUrl, fileType });
     
     const response = await fetch(imageUrl);
@@ -61,6 +70,12 @@ async function convertImageUrlToBase64(imageUrl: string, fileType?: string): Pro
     
     // Determine MIME type
     let mimeType = fileType || 'image/png';
+    
+    // Check if it's a PDF
+    if (fileType === 'application/pdf' || imageUrl.toLowerCase().includes('.pdf')) {
+      throw new Error('PDF files are not supported for direct image processing. PDF extraction requires text-based processing.');
+    }
+    
     if (fileType === 'application/octet-stream' || !fileType) {
       // Try to determine from URL extension
       const urlLower = imageUrl.toLowerCase();
@@ -475,5 +490,219 @@ async function fetchDocumentText(documentUrl: string): Promise<string> {
   } catch (error) {
     console.error('Document text extraction failed:', error);
     throw new Error('Document text extraction not implemented for this type');
+  }
+}
+
+/**
+ * Extract tabular data from an image using OpenAI Vision
+ * Used for documents with multiple rows like bank statements, invoices, etc.
+ */
+export async function extractTabularData(
+  imageUrl: string,
+  fileName: string,
+  fieldDefinitions: TabularFieldDefinition[]
+): Promise<TabularExtractionResult> {
+  try {
+    console.log('[AI] Starting tabular extraction for:', fileName);
+    
+    // Convert image URL to base64 for OpenAI
+    const imageDataUrl = await convertImageUrlToBase64(imageUrl, 'image/png');
+    
+    // Create dynamic schema based on field definitions
+    const dynamicSchema = createTabularExtractionSchema(fieldDefinitions);
+    
+    // Build field descriptions for AI
+    const fieldDescriptions = fieldDefinitions.map(field => 
+      `- ${field.field_name} (${field.field_type}): ${field.field_label}${field.extraction_pattern ? ` - Pattern: ${field.extraction_pattern}` : ''}`
+    ).join('\n');
+    
+    const { object } = await withTimeout(
+      generateObject({
+        model: openai(AI_CONFIG.openai.model),
+        schema: dynamicSchema,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Extract tabular data from this document "${fileName}". 
+
+This document contains multiple rows of data. Please extract each row and structure the data according to these field definitions:
+
+${fieldDescriptions}
+
+Instructions:
+1. Extract ALL visible rows of data
+2. Each row should be a separate object in the tableData array
+3. Use consistent field names as defined above
+4. Convert values to appropriate types (numbers for currency/numeric fields, dates in YYYY-MM-DD format)
+5. If a field is empty or unclear, use null
+6. Assess data quality based on clarity and completeness
+7. Include all readable text in extractedText
+
+Return structured data with high confidence only if the data is clearly readable.`
+            },
+            {
+              type: 'image',
+              image: imageDataUrl,
+            }
+          ]
+        }],
+        temperature: AI_CONFIG.openai.temperature,
+      }),
+      AI_CONFIG.timeout,
+      'OpenAI tabular extraction'
+    );
+    
+    console.log('[AI] Tabular extraction successful:', {
+      rowCount: object.tableData.length,
+      confidence: object.confidence,
+      fileName
+    });
+    
+    return object;
+  } catch (error) {
+    console.error('[AI] Tabular extraction failed:', error);
+    throw new Error(`Tabular extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Extract and analyze tabular document in one call
+ * Combines OCR + analysis + tabular extraction
+ */
+export async function extractAndAnalyzeTabularDocument(
+  imageUrl: string,
+  fileName: string,
+  fileType: string,
+  fieldDefinitions: TabularFieldDefinition[]
+): Promise<ProcessingResult> {
+  try {
+    console.log('[AI] Starting combined tabular extraction and analysis for:', fileName);
+    
+    // First, perform tabular extraction
+    const tabularResult = await extractTabularData(imageUrl, fileName, fieldDefinitions);
+    
+    // Then, analyze the document for categorization
+    const analysisResult = await extractAndAnalyzeDocument(imageUrl, fileName, fileType);
+    
+    // Combine results
+    return {
+      ocrText: tabularResult.extractedText,
+      description: analysisResult.description || `Tabular document: ${fileName}`,
+      tags: analysisResult.tags || ['documento', 'tabular'],
+      extractedData: {
+        tabularData: tabularResult.tableData,
+        tableMetadata: tabularResult.tableMetadata,
+      },
+      confidence: Math.min(tabularResult.confidence, analysisResult.confidence || 0.8),
+      provider: 'openai-tabular',
+    };
+  } catch (error) {
+    console.error('[AI] Combined tabular processing failed:', error);
+    return generateFallbackResult(fileName, error?.message);
+  }
+}
+
+/**
+ * Process tabular document with Mistral fallback
+ * For when OpenAI fails or for cost optimization
+ */
+export async function processTabularDocumentWithMistral(
+  ocrText: string,
+  fileName: string,
+  fieldDefinitions: TabularFieldDefinition[]
+): Promise<ProcessingResult> {
+  try {
+    console.log('[AI] Processing tabular data with Mistral for:', fileName);
+    
+    // Clean the OCR text to prevent JSON parsing issues
+    // Remove excessive pipe characters, quotes, and other problematic characters
+    const cleanedText = ocrText
+      .replace(/\|[\s\|]+\|/g, '|')     // Replace multiple pipes with single pipe
+      .replace(/\|+/g, '|')             // Replace consecutive pipes
+      .replace(/["\\"]/g, "'")          // Replace double quotes with single quotes
+      .replace(/\r\n/g, '\n')           // Normalize line endings
+      .replace(/\s+/g, ' ')             // Normalize whitespace
+      .replace(/\n+/g, '\n')            // Remove excessive line breaks
+      .trim()
+      .substring(0, 3000);              // Limit length to prevent token overflow
+    
+    // Build field descriptions
+    const fieldDescriptions = fieldDefinitions.map(field => 
+      `- ${field.field_name}: ${field.field_label} (${field.field_type})`
+    ).join('\n');
+    
+    // Use generic tabular schema since Mistral doesn't support dynamic schemas as well
+    let extractionResult;
+    try {
+      const { object } = await withTimeout(
+        generateObject({
+          model: mistral(AI_CONFIG.mistral.model),
+          schema: tabularExtractionSchema,
+          messages: [{
+            role: 'user',
+            content: `You are analyzing a document with tabular data. Extract all rows of data from the text.
+
+Document: "${fileName}"
+
+Fields to extract for each row:
+${fieldDescriptions}
+
+Instructions:
+1. Identify the table structure in the text
+2. Extract each row as a separate object
+3. Map values to the correct fields based on position
+4. For dates, use YYYY-MM-DD format
+5. For currency, extract numeric values only
+6. Skip header rows and empty rows
+
+Text to analyze:
+${cleanedText}
+
+Return the data in the required JSON structure with tableData array containing all rows.`
+          }],
+          temperature: AI_CONFIG.mistral.temperature,
+        }),
+        AI_CONFIG.timeout,
+        'Mistral tabular extraction'
+      );
+      extractionResult = object;
+    } catch (extractError) {
+      console.error('[AI] Mistral structured extraction failed, using fallback:', extractError);
+      
+      // Fallback: Return a simpler result
+      extractionResult = {
+        extractedText: ocrText.substring(0, 1000),
+        confidence: 0.5,
+        tableData: [],
+        tableMetadata: {
+          rowCount: 0,
+          columnCount: fieldDefinitions.length,
+          hasHeaders: false,
+          dataQuality: 'poor' as const,
+        }
+      };
+    }
+    
+    return {
+      ocrText: extractionResult.extractedText || ocrText,
+      description: `Tabular document: ${fileName}`,
+      tags: ['documento', 'tabular', 'datos-multiples'],
+      extractedData: {
+        tabularData: extractionResult.tableData || [],
+        tableMetadata: extractionResult.tableMetadata || {
+          rowCount: 0,
+          columnCount: fieldDefinitions.length,
+          hasHeaders: false,
+          dataQuality: 'poor',
+        },
+      },
+      confidence: extractionResult.confidence || 0.5,
+      provider: 'mistral-tabular',
+    };
+  } catch (error) {
+    console.error('[AI] Mistral tabular processing failed:', error);
+    return generateFallbackResult(fileName, error?.message);
   }
 }

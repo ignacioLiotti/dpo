@@ -199,6 +199,81 @@ export function validateTags(tags: string[]): string[] {
     .slice(0, 10); // Max 10 tags
 }
 
+// 9. Tabular extraction schemas for multi-row documents (e.g., bank statements)
+export interface TabularFieldDefinition {
+  id?: string; // Database ID for saving
+  field_name: string;
+  field_type: keyof typeof FieldTypeSchema;
+  field_label: string;
+  extraction_pattern?: string;
+  is_required: boolean;
+  column_index?: number;
+  is_row_identifier?: boolean;
+}
+
+export const tabularExtractionSchema = z.object({
+  extractedText: z.string()
+    .describe('All text extracted from the document'),
+  confidence: z.number()
+    .min(0)
+    .max(1)
+    .describe('Overall confidence score of the extraction'),
+  tableData: z.array(z.record(z.any()))
+    .describe('Array of rows, each row is an object with field names as keys'),
+  tableMetadata: z.object({
+    rowCount: z.number()
+      .int()
+      .min(0)
+      .describe('Number of data rows extracted'),
+    columnCount: z.number()
+      .int()
+      .min(0)
+      .describe('Number of columns detected'),
+    hasHeaders: z.boolean()
+      .describe('Whether column headers were detected'),
+    tableType: z.string()
+      .optional()
+      .describe('Type of table detected (e.g., "bank_statement", "invoice_items")'),
+    extractionMethod: z.string()
+      .optional()
+      .describe('Method used for extraction'),
+    dataQuality: z.enum(['excellent', 'good', 'fair', 'poor'])
+      .describe('Assessment of data quality')
+  })
+});
+
+export type TabularExtractionResult = z.infer<typeof tabularExtractionSchema>;
+
+// 10. Create dynamic tabular extraction schema
+export function createTabularExtractionSchema(fieldDefinitions: TabularFieldDefinition[]) {
+  const rowSchemaShape: Record<string, z.ZodTypeAny> = {};
+  
+  fieldDefinitions.forEach(field => {
+    let fieldSchema = FieldTypeSchema[field.field_type] || z.string();
+    
+    // Make optional if not required
+    rowSchemaShape[field.field_name] = field.is_required 
+      ? fieldSchema.describe(`${field.field_label} (required)`)
+      : fieldSchema.nullable().describe(`${field.field_label} (optional)`);
+  });
+  
+  const rowSchema = z.object(rowSchemaShape);
+  
+  return z.object({
+    extractedText: z.string().describe('All text extracted from the document'),
+    confidence: z.number().min(0).max(1).describe('Overall confidence score'),
+    tableData: z.array(rowSchema).describe('Array of structured data rows'),
+    tableMetadata: z.object({
+      rowCount: z.number().int().min(0),
+      columnCount: z.number().int().min(0),
+      hasHeaders: z.boolean(),
+      tableType: z.string().optional(),
+      extractionMethod: z.string().optional(),
+      dataQuality: z.enum(['excellent', 'good', 'fair', 'poor'])
+    })
+  });
+}
+
 // Helper to generate fallback result when AI fails
 export function generateFallbackResult(fileName: string, error?: string): ProcessingResult {
   return {

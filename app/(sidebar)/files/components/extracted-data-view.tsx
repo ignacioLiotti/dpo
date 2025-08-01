@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Database, Download, Filter, RefreshCw, Loader2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Database, Download, Filter, RefreshCw, Loader2, Clock, CheckCircle, XCircle, ChevronDown, ChevronRight, Rows3 } from 'lucide-react';
 import type { ObraDocument, Folder, FolderFieldDefinition } from '../types';
 import { getFolderExtractedData } from '../actions/folder-extraction-actions';
 
@@ -29,6 +30,23 @@ interface GroupedExtractedData {
   };
 }
 
+interface TabularRow {
+  row_index: number;
+  fields: {
+    id: string;
+    value: any;
+    field_definition_id: string;
+  }[];
+}
+
+interface TabularData {
+  [file_id: string]: {
+    document_name: string;
+    file_id: string;
+    rows: TabularRow[];
+  };
+}
+
 export function ExtractedDataView({
   documents,
   currentFolder,
@@ -41,6 +59,7 @@ export function ExtractedDataView({
   const [realtimeExtractedData, setRealtimeExtractedData] = useState<any[]>(extractedData);
   const [lastProcessingCount, setLastProcessingCount] = useState(processingCount);
   const [autoRefreshing, setAutoRefreshing] = useState(false);
+  const [expandedDocuments, setExpandedDocuments] = useState<Set<string>>(new Set());
 
   // Auto-refresh when processing completes
   useEffect(() => {
@@ -115,9 +134,15 @@ export function ExtractedDataView({
     }
   };
 
-  // Group extracted data by file_id
-  const groupedData: GroupedExtractedData = realtimeExtractedData.reduce((acc, record) => {
-    if (!record.file_id || !record.extracted_value) return acc;
+  // Determine if this is tabular extraction
+  const isTabularFolder = currentFolder?.extraction_type === 'tabular';
+
+  // Group extracted data by file_id - handle both single and tabular data
+  const groupedData: GroupedExtractedData = {};
+  const tabularData: TabularData = {};
+
+  realtimeExtractedData.forEach(record => {
+    if (!record.file_id || !record.extracted_value) return;
 
     let parsedValue;
     try {
@@ -127,24 +152,57 @@ export function ExtractedDataView({
       parsedValue = record.extracted_value;
     }
 
-    if (!acc[record.file_id]) {
-      const matchingDoc = documents.find(doc => doc.id === record.file_id);
-      acc[record.file_id] = {
-        document_name: matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`,
-        file_id: record.file_id,
-        fields: []
-      };
+    const matchingDoc = documents.find(doc => doc.id === record.file_id);
+    const documentName = matchingDoc?.name || `File ${record.file_id.substring(0, 8)}...`;
+
+    if (record.is_tabular && isTabularFolder) {
+      // Handle tabular data
+      if (!tabularData[record.file_id]) {
+        tabularData[record.file_id] = {
+          document_name: documentName,
+          file_id: record.file_id,
+          rows: []
+        };
+      }
+
+      // Find or create row
+      let targetRow = tabularData[record.file_id].rows.find(row => row.row_index === (record.row_index || 0));
+      if (!targetRow) {
+        targetRow = {
+          row_index: record.row_index || 0,
+          fields: []
+        };
+        tabularData[record.file_id].rows.push(targetRow);
+      }
+
+      targetRow.fields.push({
+        id: record.id,
+        value: parsedValue,
+        field_definition_id: record.field_definition_id
+      });
+    } else {
+      // Handle single extraction data
+      if (!groupedData[record.file_id]) {
+        groupedData[record.file_id] = {
+          document_name: documentName,
+          file_id: record.file_id,
+          fields: []
+        };
+      }
+
+      groupedData[record.file_id].fields.push({
+        id: record.id,
+        value: parsedValue,
+        field_definition_id: record.field_definition_id,
+        order: groupedData[record.file_id].fields.length
+      });
     }
+  });
 
-    acc[record.file_id].fields.push({
-      id: record.id,
-      value: parsedValue,
-      field_definition_id: record.field_definition_id,
-      order: acc[record.file_id].fields.length
-    });
-
-    return acc;
-  }, {} as GroupedExtractedData);
+  // Sort tabular rows by row_index
+  Object.values(tabularData).forEach(doc => {
+    doc.rows.sort((a, b) => a.row_index - b.row_index);
+  });
 
   // Include ALL documents in the folder
   const documentsWithExtractedData = documents
@@ -166,7 +224,33 @@ export function ExtractedDataView({
     type: field.field_type
   }));
 
+  const toggleDocumentExpansion = (fileId: string) => {
+    const newExpanded = new Set(expandedDocuments);
+    if (newExpanded.has(fileId)) {
+      newExpanded.delete(fileId);
+    } else {
+      newExpanded.add(fileId);
+    }
+    setExpandedDocuments(newExpanded);
+  };
+
+  const expandAllDocuments = () => {
+    setExpandedDocuments(new Set(Object.keys(tabularData)));
+  };
+
+  const collapseAllDocuments = () => {
+    setExpandedDocuments(new Set());
+  };
+
   const exportData = () => {
+    if (isTabularFolder) {
+      exportTabularData();
+    } else {
+      exportSingleData();
+    }
+  };
+
+  const exportSingleData = () => {
     if (!documentsWithExtractedData.length) return;
 
     const headers = ['Documento', ...fieldHeaders.map(header => header.label)];
@@ -188,14 +272,48 @@ export function ExtractedDataView({
     URL.revokeObjectURL(url);
   };
 
+  const exportTabularData = () => {
+    if (!Object.keys(tabularData).length) return;
+
+    const headers = ['Documento', 'Fila', ...fieldHeaders.map(header => header.label)];
+    const rows: string[][] = [];
+
+    Object.values(tabularData).forEach(doc => {
+      doc.rows.forEach(row => {
+        const csvRow = [
+          doc.document_name,
+          String(row.row_index + 1), // 1-based for user display
+          ...fieldHeaders.map(header => {
+            const field = row.fields.find(f => f.field_definition_id === header.id);
+            return field ? String(field.value) : '';
+          })
+        ];
+        rows.push(csvRow);
+      });
+    });
+
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentFolder?.name || 'extracted-data'}-tabular.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Calculate statistics
   const processingDocsCount = documentsWithExtractedData.filter(
     doc => doc.processing_status === 'pending' || doc.processing_status === 'processing'
   ).length;
 
-  const completedDocsCount = documentsWithExtractedData.filter(
-    doc => doc.fields.length > 0
-  ).length;
+  const completedDocsCount = isTabularFolder 
+    ? Object.keys(tabularData).length
+    : documentsWithExtractedData.filter(doc => doc.fields.length > 0).length;
+
+  const totalRowsCount = isTabularFolder 
+    ? Object.values(tabularData).reduce((sum, doc) => sum + doc.rows.length, 0)
+    : completedDocsCount;
 
   if (!currentFolder) {
     return (
@@ -245,13 +363,16 @@ export function ExtractedDataView({
     );
   }
 
-  if (!documentsWithExtractedData.length) {
+  if (!documentsWithExtractedData.length && (!isTabularFolder || !Object.keys(tabularData).length)) {
     return (
       <div className="text-center py-12">
         <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-medium mb-2">No extracted data</h3>
         <p className="text-muted-foreground">
-          No documents in this folder yet. Upload documents to see extracted data here.
+          {isTabularFolder 
+            ? 'No tabular data extracted yet. Upload documents with table data to see extracted rows here.'
+            : 'No documents in this folder yet. Upload documents to see extracted data here.'
+          }
         </p>
       </div>
     );
@@ -279,68 +400,203 @@ export function ExtractedDataView({
         </div>
       )} */}
 
-      {/* Data Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Document</TableHead>
-                  {/* <TableHead>Status</TableHead> */}
-                  {fieldHeaders.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documentsWithExtractedData.map((document, index) => (
-                  <TableRow key={document.file_id}>
-                    <TableCell className="font-medium">
-                      <div className="max-w-[200px] truncate" title={document.document_name}>
-                        {document.document_name}
-                      </div>
-                    </TableCell>
-                    {/* <TableCell>
-                      <ProcessingStatusIndicator status={document.processing_status} />
-                    </TableCell> */}
-                    {fieldHeaders.map((header) => {
-                      const field = document.fields.find(f => f.field_definition_id === header.id);
-
-                      // Show loading indicator if document is being processed
-                      if (document.processing_status === 'pending' || document.processing_status === 'processing') {
-                        return (
-                          <TableCell key={header.id} className='overflow-hidden max-w-[200px] py-0'>
-                            <div className='relative max-w-[180px] overflow-hidden h-[25px] rounded-md'>
-                              <div className="w-[800px] h-full ml-[-150px] bg-[repeating-linear-gradient(-60deg,#dbdbdb,#f9f9f9_90px,#dbdbdb_180px)] text-transparent animate-bg-pulse animate-bg-slide "> text</div>
-                            </div>
-                          </TableCell>
-                        );
-                      }
-
+      {/* Data Display - Different views for single vs tabular */}
+      {isTabularFolder ? (
+        <div className="space-y-4">
+          {/* Tabular Data View */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Rows3 className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-lg">Tabular Data ({totalRowsCount} rows)</CardTitle>
+                </div>
+                {Object.keys(tabularData).length > 1 && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={expandAllDocuments}
+                      className="text-xs h-7"
+                    >
+                      Expand All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={collapseAllDocuments}
+                      className="text-xs h-7"
+                    >
+                      Collapse All
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="space-y-0">
+                {Object.keys(tabularData).length === 0 && processingDocsCount === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Rows3 className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">No tabular data extracted yet</p>
+                  </div>
+                ) : (
+                  <>
+                    {Object.values(tabularData).map((document) => {
+                      const isExpanded = expandedDocuments.has(document.file_id);
                       return (
-                        <TableCell key={header.id}>
-                          {field && field.value !== null && field.value !== undefined && field.value !== '' ? (
-                            <span className="text-sm">
-                              {typeof field.value === 'boolean' ? (field.value ? 'Yes' : 'No') : String(field.value)}
-                            </span>
-                          ) : document.processing_status === 'failed' ? (
-                            <span className="text-red-500 text-sm">Error</span>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
+                    <Collapsible key={document.file_id} open={isExpanded} onOpenChange={() => toggleDocumentExpansion(document.file_id)}>
+                      <CollapsibleTrigger asChild>
+                        <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer border-b">
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <div>
+                              <div className="font-medium text-sm">{document.document_name}</div>
+                              <div className="text-xs text-muted-foreground">{document.rows.length} rows extracted</div>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {document.rows.length} rows
+                          </Badge>
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="border-b">
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-muted/30">
+                                  <TableHead className="w-16">#</TableHead>
+                                  {fieldHeaders.map((header) => (
+                                    <TableHead key={header.id}>
+                                      {header.label}
+                                    </TableHead>
+                                  ))}
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {document.rows.map((row) => (
+                                  <TableRow key={`${document.file_id}-${row.row_index}`} className="border-b-0">
+                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                      {row.row_index + 1}
+                                    </TableCell>
+                                    {fieldHeaders.map((header) => {
+                                      const field = row.fields.find(f => f.field_definition_id === header.id);
+                                      return (
+                                        <TableCell key={header.id}>
+                                          {field && field.value !== null && field.value !== undefined && field.value !== '' ? (
+                                            <span className="text-sm">
+                                              {typeof field.value === 'boolean' ? (field.value ? 'Yes' : 'No') : String(field.value)}
+                                            </span>
+                                          ) : (
+                                            <span className="text-muted-foreground text-sm">-</span>
+                                          )}
+                                        </TableCell>
+                                      );
+                                    })}
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                        </Collapsible>
                       );
                     })}
+
+                    {/* Show processing documents in tabular view */}
+                    {documentsWithExtractedData
+                      .filter(doc => 
+                        !tabularData[doc.file_id] && 
+                        (doc.processing_status === 'pending' || doc.processing_status === 'processing')
+                      )
+                      .map((document) => (
+                        <div key={document.file_id} className="flex items-center justify-between p-4 border-b bg-muted/20">
+                          <div className="flex items-center gap-3">
+                            <div className="h-4 w-4" /> {/* Spacer for collapsed icon */}
+                            <div>
+                              <div className="font-medium text-sm">{document.document_name}</div>
+                              <div className="text-xs text-muted-foreground">Processing...</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                            <Badge variant="secondary" className="text-xs">Processing</Badge>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        /* Single Extraction Data View */
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Document</TableHead>
+                    {fieldHeaders.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.label}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {documentsWithExtractedData.map((document, index) => (
+                    <TableRow key={document.file_id}>
+                      <TableCell className="font-medium">
+                        <div className="max-w-[200px] truncate" title={document.document_name}>
+                          {document.document_name}
+                        </div>
+                      </TableCell>
+                      {fieldHeaders.map((header) => {
+                        const field = document.fields.find(f => f.field_definition_id === header.id);
+
+                        // Show loading indicator if document is being processed
+                        if (document.processing_status === 'pending' || document.processing_status === 'processing') {
+                          return (
+                            <TableCell key={header.id} className='overflow-hidden max-w-[200px] py-0'>
+                              <div className='relative max-w-[180px] overflow-hidden h-[25px] rounded-md'>
+                                <div className="w-[800px] h-full ml-[-150px] bg-[repeating-linear-gradient(-60deg,#dbdbdb,#f9f9f9_90px,#dbdbdb_180px)] text-transparent animate-bg-pulse animate-bg-slide "> text</div>
+                              </div>
+                            </TableCell>
+                          );
+                        }
+
+                        return (
+                          <TableCell key={header.id}>
+                            {field && field.value !== null && field.value !== undefined && field.value !== '' ? (
+                              <span className="text-sm">
+                                {typeof field.value === 'boolean' ? (field.value ? 'Yes' : 'No') : String(field.value)}
+                              </span>
+                            ) : document.processing_status === 'failed' ? (
+                              <span className="text-red-500 text-sm">Error</span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-between">
@@ -360,7 +616,11 @@ export function ExtractedDataView({
           </Button>
         </div>
         <div className="text-sm text-muted-foreground">
-          {completedDocsCount} of {documentsWithExtractedData.length} document{documentsWithExtractedData.length !== 1 ? 's' : ''} with extracted data
+          {isTabularFolder ? (
+            `${completedDocsCount} document${completedDocsCount !== 1 ? 's' : ''} with ${totalRowsCount} rows extracted`
+          ) : (
+            `${completedDocsCount} of ${documentsWithExtractedData.length} document${documentsWithExtractedData.length !== 1 ? 's' : ''} with extracted data`
+          )}
         </div>
       </div>
     </div>

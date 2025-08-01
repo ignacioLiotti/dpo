@@ -71,6 +71,8 @@ export function FolderSettingsDialog({
   onUpdate
 }: FolderSettingsDialogProps) {
   const [extractionEnabled, setExtractionEnabled] = useState(false);
+  const [extractionType, setExtractionType] = useState<'single' | 'tabular'>('single');
+  const [maxRows, setMaxRows] = useState(100);
   const [fieldDefinitions, setFieldDefinitions] = useState<FolderFieldDefinition[]>([]);
   const [extractedData, setExtractedData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,12 +85,25 @@ export function FolderSettingsDialog({
   useEffect(() => {
     if (folder && isOpen) {
       setExtractionEnabled(folder.extract_data || false);
+      setExtractionType((folder as any).extraction_type || 'single');
+      setMaxRows((folder as any).max_rows || 100);
       loadFieldDefinitions();
       if (folder.extract_data) {
         loadExtractedData();
       }
     }
   }, [folder, isOpen]);
+
+  // Auto-save extraction settings when they change
+  useEffect(() => {
+    if (folder && extractionEnabled && isOpen) {
+      const timeoutId = setTimeout(() => {
+        handleUpdateExtractionSettings();
+      }, 1000); // Debounce for 1 second
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [extractionType, maxRows]);
 
   const loadFieldDefinitions = async () => {
     if (!folder) return;
@@ -154,6 +169,8 @@ export function FolderSettingsDialog({
       const formData = new FormData();
       formData.append('folder_id', folder.id);
       formData.append('enable_extraction', enabled.toString());
+      formData.append('extraction_type', extractionType);
+      formData.append('max_rows', maxRows.toString());
 
       await toggleFolderExtraction(formData);
 
@@ -166,6 +183,29 @@ export function FolderSettingsDialog({
       // Revert optimistic update on error
       setExtractionEnabled(!enabled);
       toast.error('Error al cambiar configuración');
+    }
+  };
+
+  const handleUpdateExtractionSettings = async () => {
+    if (!folder || !extractionEnabled) return;
+
+    toast.info('Actualizando configuración...');
+    
+    try {
+      const formData = new FormData();
+      formData.append('folder_id', folder.id);
+      formData.append('enable_extraction', 'true');
+      formData.append('extraction_type', extractionType);
+      formData.append('max_rows', maxRows.toString());
+
+      await toggleFolderExtraction(formData);
+      
+      toast.success('Configuración actualizada correctamente');
+      onUpdate?.();
+      router.refresh();
+    } catch (error) {
+      console.error('Error updating extraction settings:', error);
+      toast.error('Error al actualizar configuración');
     }
   };
 
@@ -281,7 +321,7 @@ export function FolderSettingsDialog({
 
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="font-medium">🤖 Extracción de Datos</p>
@@ -298,6 +338,104 @@ export function FolderSettingsDialog({
                       disabled={loading}
                     />
                   </div>
+
+                  {extractionEnabled && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium">Tipo de Extracción</Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Determina cómo se procesarán los documentos de esta carpeta
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                          <div 
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              extractionType === 'single' 
+                                ? 'border-primary bg-primary/5' 
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => setExtractionType('single')}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-4 h-4 rounded-full border-2 border-primary mt-0.5 flex items-center justify-center">
+                                {extractionType === 'single' && (
+                                  <div className="w-2 h-2 rounded-full bg-primary" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">📄 Extracción Individual</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Extrae un único registro por documento (facturas, contratos, certificados)
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div 
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              extractionType === 'tabular' 
+                                ? 'border-primary bg-primary/5' 
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => setExtractionType('tabular')}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-4 h-4 rounded-full border-2 border-primary mt-0.5 flex items-center justify-center">
+                                {extractionType === 'tabular' && (
+                                  <div className="w-2 h-2 rounded-full bg-primary" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">📊 Extracción Tabular</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Extrae múltiples filas de datos (estados de cuenta, listas de precios, inventarios)
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {extractionType === 'tabular' && (
+                          <div className="pt-2 space-y-3">
+                            <div>
+                              <Label htmlFor="maxRows" className="text-sm">Máximo de Filas</Label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Input
+                                  id="maxRows"
+                                  type="number"
+                                  min="1"
+                                  max="1000"
+                                  value={maxRows}
+                                  onChange={(e) => setMaxRows(parseInt(e.target.value) || 100)}
+                                  className="w-24"
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  filas por documento (máx. 1000)
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-start gap-2">
+                                <span className="text-blue-600">💡</span>
+                                <div className="text-sm">
+                                  <p className="font-medium text-blue-800 mb-1">Extracción Tabular</p>
+                                  <ul className="text-blue-700 space-y-1 text-xs">
+                                    <li>• Ideal para documentos con múltiples filas de datos</li>
+                                    <li>• Cada fila se guarda como un registro separado</li>
+                                    <li>• Perfecto para estados de cuenta bancarios</li>
+                                    <li>• Útil para facturas con múltiples productos</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* {extractionEnabled && (
                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -418,28 +556,69 @@ export function FolderSettingsDialog({
             </TabsContent>
 
             <TabsContent value="templates" className="space-y-4">
-              <div className="grid gap-4">
-                <TemplateCard
-                  title="📄 Facturas"
-                  description="Extrae número de factura, monto total, fecha y proveedor"
-                  fields={['Número de Factura', 'Monto Total', 'Fecha', 'Proveedor']}
-                  onApply={() => handleApplyTemplate('invoice')}
-                  disabled={loading}
-                />
-                <TemplateCard
-                  title="📋 Contratos"
-                  description="Extrae número de contrato, monto, fechas y contratista"
-                  fields={['Número de Contrato', 'Monto', 'Fecha Inicio', 'Fecha Fin', 'Contratista']}
-                  onApply={() => handleApplyTemplate('contract')}
-                  disabled={loading}
-                />
-                <TemplateCard
-                  title="🏛️ Permisos"
-                  description="Extrae número de permiso, fechas y autoridad emisora"
-                  fields={['Número de Permiso', 'Fecha Emisión', 'Fecha Vencimiento', 'Autoridad']}
-                  onApply={() => handleApplyTemplate('permit')}
-                  disabled={loading}
-                />
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Plantillas de Extracción Individual</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Para documentos con un único conjunto de datos por archivo
+                  </p>
+                  <div className="grid gap-4">
+                    <TemplateCard
+                      title="📄 Facturas"
+                      description="Extrae número de factura, monto total, fecha y proveedor"
+                      fields={['Número de Factura', 'Monto Total', 'Fecha', 'Proveedor']}
+                      onApply={() => handleApplyTemplate('invoice')}
+                      disabled={loading}
+                    />
+                    <TemplateCard
+                      title="📋 Contratos"
+                      description="Extrae número de contrato, monto, fechas y contratista"
+                      fields={['Número de Contrato', 'Monto', 'Fecha Inicio', 'Fecha Fin', 'Contratista']}
+                      onApply={() => handleApplyTemplate('contract')}
+                      disabled={loading}
+                    />
+                    <TemplateCard
+                      title="🏛️ Permisos"
+                      description="Extrae número de permiso, fechas y autoridad emisora"
+                      fields={['Número de Permiso', 'Fecha Emisión', 'Fecha Vencimiento', 'Autoridad']}
+                      onApply={() => handleApplyTemplate('permit')}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Plantillas de Extracción Tabular</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Para documentos con múltiples filas de datos por archivo
+                  </p>
+                  <div className="grid gap-4">
+                    <TemplateCard
+                      title="🏦 Estado de Cuenta Bancario"
+                      description="Extrae múltiples transacciones con fecha, descripción, monto y tipo"
+                      fields={['Fecha', 'Descripción', 'Monto', 'Tipo de Transacción']}
+                      onApply={() => handleApplyTemplate('bank_statement')}
+                      disabled={loading}
+                      isTabular={true}
+                    />
+                    <TemplateCard
+                      title="📊 Lista de Precios"
+                      description="Extrae múltiples productos con código, descripción, precio y categoría"
+                      fields={['Código', 'Descripción', 'Precio', 'Categoría']}
+                      onApply={() => handleApplyTemplate('price_list')}
+                      disabled={loading}
+                      isTabular={true}
+                    />
+                    <TemplateCard
+                      title="📦 Inventario"
+                      description="Extrae múltiples items con código, nombre, cantidad y ubicación"
+                      fields={['Código', 'Nombre', 'Cantidad', 'Ubicación']}
+                      onApply={() => handleApplyTemplate('inventory')}
+                      disabled={loading}
+                      isTabular={true}
+                    />
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
@@ -595,7 +774,9 @@ function FieldDefinitionForm({
   const [formData, setFormData] = useState({
     field_label: field?.field_label || '',
     field_type: field?.field_type || 'text',
-    extraction_pattern: field?.extraction_pattern || ''
+    extraction_pattern: field?.extraction_pattern || '',
+    column_index: (field as any)?.column_index || 0,
+    is_row_identifier: (field as any)?.is_row_identifier || false
   });
   
   const [saving, setSaving] = useState(false);
@@ -648,6 +829,12 @@ function FieldDefinitionForm({
       submitData.append('extraction_pattern', formData.extraction_pattern);
       submitData.append('is_required', 'false');
       submitData.append('default_value', '');
+      
+      // Add tabular-specific fields if tabular extraction is enabled
+      if (extractionType === 'tabular') {
+        submitData.append('column_index', formData.column_index.toString());
+        submitData.append('is_row_identifier', formData.is_row_identifier.toString());
+      }
       
       if (field) {
         submitData.append('field_id', field.id);
@@ -735,6 +922,47 @@ function FieldDefinitionForm({
             </p>
           </div>
 
+          {/* Tabular extraction fields */}
+          {extractionType === 'tabular' && (
+            <div className="grid grid-cols-2 gap-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-orange-600">📊</span>
+                  <span className="text-sm font-medium text-orange-800">Configuración Tabular</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="column_index">Índice de Columna</Label>
+                <Input
+                  id="column_index"
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={formData.column_index}
+                  onChange={(e) => handleInputChange('column_index', parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Posición de la columna en la tabla (empezando desde 0)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.is_row_identifier}
+                    onCheckedChange={(checked) => handleInputChange('is_row_identifier', checked)}
+                  />
+                  Identificador de Fila
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Este campo identifica únicamente cada fila (ej: fecha, ID)
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
@@ -754,13 +982,15 @@ function TemplateCard({
   description,
   fields,
   onApply,
-  disabled
+  disabled,
+  isTabular = false
 }: {
   title: string;
   description: string;
   fields: string[];
   onApply: () => void;
   disabled: boolean;
+  isTabular?: boolean;
 }) {
   return (
     <Card>
@@ -770,6 +1000,18 @@ function TemplateCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
+          {isTabular && (
+            <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+              <div className="flex items-center gap-1">
+                <span className="text-orange-600">📊</span>
+                <span className="font-medium text-orange-800">Extracción Tabular</span>
+              </div>
+              <p className="text-orange-700 mt-1">
+                Esta plantilla extraerá múltiples filas de datos por documento
+              </p>
+            </div>
+          )}
+          
           <div>
             <p className="text-sm font-medium mb-2">Campos incluidos:</p>
             <div className="flex flex-wrap gap-1">

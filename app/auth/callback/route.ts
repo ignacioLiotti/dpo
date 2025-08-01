@@ -15,11 +15,19 @@ export async function GET(request: Request) {
 		await supabase.auth.exchangeCodeForSession(code);
 		
 		// Check if user needs organization setup
-		const { user, organizationId } = await getUserOrganization(supabase);
-		
-		// If user is authenticated but has no organization, redirect to setup
-		if (user && !organizationId && !redirectTo) {
-			return NextResponse.redirect(`${origin}/organization-setup`);
+		try {
+			const { user, organizationId } = await getUserOrganization(supabase);
+			
+			// If user is authenticated but has no organization, redirect to setup
+			if (user && !organizationId && !redirectTo) {
+				return NextResponse.redirect(`${origin}/organization-setup`);
+			}
+		} catch (error) {
+			// If getUserOrganization fails (e.g., user has no org), check if we should redirect to setup
+			const { data: { user } } = await supabase.auth.getUser();
+			if (user && !redirectTo) {
+				return NextResponse.redirect(`${origin}/organization-setup`);
+			}
 		}
 	}
 

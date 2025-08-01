@@ -42,6 +42,8 @@ export interface Folder {
   color?: string;
   icon?: string;
   extract_data?: boolean; // Whether data extraction is enabled
+  extraction_type?: 'single' | 'tabular'; // Type of extraction
+  max_rows?: number; // Maximum rows for tabular extraction
 }
 
 export interface FolderFieldDefinition {
@@ -61,6 +63,8 @@ export interface FolderFieldDefinition {
   default_value?: string;
   sort_order: number;
   is_active: boolean;
+  column_index?: number; // Column position in tabular data
+  is_row_identifier?: boolean; // Whether this field identifies rows
 }
 
 export interface DocumentExtractedData {
